@@ -1,0 +1,106 @@
+import { useRef, useState } from "react";
+import { ImagePlus, Loader2, X } from "lucide-react";
+import { toast } from "sonner";
+import { STORAGE_BUCKET, supabase } from "@/lib/supabase";
+
+export function Dropzone({
+  label,
+  value,
+  userId,
+  onChange,
+  round,
+}: {
+  label: string;
+  value: string | null;
+  userId: string;
+  onChange: (url: string | null) => void;
+  round?: boolean;
+}) {
+  const [busy, setBusy] = useState(false);
+  const [over, setOver] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  async function upload(file: File) {
+    if (!file.type.startsWith("image/")) {
+      toast.error("Please choose an image file.");
+      return;
+    }
+    setBusy(true);
+    const ext = file.name.split(".").pop() || "png";
+    const path = `${userId}/${crypto.randomUUID()}.${ext}`;
+    const { error } = await supabase.storage
+      .from(STORAGE_BUCKET)
+      .upload(path, file, { upsert: true, cacheControl: "3600" });
+    setBusy(false);
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+    const { data } = supabase.storage.from(STORAGE_BUCKET).getPublicUrl(path);
+    onChange(data.publicUrl);
+    toast.success(`${label} uploaded`);
+  }
+
+  return (
+    <div>
+      <span className="mb-1.5 block text-xs font-medium text-muted-foreground">{label}</span>
+      <div
+        onDragOver={(e) => {
+          e.preventDefault();
+          setOver(true);
+        }}
+        onDragLeave={() => setOver(false)}
+        onDrop={(e) => {
+          e.preventDefault();
+          setOver(false);
+          const f = e.dataTransfer.files?.[0];
+          if (f) void upload(f);
+        }}
+        onClick={() => inputRef.current?.click()}
+        className={`relative flex h-28 cursor-pointer items-center justify-center gap-3 rounded-2xl border border-dashed px-4 text-center transition ${
+          over ? "border-primary bg-primary/10" : "border-border hover:bg-secondary/50"
+        }`}
+      >
+        {busy ? (
+          <Loader2 className="h-5 w-5 animate-spin text-primary" />
+        ) : value ? (
+          <>
+            <img
+              src={value}
+              alt={label}
+              className={`h-16 w-16 object-cover ${round ? "rounded-full" : "rounded-xl"}`}
+            />
+            <span className="text-xs text-muted-foreground">Click or drop to replace</span>
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                onChange(null);
+              }}
+              className="absolute right-2 top-2 rounded-full bg-background/80 p-1 text-muted-foreground hover:text-foreground"
+              aria-label={`Remove ${label}`}
+            >
+              <X className="h-3.5 w-3.5" />
+            </button>
+          </>
+        ) : (
+          <span className="flex flex-col items-center gap-1.5 text-xs text-muted-foreground">
+            <ImagePlus className="h-5 w-5 text-primary" />
+            Drag &amp; drop or click to upload
+          </span>
+        )}
+      </div>
+      <input
+        ref={inputRef}
+        type="file"
+        accept="image/*"
+        className="hidden"
+        onChange={(e) => {
+          const f = e.target.files?.[0];
+          if (f) void upload(f);
+          e.target.value = "";
+        }}
+      />
+    </div>
+  );
+}
