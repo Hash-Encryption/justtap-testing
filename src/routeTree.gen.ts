@@ -10,7 +10,9 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AdminRouteImport } from './routes/admin'
 import { Route as AuthRouteImport } from './routes/auth'
+import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as CSlugRouteImport } from './routes/c.$slug'
 import { Route as ApiVcardSlugRouteImport } from './routes/api/vcard.$slug'
 
@@ -19,9 +21,19 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AdminRoute = AdminRouteImport.update({
+  id: '/admin',
+  path: '/admin',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AuthRoute = AuthRouteImport.update({
   id: '/auth',
   path: '/auth',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DashboardRoute = DashboardRouteImport.update({
+  id: '/dashboard',
+  path: '/dashboard',
   getParentRoute: () => rootRouteImport,
 } as any)
 const CSlugRoute = CSlugRouteImport.update({
@@ -37,34 +49,50 @@ const ApiVcardSlugRoute = ApiVcardSlugRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/admin': typeof AdminRoute
   '/auth': typeof AuthRoute
+  '/dashboard': typeof DashboardRoute
   '/c/$slug': typeof CSlugRoute
   '/api/vcard/$slug': typeof ApiVcardSlugRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/admin': typeof AdminRoute
   '/auth': typeof AuthRoute
+  '/dashboard': typeof DashboardRoute
   '/c/$slug': typeof CSlugRoute
   '/api/vcard/$slug': typeof ApiVcardSlugRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/admin': typeof AdminRoute
   '/auth': typeof AuthRoute
+  '/dashboard': typeof DashboardRoute
   '/c/$slug': typeof CSlugRoute
   '/api/vcard/$slug': typeof ApiVcardSlugRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/auth' | '/c/$slug' | '/api/vcard/$slug'
+  fullPaths:
+    '/' | '/admin' | '/auth' | '/dashboard' | '/c/$slug' | '/api/vcard/$slug'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/auth' | '/c/$slug' | '/api/vcard/$slug'
-  id: '__root__' | '/' | '/auth' | '/c/$slug' | '/api/vcard/$slug'
+  to: '/' | '/admin' | '/auth' | '/dashboard' | '/c/$slug' | '/api/vcard/$slug'
+  id:
+    | '__root__'
+    | '/'
+    | '/admin'
+    | '/auth'
+    | '/dashboard'
+    | '/c/$slug'
+    | '/api/vcard/$slug'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AdminRoute: typeof AdminRoute
   AuthRoute: typeof AuthRoute
+  DashboardRoute: typeof DashboardRoute
   CSlugRoute: typeof CSlugRoute
   ApiVcardSlugRoute: typeof ApiVcardSlugRoute
 }
@@ -78,11 +106,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/admin': {
+      id: '/admin'
+      path: '/admin'
+      fullPath: '/admin'
+      preLoaderRoute: typeof AdminRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/auth': {
       id: '/auth'
       path: '/auth'
       fullPath: '/auth'
       preLoaderRoute: typeof AuthRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/dashboard': {
+      id: '/dashboard'
+      path: '/dashboard'
+      fullPath: '/dashboard'
+      preLoaderRoute: typeof DashboardRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/c/$slug': {
@@ -104,7 +146,9 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AdminRoute: AdminRoute,
   AuthRoute: AuthRoute,
+  DashboardRoute: DashboardRoute,
   CSlugRoute: CSlugRoute,
   ApiVcardSlugRoute: ApiVcardSlugRoute,
 }
