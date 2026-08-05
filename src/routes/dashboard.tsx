@@ -56,7 +56,7 @@ function Dashboard() {
         const existing = (data as Card | null) ?? null;
         setCard(existing);
         setDraft(existing ?? { ...emptyCard, user_id: user.id });
-        setEditing(!existing);
+        setEditing(false);
         setFetching(false);
       });
     return () => {
@@ -132,11 +132,11 @@ function Dashboard() {
         {tab === "card" &&
           (card && !editing ? (
             <div>
-              <h1 className="font-display text-xl font-bold">My cards</h1>
+              <h1 className="font-display text-xl font-bold">My Digital Card</h1>
               <button
                 type="button"
                 onClick={() => setEditing(true)}
-                className="glass mt-4 flex w-full items-center gap-4 rounded-2xl p-4 text-left transition hover:border-primary"
+                className="glass mt-4 flex w-full items-center gap-4 rounded-2xl p-4 text-left transition hover:border-primary border border-border/60"
               >
                 <div
                   className="grid h-16 w-16 shrink-0 place-items-center overflow-hidden rounded-xl text-xl font-bold"
@@ -153,6 +153,23 @@ function Dashboard() {
                   <p className="truncate text-xs text-muted-foreground">/c/{card.slug}</p>
                 </div>
                 <Pencil className="h-4 w-4 text-muted-foreground" />
+              </button>
+            </div>
+          ) : !card && !editing ? (
+            <div className="glass rounded-3xl p-8 text-center border border-border/60">
+              <div className="mx-auto grid h-16 w-16 place-items-center rounded-2xl bg-primary/10 text-primary mb-4">
+                <LayoutGrid className="h-8 w-8" />
+              </div>
+              <h1 className="font-display text-2xl font-bold">Welcome to Snap Connect</h1>
+              <p className="mt-2 text-sm text-muted-foreground max-w-md mx-auto">
+                You don&apos;t have a digital business card created yet. Create your personalized profile to start sharing your contact info, social links, and QR codes via NFC.
+              </p>
+              <button
+                type="button"
+                onClick={() => setEditing(true)}
+                className="mt-6 inline-flex items-center gap-2 rounded-full bg-primary px-6 py-3 text-sm font-semibold text-primary-foreground hover:opacity-90 transition-opacity"
+              >
+                <Pencil className="h-4 w-4" /> Create My Digital Card
               </button>
             </div>
           ) : (

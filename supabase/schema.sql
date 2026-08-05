@@ -39,6 +39,56 @@ drop policy if exists "admins read all roles" on public.user_roles;
 create policy "admins read all roles" on public.user_roles
   for select to authenticated using (public.has_role(auth.uid(), 'admin'));
 
+-- ---------- PROFILES (client accounts) ----------
+create table if not exists public.profiles (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid references auth.users(id) on delete cascade unique,
+  full_name text not null,
+  email text not null,
+  phone text,
+  created_at timestamp with time zone default now()
+);
+
+grant select, insert, update, delete on public.profiles to authenticated;
+grant all on public.profiles to service_role;
+alter table public.profiles enable row level security;
+
+drop policy if exists "users read own profile" on public.profiles;
+create policy "users read own profile" on public.profiles
+  for select to authenticated using (auth.uid() = user_id or public.has_role(auth.uid(), 'admin'));
+
+drop policy if exists "users update own profile" on public.profiles;
+create policy "users update own profile" on public.profiles
+  for update to authenticated using (auth.uid() = user_id or public.has_role(auth.uid(), 'admin'));
+
+drop policy if exists "admins insert profiles" on public.profiles;
+create policy "admins insert profiles" on public.profiles
+  for insert to authenticated with check (auth.uid() = user_id or public.has_role(auth.uid(), 'admin'));
+
+drop policy if exists "admins delete profiles" on public.profiles;
+create policy "admins delete profiles" on public.profiles
+  for delete to authenticated using (public.has_role(auth.uid(), 'admin'));
+
+-- Auto-create profile on auth user creation
+create or replace function public.handle_new_user()
+returns trigger as $$
+begin
+  insert into public.profiles (user_id, full_name, email)
+  values (
+    new.id,
+    coalesce(new.raw_user_meta_data->>'full_name', split_part(new.email, '@', 1)),
+    new.email
+  )
+  on conflict (user_id) do nothing;
+  return new;
+end;
+$$ language plpgsql security definer;
+
+drop trigger if exists on_auth_user_created on auth.users;
+create trigger on_auth_user_created
+  after insert on auth.users
+  for each row execute procedure public.handle_new_user();
+
 -- ---------- CARDS ----------
 create table if not exists public.cards (
   id uuid primary key default gen_random_uuid(),

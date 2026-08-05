@@ -7,7 +7,11 @@ export const Route = createFileRoute("/api/vcard/$slug")({
   server: {
     handlers: {
       GET: async ({ params, request }) => {
-        const client = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+        const apiKey =
+          (typeof process !== "undefined" && process.env?.SUPABASE_SERVICE_ROLE_KEY) ||
+          SUPABASE_ANON_KEY;
+
+        const client = createClient(SUPABASE_URL, apiKey, {
           auth: { persistSession: false, autoRefreshToken: false },
         });
 
