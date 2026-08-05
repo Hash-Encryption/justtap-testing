@@ -23,11 +23,20 @@ export function CardEditor({ draft, setDraft, userId, isNew, onSaved }: Props) {
   const setSocial = (key: string, value: string) =>
     setDraft({ ...draft, social_links: { ...(draft.social_links ?? {}), [key]: value } });
 
-  async function save() {
-    if (!draft.full_name.trim()) return toast.error("Full name is required");
-    if (!draft.phone.trim()) return toast.error("Phone number is required");
+  async function save(): Promise<void> {
+    if (!draft.full_name.trim()) {
+      toast.error("Full name is required");
+      return;
+    }
+    if (!draft.phone.trim()) {
+      toast.error("Phone number is required");
+      return;
+    }
     const slug = slugify(draft.slug || draft.full_name);
-    if (!slug) return toast.error("A valid card link (slug) is required");
+    if (!slug) {
+      toast.error("A valid card link (slug) is required");
+      return;
+    }
 
     setSaving(true);
     const payload = {
