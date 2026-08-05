@@ -29,7 +29,7 @@ function AuthPage() {
     });
   }, [navigate]);
 
-  async function submit(e: React.FormEvent) {
+  async function submit(e: React.FormEvent): Promise<void> {
     e.preventDefault();
     setBusy(true);
     if (mode === "signup") {
@@ -39,13 +39,22 @@ function AuthPage() {
         options: { emailRedirectTo: window.location.origin + "/dashboard" },
       });
       setBusy(false);
-      if (error) return toast.error(error.message);
-      if (!data.session) return toast.success("Check your email to confirm your account.");
+      if (error) {
+        toast.error(error.message);
+        return;
+      }
+      if (!data.session) {
+        toast.success("Check your email to confirm your account.");
+        return;
+      }
       navigate({ to: "/dashboard" });
     } else {
       const { error } = await supabase.auth.signInWithPassword({ email, password });
       setBusy(false);
-      if (error) return toast.error(error.message);
+      if (error) {
+        toast.error(error.message);
+        return;
+      }
       navigate({ to: "/dashboard" });
     }
   }
