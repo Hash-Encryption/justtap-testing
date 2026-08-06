@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { BarChart3, Inbox, LayoutGrid, Loader2, LogOut, Pencil, QrCode, Shield } from "lucide-react";
+import { toast } from "sonner";
 import { supabase } from "@/lib/supabase";
 import { emptyCard, type Card } from "@/lib/card";
 import { useAuth, useIsAdmin } from "@/hooks/useAuth";
@@ -8,6 +9,9 @@ import { CardEditor } from "@/components/dashboard/CardEditor";
 import { AnalyticsTab } from "@/components/dashboard/AnalyticsTab";
 import { LeadsTab } from "@/components/dashboard/LeadsTab";
 import { QrTab } from "@/components/dashboard/QrTab";
+
+import { useTranslation } from "@/lib/i18n";
+import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 
 export const Route = createFileRoute("/dashboard")({
   ssr: false,
@@ -18,7 +22,7 @@ export const Route = createFileRoute("/dashboard")({
         name: "description",
         content: "Design your NFC digital business card, track scans, read leads and download your QR code.",
       },
-      { property: "og:title", content: "Card dashboard — Tapt" },
+      { property: "og:title", content: "Card dashboard — JustTap" },
       { property: "og:description", content: "Live editor, analytics, leads and QR codes for your digital business card." },
     ],
   }),
@@ -28,6 +32,7 @@ export const Route = createFileRoute("/dashboard")({
 type Tab = "card" | "analytics" | "leads" | "qr";
 
 function Dashboard() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const { user, loading } = useAuth();
   const isAdmin = useIsAdmin(user?.id);
@@ -44,21 +49,91 @@ function Dashboard() {
   useEffect(() => {
     if (!user) return;
     let cancelled = false;
-    supabase
-      .from("cards")
-      .select("*")
-      .eq("user_id", user.id)
-      .order("created_at", { ascending: true })
-      .limit(1)
-      .maybeSingle()
-      .then(({ data }) => {
-        if (cancelled) return;
-        const existing = (data as Card | null) ?? null;
-        setCard(existing);
-        setDraft(existing ?? { ...emptyCard, user_id: user.id });
-        setEditing(false);
-        setFetching(false);
-      });
+
+    async function loadUserCard() {
+      if (!user) return;
+      // 1. Check for pending guest draft to claim
+      let guestPayload: Card | null = null;
+      try {
+        const stored =
+          localStorage.getItem("justtap_guest_pending_card") ||
+          sessionStorage.getItem("justtap_guest_pending_card");
+        if (stored) {
+          const parsed = JSON.parse(stored);
+          if (parsed?.card?.full_name && parsed?.card?.phone) {
+            guestPayload = parsed.card;
+          }
+        }
+      } catch {}
+
+      // Fetch user's existing cards
+      const { data } = await supabase
+        .from("cards")
+        .select("*")
+        .eq("user_id", user.id)
+        .order("created_at", { ascending: true })
+        .limit(1)
+        .maybeSingle();
+
+      if (cancelled) return;
+      const existing = (data as Card | null) ?? null;
+
+      // If user has a guest draft and no published card yet, auto-publish guest draft
+      if (guestPayload && !existing) {
+        const payload = {
+          user_id: user.id,
+          slug: guestPayload.slug,
+          full_name: guestPayload.full_name.trim(),
+          phone: guestPayload.phone.trim(),
+          email: guestPayload.email || null,
+          title: guestPayload.title || null,
+          company: guestPayload.company || null,
+          bio: guestPayload.bio || null,
+          avatar_url: guestPayload.avatar_url,
+          logo_url: guestPayload.logo_url,
+          show_logo_badge: guestPayload.show_logo_badge,
+          header_pattern: guestPayload.header_pattern,
+          accent_color: guestPayload.accent_color,
+          bg_color: guestPayload.bg_color,
+          whatsapp_phone: guestPayload.whatsapp_phone || null,
+          whatsapp_message: guestPayload.whatsapp_message || null,
+          enable_arabic: guestPayload.enable_arabic,
+          full_name_ar: guestPayload.full_name_ar || null,
+          title_ar: guestPayload.title_ar || null,
+          bio_ar: guestPayload.bio_ar || null,
+          social_links: guestPayload.social_links ?? {},
+        };
+
+        const { data: created, error } = await supabase
+          .from("cards")
+          .insert(payload)
+          .select()
+          .single();
+
+        try {
+          localStorage.removeItem("justtap_guest_pending_card");
+          sessionStorage.removeItem("justtap_guest_pending_card");
+        } catch {}
+
+        if (!error && created) {
+          const published = created as Card;
+          setCard(published);
+          setDraft(published);
+          setEditing(false);
+          setFetching(false);
+          toast.success("Your digital card has been published and linked to your profile!");
+          return;
+        }
+      }
+
+      setCard(existing);
+      setDraft(existing ?? { ...emptyCard, user_id: user.id });
+      setEditing(false);
+      setFetching(false);
+    }
+
+    void loadUserCard();
+
     return () => {
       cancelled = true;
     };
@@ -78,10 +153,10 @@ function Dashboard() {
   }
 
   const tabs: { id: Tab; label: string; icon: React.ReactNode }[] = [
-    { id: "card", label: "My card", icon: <LayoutGrid className="h-4 w-4" /> },
-    { id: "analytics", label: "Analytics", icon: <BarChart3 className="h-4 w-4" /> },
-    { id: "leads", label: "Leads", icon: <Inbox className="h-4 w-4" /> },
-    { id: "qr", label: "QR code", icon: <QrCode className="h-4 w-4" /> },
+    { id: "card", label: t("myCardTab"), icon: <LayoutGrid className="h-4 w-4" /> },
+    { id: "analytics", label: t("analyticsTab"), icon: <BarChart3 className="h-4 w-4" /> },
+    { id: "leads", label: t("leadsTab"), icon: <Inbox className="h-4 w-4" /> },
+    { id: "qr", label: t("qrCodeTab"), icon: <QrCode className="h-4 w-4" /> },
   ];
 
   return (
@@ -89,15 +164,16 @@ function Dashboard() {
       <header className="sticky top-0 z-30 border-b border-border bg-background/80 backdrop-blur-xl">
         <div className="mx-auto flex max-w-3xl items-center justify-between px-5 py-3.5">
           <Link to="/" className="font-display text-base font-bold">
-            tapt<span className="text-primary">.</span>
+            {t("appName")}<span className="text-primary">.</span>
           </Link>
           <div className="flex items-center gap-1.5">
+            <LanguageSwitcher />
             {isAdmin && (
               <Link
                 to="/admin"
                 className="flex items-center gap-1.5 rounded-full border border-border px-3 py-1.5 text-xs"
               >
-                <Shield className="h-3.5 w-3.5" /> Admin
+                <Shield className="h-3.5 w-3.5" /> {t("adminPortal")}
               </Link>
             )}
             <button
@@ -105,7 +181,7 @@ function Dashboard() {
               onClick={() => void signOut()}
               className="flex items-center gap-1.5 rounded-full border border-border px-3 py-1.5 text-xs text-muted-foreground hover:text-foreground"
             >
-              <LogOut className="h-3.5 w-3.5" /> Sign out
+              <LogOut className="h-3.5 w-3.5" /> {t("signOut")}
             </button>
           </div>
         </div>
@@ -176,7 +252,7 @@ function Dashboard() {
             <CardEditor
               draft={draft}
               setDraft={setDraft}
-              userId={user.id}
+              userId={user?.id ?? "guest"}
               isNew={!card}
               onSaved={(saved) => {
                 setCard(saved);

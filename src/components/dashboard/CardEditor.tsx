@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { ArrowUp, Check, ExternalLink, Loader2, Save } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/lib/supabase";
@@ -6,6 +6,8 @@ import { COLOR_PRESETS, PATTERNS, slugify, type Card, type HeaderPattern } from 
 import { CardView } from "@/components/card/CardView";
 import { PhoneFrame } from "./PhoneFrame";
 import { Dropzone } from "./Dropzone";
+
+import { useTranslation } from "@/lib/i18n";
 
 type Props = {
   draft: Card;
@@ -16,8 +18,52 @@ type Props = {
 };
 
 export function CardEditor({ draft, setDraft, userId, isNew, onSaved }: Props) {
+  const { t } = useTranslation();
   const [saving, setSaving] = useState(false);
   const [showArabic, setShowArabic] = useState(draft.enable_arabic);
+  const [draftRestored, setDraftRestored] = useState(false);
+  const [lastAutoSaved, setLastAutoSaved] = useState<string | null>(null);
+
+  const draftKey = `justtap_card_draft_${userId}`;
+  const THREE_DAYS_MS = 3 * 24 * 60 * 60 * 1000;
+
+  // Restore active draft or purge if inactive for > 3 days
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem(draftKey) || sessionStorage.getItem(draftKey);
+      if (stored) {
+        const parsed = JSON.parse(stored) as { card?: Card; updatedAt?: number } | Card;
+        const cardData = "card" in parsed && parsed.card ? parsed.card : (parsed as Card);
+        const updatedAt = "updatedAt" in parsed && typeof parsed.updatedAt === "number" ? parsed.updatedAt : null;
+
+        // Purge draft if inactive for more than 3 days
+        if (updatedAt && Date.now() - updatedAt > THREE_DAYS_MS) {
+          localStorage.removeItem(draftKey);
+          sessionStorage.removeItem(draftKey);
+        } else if (cardData && (cardData.full_name || cardData.phone || cardData.title || cardData.bio)) {
+          setDraft(cardData);
+          setShowArabic(cardData.enable_arabic);
+          setDraftRestored(true);
+          toast.info("Restored your active draft");
+        }
+      }
+    } catch {
+      // Ignore JSON parse errors
+    }
+  }, [userId, draftKey, setDraft, THREE_DAYS_MS]);
+
+  // Real-time auto-save draft with timestamp
+  useEffect(() => {
+    try {
+      const payload = JSON.stringify({ card: draft, updatedAt: Date.now() });
+      localStorage.setItem(draftKey, payload);
+      sessionStorage.setItem(draftKey, payload);
+      const now = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+      setLastAutoSaved(now);
+    } catch {
+      // Ignore storage errors
+    }
+  }, [draft, draftKey]);
 
   const set = <K extends keyof Card>(key: K, value: Card[K]) => setDraft({ ...draft, [key]: value });
   const setSocial = (key: string, value: string) =>
@@ -34,7 +80,7 @@ export function CardEditor({ draft, setDraft, userId, isNew, onSaved }: Props) {
     }
     const slug = slugify(draft.slug || draft.full_name);
     if (!slug) {
-      toast.error("A valid card link (slug) is required");
+      toast.error("A valid nickname is required");
       return;
     }
 
@@ -71,16 +117,43 @@ export function CardEditor({ draft, setDraft, userId, isNew, onSaved }: Props) {
     setSaving(false);
     if (error) {
       toast.error(
-        error.code === "23505" ? "That card link is already taken — try another." : error.message,
+        error.code === "23505" ? "That nickname is already taken — try another." : error.message,
       );
       return;
+    }
+    // Remove local draft upon successful database save
+    try {
+      localStorage.removeItem(draftKey);
+      sessionStorage.removeItem(draftKey);
+    } catch {
+      // Ignore
     }
     toast.success(isNew ? "Card published!" : "Changes saved");
     onSaved(data as Card);
   }
 
   return (
-    <div className="relative">
+    <div className="relative pb-16">
+      {draftRestored && (
+        <div className="mb-4 flex items-center justify-between rounded-xl bg-primary/10 px-4 py-2.5 text-xs font-medium text-primary">
+          <span>Loaded your auto-saved draft from browser storage.</span>
+          <button
+            type="button"
+            onClick={() => {
+              try {
+                localStorage.removeItem(draftKey);
+                sessionStorage.removeItem(draftKey);
+              } catch {}
+              setDraftRestored(false);
+            }}
+            aria-label="Dismiss draft notification"
+            className="underline opacity-80 hover:opacity-100"
+          >
+            Clear draft
+          </button>
+        </div>
+      )}
+
       {/* LIVE PREVIEW */}
       <div id="live-preview" className="scroll-mt-24">
         <PhoneFrame>
@@ -110,8 +183,8 @@ export function CardEditor({ draft, setDraft, userId, isNew, onSaved }: Props) {
       </div>
 
       {/* STYLE PANEL */}
-      <Section title="Quick styling">
-        <Field label="Accent color">
+      <Section title={t("quickStyling")}>
+        <Field label={t("accentColor")}>
           <div className="flex flex-wrap items-center gap-2">
             {COLOR_PRESETS.map((p) => (
               <button
@@ -139,7 +212,7 @@ export function CardEditor({ draft, setDraft, userId, isNew, onSaved }: Props) {
           </div>
         </Field>
 
-        <Field label="Card background">
+        <Field label={t("cardBackground")}>
           <div className="flex items-center gap-3">
             <input
               type="color"
@@ -155,7 +228,7 @@ export function CardEditor({ draft, setDraft, userId, isNew, onSaved }: Props) {
           </div>
         </Field>
 
-        <Field label="Header pattern">
+        <Field label={t("headerPattern")}>
           <div className="flex gap-2">
             {PATTERNS.map((p) => (
               <button
@@ -181,32 +254,32 @@ export function CardEditor({ draft, setDraft, userId, isNew, onSaved }: Props) {
             onChange={(e) => set("show_logo_badge", e.target.checked)}
             className="h-4 w-4 accent-primary"
           />
-          Show circular floating logo badge
+          {t("showLogoBadge")}
         </label>
       </Section>
 
-      <Section title="Personal info">
-        <Input label="Full name *" value={draft.full_name} onChange={(v) => set("full_name", v)} />
+      <Section title={t("personalInfo")}>
+        <Input label={t("fullName")} value={draft.full_name} onChange={(v) => set("full_name", v)} />
         <Input
-          label="Card link (slug)"
+          label={t("cardLink")}
           value={draft.slug}
           onChange={(v) => set("slug", slugify(v))}
           hint={`/c/${slugify(draft.slug || draft.full_name) || "your-name"}`}
         />
-        <Input label="Job title" value={draft.title ?? ""} onChange={(v) => set("title", v)} />
-        <Input label="Company" value={draft.company ?? ""} onChange={(v) => set("company", v)} />
-        <Input label="Bio" value={draft.bio ?? ""} onChange={(v) => set("bio", v)} textarea />
+        <Input label={t("jobTitle")} value={draft.title ?? ""} onChange={(v) => set("title", v)} />
+        <Input label={t("company")} value={draft.company ?? ""} onChange={(v) => set("company", v)} />
+        <Input label={t("bio")} value={draft.bio ?? ""} onChange={(v) => set("bio", v)} textarea />
       </Section>
 
-      <Section title="Photos & media">
+      <Section title={t("photosMedia")}>
         <Dropzone
-          label="Profile photo"
+          label={t("profilePhoto")}
           value={draft.avatar_url}
           userId={userId}
           onChange={(url) => set("avatar_url", url)}
         />
         <Dropzone
-          label="Logo badge (transparent PNG/SVG)"
+          label={t("logoBadge")}
           value={draft.logo_url}
           userId={userId}
           round
@@ -214,23 +287,23 @@ export function CardEditor({ draft, setDraft, userId, isNew, onSaved }: Props) {
         />
       </Section>
 
-      <Section title="Contact details">
-        <Input label="Phone number *" value={draft.phone} onChange={(v) => set("phone", v)} />
+      <Section title={t("contactDetails")}>
+        <Input label={t("phoneNumber")} value={draft.phone} onChange={(v) => set("phone", v)} />
         <Input
-          label="WhatsApp number"
+          label={t("whatsappNumber")}
           value={draft.whatsapp_phone ?? ""}
           onChange={(v) => set("whatsapp_phone", v)}
-          hint="Include country code, e.g. 966501234567"
+          hint="Auto-formats local numbers (e.g. 0501234567 -> 966501234567)"
         />
         <Input
-          label="WhatsApp prefilled message"
+          label={t("whatsappMessage")}
           value={draft.whatsapp_message ?? ""}
           onChange={(v) => set("whatsapp_message", v)}
         />
-        <Input label="Email address" value={draft.email ?? ""} onChange={(v) => set("email", v)} />
+        <Input label={t("emailAddress")} value={draft.email ?? ""} onChange={(v) => set("email", v)} />
       </Section>
 
-      <Section title="Social links">
+      <Section title={t("socialLinks")}>
         <Input
           label="LinkedIn"
           value={draft.social_links?.linkedin ?? ""}
@@ -253,7 +326,7 @@ export function CardEditor({ draft, setDraft, userId, isNew, onSaved }: Props) {
         />
       </Section>
 
-      <Section title="Bilingual (Arabic)">
+      <Section title={t("bilingualArabic")}>
         <label className="flex items-center gap-2.5 text-sm">
           <input
             type="checkbox"
@@ -264,22 +337,22 @@ export function CardEditor({ draft, setDraft, userId, isNew, onSaved }: Props) {
             }}
             className="h-4 w-4 accent-primary"
           />
-          Enable EN / AR switcher on the card
+          {t("enableArabicSwitch")}
         </label>
         {showArabic && (
           <div className="space-y-4 pt-2" dir="rtl">
             <Input
-              label="الاسم بالعربية"
+              label={t("arFullName")}
               value={draft.full_name_ar ?? ""}
               onChange={(v) => set("full_name_ar", v)}
             />
             <Input
-              label="المسمى الوظيفي"
+              label={t("arJobTitle")}
               value={draft.title_ar ?? ""}
               onChange={(v) => set("title_ar", v)}
             />
             <Input
-              label="نبذة"
+              label={t("arBio")}
               value={draft.bio_ar ?? ""}
               onChange={(v) => set("bio_ar", v)}
               textarea
@@ -288,15 +361,33 @@ export function CardEditor({ draft, setDraft, userId, isNew, onSaved }: Props) {
         )}
       </Section>
 
-      <button
-        type="button"
-        onClick={() =>
-          document.getElementById("live-preview")?.scrollIntoView({ behavior: "smooth" })
-        }
-        className="fixed bottom-6 right-6 z-40 flex items-center gap-2 rounded-full bg-primary px-4 py-3 text-xs font-semibold text-primary-foreground shadow-lg"
-      >
-        <ArrowUp className="h-4 w-4" /> Jump to preview
-      </button>
+      {/* STICKY BOTTOM SAVE & PREVIEW BAR */}
+      <div className="fixed bottom-5 left-1/2 z-40 flex -translate-x-1/2 items-center gap-3 rounded-full border border-border/80 bg-background/90 px-4 py-2.5 shadow-2xl backdrop-blur-xl transition-all">
+        {lastAutoSaved && (
+          <span className="hidden sm:flex items-center gap-1.5 text-[11px] text-muted-foreground">
+            <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
+            {t("autoSavedAt")} {lastAutoSaved}
+          </span>
+        )}
+        <button
+          type="button"
+          onClick={() => void save()}
+          disabled={saving}
+          className="flex items-center gap-1.5 rounded-full bg-primary px-4 py-2 text-xs font-semibold text-primary-foreground transition hover:opacity-90 disabled:opacity-60"
+        >
+          {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
+          {isNew ? t("publishCard") : t("saveChanges")}
+        </button>
+        <button
+          type="button"
+          onClick={() =>
+            document.getElementById("live-preview")?.scrollIntoView({ behavior: "smooth" })
+          }
+          className="flex items-center gap-1 rounded-full border border-border px-3 py-2 text-xs font-medium hover:bg-secondary"
+        >
+          <ArrowUp className="h-3.5 w-3.5" /> {t("previewCard")}
+        </button>
+      </div>
     </div>
   );
 }

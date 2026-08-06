@@ -1,16 +1,18 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { Nfc, QrCode, BarChart3, Inbox, Languages, Palette } from "lucide-react";
+import { useTranslation } from "@/lib/i18n";
+import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "Tapt — White-label NFC Digital Business Cards" },
+      { title: "JustTap — White-label NFC Digital Business Cards" },
       {
         name: "description",
         content:
           "Launch a fully white-label digital business card platform for NFC cards: live editor, lead capture, analytics and QR codes.",
       },
-      { property: "og:title", content: "Tapt — White-label NFC Digital Business Cards" },
+      { property: "og:title", content: "JustTap — White-label NFC Digital Business Cards" },
       {
         property: "og:description",
         content: "One tap. Contact saved. Multi-tenant digital business cards for NFC.",
@@ -20,58 +22,65 @@ export const Route = createFileRoute("/")({
   component: Landing,
 });
 
-const features = [
-  { Icon: Palette, title: "Live white-label editor", body: "Colors, header cuts, logo badge — every change renders instantly in a mobile preview." },
-  { Icon: Nfc, title: "Built for NFC", body: "Each card maps to a fast public /c/slug page tuned for a 375–430px tap-and-go screen." },
-  { Icon: Inbox, title: "Lead capture inbox", body: "Visitors exchange their details in a bottom sheet; you export them as CSV." },
-  { Icon: BarChart3, title: "Scan analytics", body: "Track page views versus contact downloads for every card you issue." },
-  { Icon: QrCode, title: "QR fallback", body: "Download a high-resolution PNG or SVG QR code pointing at the card." },
-  { Icon: Languages, title: "Bilingual EN / AR", body: "Optional Arabic fields with a full right-to-left layout switch." },
-];
-
 function Landing() {
+  const { t } = useTranslation();
+
+  const features = [
+    { Icon: Palette, title: t("feature1Title"), body: t("feature1Desc") },
+    { Icon: Nfc, title: t("feature2Title"), body: t("feature2Desc") },
+    { Icon: Inbox, title: t("feature3Title"), body: t("feature3Desc") },
+    { Icon: BarChart3, title: t("feature4Title"), body: t("feature4Desc") },
+    { Icon: QrCode, title: t("feature5Title"), body: t("feature5Desc") },
+    { Icon: Languages, title: t("feature6Title"), body: t("feature6Desc") },
+  ];
+
   return (
     <main className="min-h-screen grid-glow">
       <header className="mx-auto flex max-w-6xl items-center justify-between px-6 py-6">
         <span className="font-display text-lg font-bold tracking-tight">
-          tapt<span className="text-primary">.</span>
+          {t("appName")}<span className="text-primary">.</span>
         </span>
         <nav className="flex items-center gap-2 text-sm">
-          <Link to="/auth" className="rounded-full px-4 py-2 text-muted-foreground hover:text-foreground">
-            Sign in
+          <LanguageSwitcher />
+          <Link to="/auth" className="rounded-full px-3.5 py-2 font-medium text-muted-foreground hover:text-foreground">
+            {t("signIn")}
           </Link>
           <Link
-            to="/dashboard"
-            className="rounded-full bg-primary px-4 py-2 font-semibold text-primary-foreground"
+            to="/builder"
+            className="rounded-full bg-primary px-4 py-2 font-semibold text-primary-foreground transition hover:opacity-90"
           >
-            Open dashboard
+            {t("createCardFirst")}
           </Link>
         </nav>
       </header>
 
       <section className="mx-auto max-w-3xl px-6 pb-16 pt-10 text-center sm:pt-20">
         <span className="inline-flex items-center gap-2 rounded-full border border-border px-3 py-1 text-xs text-muted-foreground">
-          <Nfc className="h-3.5 w-3.5 text-primary" /> Multi-tenant · 100% white-label
+          <Nfc className="h-3.5 w-3.5 text-primary" /> {t("badgeText")}
         </span>
         <h1 className="mt-6 font-display text-4xl font-extrabold leading-[1.05] tracking-tight sm:text-6xl">
-          One tap and your contact is <span className="text-primary">already saved</span>.
+          {t("heroTitle")} <span className="text-primary">{t("heroTitleHighlight")}</span>.
         </h1>
         <p className="mx-auto mt-5 max-w-xl text-base text-muted-foreground">
-          A complete digital business card platform for physical NFC cards — client portal, live card
-          editor, lead inbox, analytics and an admin control panel.
+          {t("heroSubtitle")}
         </p>
-        <div className="mt-8 flex flex-wrap justify-center gap-3">
+
+        {/* 2 CLEAR CHOICES */}
+        <div className="mt-8 grid gap-3 sm:grid-cols-2 max-w-md mx-auto">
+          <Link
+            to="/builder"
+            className="glass flex flex-col items-center justify-center gap-1 rounded-2xl border-2 border-primary/50 bg-primary/10 p-5 text-center transition hover:scale-[1.02] hover:border-primary"
+          >
+            <span className="font-display text-base font-bold text-foreground">{t("choiceCreateTitle")}</span>
+            <span className="text-xs text-muted-foreground">{t("choiceCreateDesc")}</span>
+          </Link>
+
           <Link
             to="/auth"
-            className="rounded-full bg-primary px-6 py-3 text-sm font-semibold text-primary-foreground transition hover:opacity-90"
+            className="glass flex flex-col items-center justify-center gap-1 rounded-2xl border border-border p-5 text-center transition hover:scale-[1.02] hover:border-foreground/30"
           >
-            Create your card
-          </Link>
-          <Link
-            to="/admin"
-            className="rounded-full border border-border px-6 py-3 text-sm font-semibold transition hover:bg-secondary"
-          >
-            Admin portal
+            <span className="font-display text-base font-bold text-foreground">{t("choiceLoginTitle")}</span>
+            <span className="text-xs text-muted-foreground">{t("choiceLoginDesc")}</span>
           </Link>
         </div>
       </section>

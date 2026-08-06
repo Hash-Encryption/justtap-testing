@@ -116,3 +116,35 @@ export function buildVCard(card: Card) {
   ].filter(Boolean);
   return lines.join("\r\n");
 }
+
+/** Auto-formats WhatsApp phone numbers: removes leading 0s/00/+, auto-adds default country code (e.g. 966) if missing. */
+export function formatWhatsAppNumber(phone: string | null | undefined, defaultCountryCode = "966"): string {
+  if (!phone) return "";
+  let cleaned = phone.trim();
+
+  // Strip leading 00 or +
+  if (cleaned.startsWith("00")) {
+    cleaned = cleaned.slice(2);
+  } else if (cleaned.startsWith("+")) {
+    cleaned = cleaned.slice(1);
+  }
+
+  // Remove non-digit characters
+  cleaned = cleaned.replace(/[^0-9]/g, "");
+  if (!cleaned) return "";
+
+  // If starts with leading '0' (e.g. 0501234567), strip '0' and prepend country code
+  if (cleaned.startsWith("0")) {
+    cleaned = defaultCountryCode + cleaned.replace(/^0+/, "");
+  } else if (cleaned.length >= 8 && cleaned.length <= 10 && !cleaned.startsWith(defaultCountryCode)) {
+    // If entered without leading zero or country code (e.g. 501234567), prepend country code
+    cleaned = defaultCountryCode + cleaned;
+  }
+
+  // Fix country code followed by a local zero (e.g. 9660501234567 -> 966501234567)
+  if (cleaned.startsWith(`${defaultCountryCode}0`)) {
+    cleaned = defaultCountryCode + cleaned.slice(defaultCountryCode.length + 1);
+  }
+
+  return cleaned;
+}

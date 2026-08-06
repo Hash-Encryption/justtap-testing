@@ -13,7 +13,7 @@ import {
 import { toast } from "sonner";
 import { HeaderCut } from "./HeaderCut";
 import { supabase } from "@/lib/supabase";
-import { readableOn, type Card } from "@/lib/card";
+import { formatWhatsAppNumber, readableOn, type Card } from "@/lib/card";
 import {
   Drawer,
   DrawerContent,
@@ -98,8 +98,10 @@ export function CardView({ card, preview = false }: Props) {
     window.location.href = `/api/vcard/${card.slug}`;
   }
 
-  const waHref = card.whatsapp_phone
-    ? `https://wa.me/${card.whatsapp_phone.replace(/[^0-9]/g, "")}?text=${encodeURIComponent(
+  const formattedWaNumber = formatWhatsAppNumber(card.whatsapp_phone || card.phone);
+
+  const waHref = formattedWaNumber
+    ? `https://wa.me/${formattedWaNumber}?text=${encodeURIComponent(
         card.whatsapp_message || "",
       )}`
     : null;

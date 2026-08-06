@@ -8,7 +8,7 @@ export const Route = createFileRoute("/api/vcard/$slug")({
     handlers: {
       GET: async ({ params, request }) => {
         const apiKey =
-          (typeof process !== "undefined" && process.env?.SUPABASE_SERVICE_ROLE_KEY) ||
+          (typeof process !== "undefined" && process.env?.["SUPABASE_SERVICE_ROLE_KEY"]) ||
           SUPABASE_ANON_KEY;
 
         const client = createClient(SUPABASE_URL, apiKey, {

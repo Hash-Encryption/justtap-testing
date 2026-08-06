@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AdminRouteImport } from './routes/admin'
 import { Route as AuthRouteImport } from './routes/auth'
+import { Route as BuilderRouteImport } from './routes/builder'
 import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as CSlugRouteImport } from './routes/c.$slug'
 import { Route as ApiVcardSlugRouteImport } from './routes/api/vcard.$slug'
@@ -29,6 +30,11 @@ const AdminRoute = AdminRouteImport.update({
 const AuthRoute = AuthRouteImport.update({
   id: '/auth',
   path: '/auth',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const BuilderRoute = BuilderRouteImport.update({
+  id: '/builder',
+  path: '/builder',
   getParentRoute: () => rootRouteImport,
 } as any)
 const DashboardRoute = DashboardRouteImport.update({
@@ -51,6 +57,7 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/admin': typeof AdminRoute
   '/auth': typeof AuthRoute
+  '/builder': typeof BuilderRoute
   '/dashboard': typeof DashboardRoute
   '/c/$slug': typeof CSlugRoute
   '/api/vcard/$slug': typeof ApiVcardSlugRoute
@@ -59,6 +66,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/admin': typeof AdminRoute
   '/auth': typeof AuthRoute
+  '/builder': typeof BuilderRoute
   '/dashboard': typeof DashboardRoute
   '/c/$slug': typeof CSlugRoute
   '/api/vcard/$slug': typeof ApiVcardSlugRoute
@@ -68,6 +76,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/admin': typeof AdminRoute
   '/auth': typeof AuthRoute
+  '/builder': typeof BuilderRoute
   '/dashboard': typeof DashboardRoute
   '/c/$slug': typeof CSlugRoute
   '/api/vcard/$slug': typeof ApiVcardSlugRoute
@@ -75,14 +84,28 @@ export interface FileRoutesById {
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
-    '/' | '/admin' | '/auth' | '/dashboard' | '/c/$slug' | '/api/vcard/$slug'
+    | '/'
+    | '/admin'
+    | '/auth'
+    | '/builder'
+    | '/dashboard'
+    | '/c/$slug'
+    | '/api/vcard/$slug'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/admin' | '/auth' | '/dashboard' | '/c/$slug' | '/api/vcard/$slug'
+  to:
+    | '/'
+    | '/admin'
+    | '/auth'
+    | '/builder'
+    | '/dashboard'
+    | '/c/$slug'
+    | '/api/vcard/$slug'
   id:
     | '__root__'
     | '/'
     | '/admin'
     | '/auth'
+    | '/builder'
     | '/dashboard'
     | '/c/$slug'
     | '/api/vcard/$slug'
@@ -92,6 +115,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AdminRoute: typeof AdminRoute
   AuthRoute: typeof AuthRoute
+  BuilderRoute: typeof BuilderRoute
   DashboardRoute: typeof DashboardRoute
   CSlugRoute: typeof CSlugRoute
   ApiVcardSlugRoute: typeof ApiVcardSlugRoute
@@ -118,6 +142,13 @@ declare module '@tanstack/react-router' {
       path: '/auth'
       fullPath: '/auth'
       preLoaderRoute: typeof AuthRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/builder': {
+      id: '/builder'
+      path: '/builder'
+      fullPath: '/builder'
+      preLoaderRoute: typeof BuilderRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/dashboard': {
@@ -148,6 +179,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AdminRoute: AdminRoute,
   AuthRoute: AuthRoute,
+  BuilderRoute: BuilderRoute,
   DashboardRoute: DashboardRoute,
   CSlugRoute: CSlugRoute,
   ApiVcardSlugRoute: ApiVcardSlugRoute,
