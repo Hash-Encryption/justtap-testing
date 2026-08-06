@@ -60,8 +60,9 @@ function Dashboard() {
           sessionStorage.getItem("justtap_guest_pending_card");
         if (stored) {
           const parsed = JSON.parse(stored);
-          if (parsed?.card?.full_name && parsed?.card?.phone) {
-            guestPayload = parsed.card;
+          const cardObj = parsed?.card ? parsed.card : parsed;
+          if (cardObj?.full_name && cardObj?.phone) {
+            guestPayload = cardObj as Card;
           }
         }
       } catch {}
@@ -80,12 +81,13 @@ function Dashboard() {
 
       // If user has a guest draft and no published card yet, auto-publish guest draft
       if (guestPayload && !existing) {
+        const slugToUse = guestPayload.slug;
         const payload = {
           user_id: user.id,
-          slug: guestPayload.slug,
+          slug: slugToUse,
           full_name: guestPayload.full_name.trim(),
           phone: guestPayload.phone.trim(),
-          email: guestPayload.email || null,
+          email: guestPayload.email || user.email || null,
           title: guestPayload.title || null,
           company: guestPayload.company || null,
           bio: guestPayload.bio || null,
@@ -104,18 +106,26 @@ function Dashboard() {
           social_links: guestPayload.social_links ?? {},
         };
 
-        const { data: created, error } = await supabase
+        let { data: created, error } = await supabase
           .from("cards")
           .insert(payload)
           .select()
           .single();
 
-        try {
-          localStorage.removeItem("justtap_guest_pending_card");
-          sessionStorage.removeItem("justtap_guest_pending_card");
-        } catch {}
+        // If nickname is taken, append random suffix so guest card claiming doesn't fail
+        if (error && error.code === "23505") {
+          payload.slug = `${slugToUse}-${Math.floor(1000 + Math.random() * 9000)}`;
+          const retry = await supabase.from("cards").insert(payload).select().single();
+          created = retry.data;
+          error = retry.error;
+        }
 
         if (!error && created) {
+          try {
+            localStorage.removeItem("justtap_guest_pending_card");
+            sessionStorage.removeItem("justtap_guest_pending_card");
+          } catch {}
+
           const published = created as Card;
           setCard(published);
           setDraft(published);
@@ -127,7 +137,7 @@ function Dashboard() {
       }
 
       setCard(existing);
-      setDraft(existing ?? { ...emptyCard, user_id: user.id });
+      setDraft(existing ?? (guestPayload ? { ...guestPayload, user_id: user.id } : { ...emptyCard, user_id: user.id }));
       setEditing(false);
       setFetching(false);
     }

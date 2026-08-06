@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { ArrowUp, Check, ExternalLink, Loader2, Save } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/lib/supabase";
@@ -24,11 +24,15 @@ export function CardEditor({ draft, setDraft, userId, isNew, onSaved }: Props) {
   const [draftRestored, setDraftRestored] = useState(false);
   const [lastAutoSaved, setLastAutoSaved] = useState<string | null>(null);
 
-  const draftKey = `justtap_card_draft_${userId}`;
+  const draftKey = userId === "guest" ? "justtap_guest_pending_card" : `justtap_card_draft_${userId}`;
   const THREE_DAYS_MS = 3 * 24 * 60 * 60 * 1000;
+  const restoredKeyRef = useRef<string | null>(null);
 
-  // Restore active draft or purge if inactive for > 3 days
+  // Restore active draft or purge if inactive for > 3 days (Runs ONCE per draftKey)
   useEffect(() => {
+    if (restoredKeyRef.current === draftKey) return;
+    restoredKeyRef.current = draftKey;
+
     try {
       const stored = localStorage.getItem(draftKey) || sessionStorage.getItem(draftKey);
       if (stored) {
@@ -41,19 +45,25 @@ export function CardEditor({ draft, setDraft, userId, isNew, onSaved }: Props) {
           localStorage.removeItem(draftKey);
           sessionStorage.removeItem(draftKey);
         } else if (cardData && (cardData.full_name || cardData.phone || cardData.title || cardData.bio)) {
-          setDraft(cardData);
-          setShowArabic(cardData.enable_arabic);
-          setDraftRestored(true);
-          toast.info("Restored your active draft");
+          // Only trigger state update and toast if the current draft prop is empty
+          const isCurrentDraftEmpty = !draft.full_name && !draft.phone && !draft.title && !draft.bio;
+          if (isCurrentDraftEmpty) {
+            setDraft(cardData);
+            setShowArabic(cardData.enable_arabic);
+            setDraftRestored(true);
+            toast.info("Restored your active draft");
+          }
         }
       }
     } catch {
       // Ignore JSON parse errors
     }
-  }, [userId, draftKey, setDraft, THREE_DAYS_MS]);
+  }, [draftKey]);
 
   // Real-time auto-save draft with timestamp
   useEffect(() => {
+    if (!draft.full_name && !draft.phone && !draft.title && !draft.bio) return;
+
     try {
       const payload = JSON.stringify({ card: draft, updatedAt: Date.now() });
       localStorage.setItem(draftKey, payload);
@@ -81,6 +91,16 @@ export function CardEditor({ draft, setDraft, userId, isNew, onSaved }: Props) {
     const slug = slugify(draft.slug || draft.full_name);
     if (!slug) {
       toast.error("A valid nickname is required");
+      return;
+    }
+
+    if (userId === "guest") {
+      try {
+        const payloadStr = JSON.stringify({ card: { ...draft, slug }, updatedAt: Date.now() });
+        localStorage.setItem("justtap_guest_pending_card", payloadStr);
+        sessionStorage.setItem("justtap_guest_pending_card", payloadStr);
+      } catch {}
+      onSaved({ ...draft, slug });
       return;
     }
 

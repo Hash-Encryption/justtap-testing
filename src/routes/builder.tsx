@@ -25,10 +25,13 @@ function BuilderPage() {
   const navigate = useNavigate();
   const [draft, setDraft] = useState<Card>(() => {
     try {
-      const stored = localStorage.getItem(GUEST_DRAFT_KEY);
+      const stored = localStorage.getItem(GUEST_DRAFT_KEY) || sessionStorage.getItem(GUEST_DRAFT_KEY);
       if (stored) {
         const parsed = JSON.parse(stored);
-        if (parsed?.card) return parsed.card;
+        const cardData = parsed?.card ? parsed.card : parsed;
+        if (cardData && (cardData.full_name || cardData.phone || cardData.title || cardData.bio)) {
+          return cardData as Card;
+        }
       }
     } catch {}
     return { ...emptyCard, user_id: "guest" };
@@ -93,12 +96,7 @@ function BuilderPage() {
 
         <CardEditor
           draft={draft}
-          setDraft={(newDraft) => {
-            setDraft(newDraft);
-            try {
-              localStorage.setItem(GUEST_DRAFT_KEY, JSON.stringify({ card: newDraft, updatedAt: Date.now() }));
-            } catch {}
-          }}
+          setDraft={setDraft}
           userId="guest"
           isNew={true}
           onSaved={handleGuestSave}
