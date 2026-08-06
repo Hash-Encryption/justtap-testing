@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { BarChart3, Inbox, LayoutGrid, Loader2, LogOut, Pencil, QrCode, Shield } from "lucide-react";
 import { toast } from "sonner";
-import { supabase } from "@/lib/supabase";
+import { STORAGE_BUCKET, supabase } from "@/lib/supabase";
 import { emptyCard, type Card } from "@/lib/card";
 import { useAuth, useIsAdmin } from "@/hooks/useAuth";
 import { CardEditor } from "@/components/dashboard/CardEditor";
@@ -12,6 +12,34 @@ import { QrTab } from "@/components/dashboard/QrTab";
 
 import { useTranslation } from "@/lib/i18n";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
+
+async function uploadDataUrlIfNeeded(
+  dataUrl: string | null | undefined,
+  userId: string,
+  prefix: string
+): Promise<string | null> {
+  if (!dataUrl) return null;
+  if (!dataUrl.startsWith("data:")) return dataUrl;
+
+  try {
+    const res = await fetch(dataUrl);
+    const blob = await res.blob();
+    const mime = dataUrl.split(";")[0].split(":")[1] || "image/png";
+    const ext = mime.split("/")[1] || "png";
+    const path = `${userId}/${prefix}_${crypto.randomUUID()}.${ext}`;
+    const { error } = await supabase.storage
+      .from(STORAGE_BUCKET)
+      .upload(path, blob, { contentType: mime, upsert: true, cacheControl: "3600" });
+
+    if (!error) {
+      const { data } = supabase.storage.from(STORAGE_BUCKET).getPublicUrl(path);
+      return data.publicUrl;
+    }
+  } catch (err) {
+    console.error("Failed to upload guest asset to storage:", err);
+  }
+  return dataUrl;
+}
 
 export const Route = createFileRoute("/dashboard")({
   ssr: false,
@@ -82,6 +110,9 @@ function Dashboard() {
       // If user has a guest draft and no published card yet, auto-publish guest draft
       if (guestPayload && !existing) {
         const slugToUse = guestPayload.slug;
+        const avatar_url = await uploadDataUrlIfNeeded(guestPayload.avatar_url, user.id, "avatar");
+        const logo_url = await uploadDataUrlIfNeeded(guestPayload.logo_url, user.id, "logo");
+
         const payload = {
           user_id: user.id,
           slug: slugToUse,
@@ -91,8 +122,8 @@ function Dashboard() {
           title: guestPayload.title || null,
           company: guestPayload.company || null,
           bio: guestPayload.bio || null,
-          avatar_url: guestPayload.avatar_url,
-          logo_url: guestPayload.logo_url,
+          avatar_url,
+          logo_url,
           show_logo_badge: guestPayload.show_logo_badge,
           header_pattern: guestPayload.header_pattern,
           accent_color: guestPayload.accent_color,

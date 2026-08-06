@@ -3,6 +3,42 @@ import { ImagePlus, Loader2, X } from "lucide-react";
 import { toast } from "sonner";
 import { STORAGE_BUCKET, supabase } from "@/lib/supabase";
 
+function compressImageToDataUrl(file: File, maxDim = 1000, quality = 0.85): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onload = (event) => {
+      const img = new Image();
+      img.src = event.target?.result as string;
+      img.onload = () => {
+        let { width, height } = img;
+        if (width > maxDim || height > maxDim) {
+          if (width > height) {
+            height = Math.round((height * maxDim) / width);
+            width = maxDim;
+          } else {
+            width = Math.round((width * maxDim) / height);
+            height = maxDim;
+          }
+        }
+        const canvas = document.createElement("canvas");
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext("2d");
+        if (!ctx) {
+          resolve(event.target?.result as string);
+          return;
+        }
+        ctx.drawImage(img, 0, 0, width, height);
+        const mimeType = file.type === "image/png" ? "image/png" : "image/jpeg";
+        resolve(canvas.toDataURL(mimeType, quality));
+      };
+      img.onerror = () => reject(new Error("Failed to load image"));
+    };
+    reader.onerror = (err) => reject(err);
+  });
+}
+
 export function Dropzone({
   label,
   value,
@@ -26,6 +62,20 @@ export function Dropzone({
       return;
     }
     setBusy(true);
+
+    if (!userId || userId === "guest") {
+      try {
+        const dataUrl = await compressImageToDataUrl(file);
+        onChange(dataUrl);
+        toast.success(`${label} attached`);
+      } catch {
+        toast.error("Failed to process image.");
+      } finally {
+        setBusy(false);
+      }
+      return;
+    }
+
     const ext = file.name.split(".").pop() || "png";
     const path = `${userId}/${crypto.randomUUID()}.${ext}`;
     const { error } = await supabase.storage
