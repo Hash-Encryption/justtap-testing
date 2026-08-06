@@ -70,6 +70,11 @@ function AuthPage() {
         toast.error(error.message);
         return;
       }
+      if (data.user && data.user.identities && data.user.identities.length === 0) {
+        toast.error("An account with this email already exists. Please sign in.");
+        setMode("signin");
+        return;
+      }
       if (!data.session) {
         toast.success("Check your email to confirm your account.");
         return;
