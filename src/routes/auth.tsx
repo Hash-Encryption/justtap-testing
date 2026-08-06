@@ -59,10 +59,11 @@ function AuthPage() {
     e.preventDefault();
     setBusy(true);
     if (mode === "signup") {
+      const redirectUrl = typeof window !== "undefined" ? `${window.location.origin}/dashboard` : undefined;
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
-        options: { emailRedirectTo: window.location.origin + "/dashboard" },
+        options: { emailRedirectTo: redirectUrl },
       });
       setBusy(false);
       if (error) {
