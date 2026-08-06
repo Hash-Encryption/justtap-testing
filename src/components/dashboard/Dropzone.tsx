@@ -63,32 +63,48 @@ export function Dropzone({
     }
     setBusy(true);
 
-    if (!userId || userId === "guest") {
-      try {
+    try {
+      // Check active client auth session
+      const { data } = await supabase.auth.getSession();
+      const authUser = data.session?.user;
+
+      if (!authUser || userId === "guest") {
         const dataUrl = await compressImageToDataUrl(file);
         onChange(dataUrl);
         toast.success(`${label} attached`);
+        return;
+      }
+
+      // Authenticated upload to authUser.id folder
+      const ext = file.name.split(".").pop() || "png";
+      const path = `${authUser.id}/${crypto.randomUUID()}.${ext}`;
+      const { error } = await supabase.storage
+        .from(STORAGE_BUCKET)
+        .upload(path, file, { upsert: true, cacheControl: "3600" });
+
+      if (error) {
+        console.warn("Storage upload failed, falling back to local data URL:", error);
+        const dataUrl = await compressImageToDataUrl(file);
+        onChange(dataUrl);
+        toast.success(`${label} saved locally`);
+        return;
+      }
+
+      const { data: publicUrlData } = supabase.storage.from(STORAGE_BUCKET).getPublicUrl(path);
+      onChange(publicUrlData.publicUrl);
+      toast.success(`${label} uploaded`);
+    } catch (err) {
+      console.error("Upload error:", err);
+      try {
+        const dataUrl = await compressImageToDataUrl(file);
+        onChange(dataUrl);
+        toast.success(`${label} saved locally`);
       } catch {
         toast.error("Failed to process image.");
-      } finally {
-        setBusy(false);
       }
-      return;
+    } finally {
+      setBusy(false);
     }
-
-    const ext = file.name.split(".").pop() || "png";
-    const path = `${userId}/${crypto.randomUUID()}.${ext}`;
-    const { error } = await supabase.storage
-      .from(STORAGE_BUCKET)
-      .upload(path, file, { upsert: true, cacheControl: "3600" });
-    setBusy(false);
-    if (error) {
-      toast.error(error.message);
-      return;
-    }
-    const { data } = supabase.storage.from(STORAGE_BUCKET).getPublicUrl(path);
-    onChange(data.publicUrl);
-    toast.success(`${label} uploaded`);
   }
 
   return (

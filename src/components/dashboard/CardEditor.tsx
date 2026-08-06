@@ -1,13 +1,41 @@
 import { useEffect, useState, useRef } from "react";
 import { ArrowUp, Check, ExternalLink, Loader2, Save } from "lucide-react";
 import { toast } from "sonner";
-import { supabase } from "@/lib/supabase";
+import { STORAGE_BUCKET, supabase } from "@/lib/supabase";
 import { COLOR_PRESETS, PATTERNS, slugify, type Card, type HeaderPattern } from "@/lib/card";
 import { CardView } from "@/components/card/CardView";
 import { PhoneFrame } from "./PhoneFrame";
 import { Dropzone } from "./Dropzone";
 
 import { useTranslation } from "@/lib/i18n";
+
+async function uploadDataUrlIfNeeded(
+  dataUrl: string | null | undefined,
+  userId: string,
+  prefix: string
+): Promise<string | null> {
+  if (!dataUrl) return null;
+  if (!dataUrl.startsWith("data:")) return dataUrl;
+
+  try {
+    const res = await fetch(dataUrl);
+    const blob = await res.blob();
+    const mime = dataUrl.split(";")[0].split(":")[1] || "image/png";
+    const ext = mime.split("/")[1] || "png";
+    const path = `${userId}/${prefix}_${crypto.randomUUID()}.${ext}`;
+    const { error } = await supabase.storage
+      .from(STORAGE_BUCKET)
+      .upload(path, blob, { contentType: mime, upsert: true, cacheControl: "3600" });
+
+    if (!error) {
+      const { data } = supabase.storage.from(STORAGE_BUCKET).getPublicUrl(path);
+      return data.publicUrl;
+    }
+  } catch (err) {
+    console.error("Failed to upload asset to storage:", err);
+  }
+  return dataUrl;
+}
 
 type Props = {
   draft: Card;
@@ -105,6 +133,9 @@ export function CardEditor({ draft, setDraft, userId, isNew, onSaved }: Props) {
     }
 
     setSaving(true);
+    const avatar_url = await uploadDataUrlIfNeeded(draft.avatar_url, userId, "avatar");
+    const logo_url = await uploadDataUrlIfNeeded(draft.logo_url, userId, "logo");
+
     const payload = {
       user_id: userId,
       slug,
@@ -114,8 +145,8 @@ export function CardEditor({ draft, setDraft, userId, isNew, onSaved }: Props) {
       title: draft.title || null,
       company: draft.company || null,
       bio: draft.bio || null,
-      avatar_url: draft.avatar_url,
-      logo_url: draft.logo_url,
+      avatar_url,
+      logo_url,
       show_logo_badge: draft.show_logo_badge,
       header_pattern: draft.header_pattern,
       accent_color: draft.accent_color,
