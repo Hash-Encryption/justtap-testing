@@ -7,6 +7,23 @@ export type SocialLinks = {
 
 export type HeaderPattern = "wave" | "diagonal" | "arch";
 
+export type PlanTier = "free" | "pro" | "enterprise";
+
+export type ProFeatures = {
+  video_url?: string | null;
+  pdf_url?: string | null;
+  pdf_label?: string | null;
+  booking_url?: string | null;
+  custom_cta_label?: string | null;
+  custom_cta_url?: string | null;
+  enable_wallet_pass?: boolean;
+  remove_branding?: boolean;
+  enable_email_alerts?: boolean;
+  notify_email?: string | null;
+  enable_lead_webhook?: boolean;
+  webhook_url?: string | null;
+};
+
 export type Card = {
   id: string;
   user_id: string;
@@ -30,6 +47,8 @@ export type Card = {
   title_ar: string | null;
   bio_ar: string | null;
   social_links: SocialLinks | null;
+  plan_tier?: PlanTier;
+  pro_features?: ProFeatures | null;
   is_active?: boolean;
   created_at?: string;
 };
@@ -48,6 +67,21 @@ export const PATTERNS: { value: HeaderPattern; label: string }[] = [
   { value: "diagonal", label: "Diagonal" },
   { value: "arch", label: "Arch" },
 ];
+
+export const defaultProFeatures: ProFeatures = {
+  video_url: "",
+  pdf_url: "",
+  pdf_label: "View Brochure / Menu (PDF)",
+  booking_url: "",
+  custom_cta_label: "Book Consultation",
+  custom_cta_url: "",
+  enable_wallet_pass: true,
+  remove_branding: false,
+  enable_email_alerts: true,
+  notify_email: "",
+  enable_lead_webhook: false,
+  webhook_url: "",
+};
 
 export const emptyCard: Card = {
   id: "",
@@ -72,6 +106,8 @@ export const emptyCard: Card = {
   title_ar: "",
   bio_ar: "",
   social_links: { linkedin: "", instagram: "", twitter: "", website: "" },
+  plan_tier: "free",
+  pro_features: defaultProFeatures,
 };
 
 export function slugify(input: string) {
@@ -82,6 +118,37 @@ export function slugify(input: string) {
     .replace(/\s+/g, "-")
     .replace(/-+/g, "-")
     .slice(0, 48);
+}
+
+/** Converts YouTube / Vimeo / Loom URLs to iframe embed URLs */
+export function getEmbedVideoUrl(url: string | null | undefined): string | null {
+  if (!url) return null;
+  const trimmed = url.trim();
+  if (!trimmed) return null;
+
+  // YouTube match (watch?v=, short link, or embed)
+  const ytMatch = trimmed.match(
+    new RegExp(
+      '(?:youtube\\.com/(?:[^/]+/.+/|(?:v|e(?:mbed)?)/|.*[?&]v=)|youtu\\.be/)([^"&?/\\s]{11})',
+    ),
+  );
+  if (ytMatch && ytMatch[1]) {
+    return `https://www.youtube-nocookie.com/embed/${ytMatch[1]}`;
+  }
+
+  // Loom match
+  const loomMatch = trimmed.match(new RegExp("loom\\.com/(?:share|embed)/([a-f0-9]+)"));
+  if (loomMatch && loomMatch[1]) {
+    return `https://www.loom.com/embed/${loomMatch[1]}`;
+  }
+
+  // Vimeo match
+  const vimeoMatch = trimmed.match(/vimeo\.com\/(?:video\/)?([0-9]+)/);
+  if (vimeoMatch && vimeoMatch[1]) {
+    return `https://player.vimeo.com/video/${vimeoMatch[1]}`;
+  }
+
+  return null;
 }
 
 /** Readable text color for a given hex background. */
@@ -118,7 +185,10 @@ export function buildVCard(card: Card) {
 }
 
 /** Auto-formats WhatsApp phone numbers: removes leading 0s/00/+, auto-adds default country code (e.g. 966) if missing. */
-export function formatWhatsAppNumber(phone: string | null | undefined, defaultCountryCode = "966"): string {
+export function formatWhatsAppNumber(
+  phone: string | null | undefined,
+  defaultCountryCode = "966",
+): string {
   if (!phone) return "";
   let cleaned = phone.trim();
 
@@ -136,7 +206,11 @@ export function formatWhatsAppNumber(phone: string | null | undefined, defaultCo
   // If starts with leading '0' (e.g. 0501234567), strip '0' and prepend country code
   if (cleaned.startsWith("0")) {
     cleaned = defaultCountryCode + cleaned.replace(/^0+/, "");
-  } else if (cleaned.length >= 8 && cleaned.length <= 10 && !cleaned.startsWith(defaultCountryCode)) {
+  } else if (
+    cleaned.length >= 8 &&
+    cleaned.length <= 10 &&
+    !cleaned.startsWith(defaultCountryCode)
+  ) {
     // If entered without leading zero or country code (e.g. 501234567), prepend country code
     cleaned = defaultCountryCode + cleaned;
   }

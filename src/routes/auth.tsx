@@ -14,12 +14,16 @@ export const Route = createFileRoute("/auth")({
   ssr: false,
   validateSearch: (search: Record<string, unknown>): AuthSearch => ({
     mode: typeof search["mode"] === "string" ? (search["mode"] as "signin" | "signup") : undefined,
-    claim_draft: search["claim_draft"] === true || search["claim_draft"] === "true" ? true : undefined,
+    claim_draft:
+      search["claim_draft"] === true || search["claim_draft"] === "true" ? true : undefined,
   }),
   head: () => ({
     meta: [
       { title: "Sign in — JustTap digital business cards" },
-      { name: "description", content: "Sign in or create an account to build and manage your NFC digital business card." },
+      {
+        name: "description",
+        content: "Sign in or create an account to build and manage your NFC digital business card.",
+      },
       { property: "og:title", content: "Sign in — JustTap" },
       { property: "og:description", content: "Access your digital business card dashboard." },
     ],
@@ -39,14 +43,18 @@ function AuthPage() {
 
   useEffect(() => {
     try {
-      const stored = localStorage.getItem("justtap_guest_pending_card") || sessionStorage.getItem("justtap_guest_pending_card");
+      const stored =
+        localStorage.getItem("justtap_guest_pending_card") ||
+        sessionStorage.getItem("justtap_guest_pending_card");
       if (stored) {
         const parsed = JSON.parse(stored);
         if (parsed?.card?.full_name) {
           setHasPendingDraft(true);
         }
       }
-    } catch {}
+    } catch {
+      /* ignore storage errors */
+    }
   }, []);
 
   useEffect(() => {
@@ -59,7 +67,8 @@ function AuthPage() {
     e.preventDefault();
     setBusy(true);
     if (mode === "signup") {
-      const redirectUrl = typeof window !== "undefined" ? `${window.location.origin}/dashboard` : undefined;
+      const redirectUrl =
+        typeof window !== "undefined" ? `${window.location.origin}/dashboard` : undefined;
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
@@ -96,7 +105,8 @@ function AuthPage() {
       <div className="glass w-full max-w-sm rounded-3xl p-7">
         <div className="flex items-center justify-between">
           <Link to="/" className="font-display text-lg font-bold">
-            {t("appName")}<span className="text-primary">.</span>
+            {t("appName")}
+            <span className="text-primary">.</span>
           </Link>
           <LanguageSwitcher />
         </div>

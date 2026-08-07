@@ -113,6 +113,8 @@ create table if not exists public.cards (
   title_ar text,
   bio_ar text,
   social_links jsonb default '{}'::jsonb,
+  plan_tier text default 'free',
+  pro_features jsonb default '{}'::jsonb,
   is_active boolean default true,
   created_at timestamp with time zone default now()
 );

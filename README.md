@@ -134,27 +134,27 @@ RLS POLICIES:
 
 - HERO PROFILE SECTION:
 
-  * Full-width profile photo at top (avatar_url).
+  - Full-width profile photo at top (avatar_url).
 
-  * SVG Header Cut Pattern at bottom of photo: Render 1 of 3 selectable SVG shapes based on `header_pattern` ('wave' curve, 'diagonal' sharp cut, or 'arch' pill curve). Fill SVG background with card `bg_color` and SVG stroke/accent layer with `accent_color`.
+  - SVG Header Cut Pattern at bottom of photo: Render 1 of 3 selectable SVG shapes based on `header_pattern` ('wave' curve, 'diagonal' sharp cut, or 'arch' pill curve). Fill SVG background with card `bg_color` and SVG stroke/accent layer with `accent_color`.
 
-  * Optional Floating Circular Logo Badge: Render transparent PNG/SVG logo in a 48px circle badge overlapping the right side of the header SVG pattern line (toggleable via `show_logo_badge`).
+  - Optional Floating Circular Logo Badge: Render transparent PNG/SVG logo in a 48px circle badge overlapping the right side of the header SVG pattern line (toggleable via `show_logo_badge`).
 
 - CARD BODY CONTENT:
 
-  * Full Name (Bold 24px), Job Title, Company Name, Bio paragraph.
+  - Full Name (Bold 24px), Job Title, Company Name, Bio paragraph.
 
-  * Direct Contact Rows: Phone (tel: link) and Email (mailto: link).
+  - Direct Contact Rows: Phone (tel: link) and Email (mailto: link).
 
-  * Social Links List: Clean vertical stack of icon buttons for LinkedIn, Instagram, X/Twitter, Website.
+  - Social Links List: Clean vertical stack of icon buttons for LinkedIn, Instagram, X/Twitter, Website.
 
 - FIXED BOTTOM FLOATING DOCK (Pinned to bottom of viewport with backdrop blur):
 
-  * LEFT BUTTON: Circular button [🤝] (48px x 48px, background color from accent_color or slate-800). Tapping opens a sleek Mobile Bottom Drawer Sheet for Lead Capture ("Exchange Info" modal with fields: Sender Name, Sender Phone, Short Note, and "Send My Info" submit button).
+  - LEFT BUTTON: Circular button [🤝] (48px x 48px, background color from accent_color or slate-800). Tapping opens a sleek Mobile Bottom Drawer Sheet for Lead Capture ("Exchange Info" modal with fields: Sender Name, Sender Phone, Short Note, and "Send My Info" submit button).
 
-  * CENTER BUTTON: Prominent rounded rectangle pill button [💾 SAVE CONTACT] (180px wide, 48px tall, filled with `accent_color` and white text). Tapping calls `/api/vcard/[slug]` to download the dynamic `.vcf` contact file and log a 'vcard_download' event.
+  - CENTER BUTTON: Prominent rounded rectangle pill button [💾 SAVE CONTACT] (180px wide, 48px tall, filled with `accent_color` and white text). Tapping calls `/api/vcard/[slug]` to download the dynamic `.vcf` contact file and log a 'vcard_download' event.
 
-  * RIGHT BUTTON: Circular button [💬] (48px x 48px, WhatsApp green or accent_color). Tapping opens `https://wa.me/[whatsapp_phone]?text=[encoded_whatsapp_message]`.
+  - RIGHT BUTTON: Circular button [💬] (48px x 48px, WhatsApp green or accent_color). Tapping opens `https://wa.me/[whatsapp_phone]?text=[encoded_whatsapp_message]`.
 
 - ANALYTICS RECORDING: Automatically log a 'page_view' event in `card_analytics` when the page mounts.
 
@@ -166,9 +166,9 @@ RLS POLICIES:
 
 - ENTRY LOGIC:
 
-  * If logged-in user has no card record, immediately auto-open in Card Creation Mode.
+  - If logged-in user has no card record, immediately auto-open in Card Creation Mode.
 
-  * If user has a card, show a "My Cards" card thumbnail. Clicking the card opens the Editor.
+  - If user has a card, show a "My Cards" card thumbnail. Clicking the card opens the Editor.
 
 - DASHBOARD EDITOR LAYOUT (VERTICAL STACK):
 
@@ -176,33 +176,33 @@ RLS POLICIES:
 
   2. QUICK STYLING CONTROL PANEL (Directly underneath Preview Frame):
 
-     * Color Presets Bar: Horizontal row of 6 preset color chips (Royal Purple #8b5cf6, Corporate Navy #2563eb, Emerald Mint #059669, Cyberpunk #38bdf8, Monochrome #111827, Sunset Gold #d97706) + a Custom Color Wheel Hex Picker.
+     - Color Presets Bar: Horizontal row of 6 preset color chips (Royal Purple #8b5cf6, Corporate Navy #2563eb, Emerald Mint #059669, Cyberpunk #38bdf8, Monochrome #111827, Sunset Gold #d97706) + a Custom Color Wheel Hex Picker.
 
-     * Header Pattern Selection: Radio chips for Wave, Diagonal, and Arch.
+     - Header Pattern Selection: Radio chips for Wave, Diagonal, and Arch.
 
-     * Logo Badge Toggle: Checkbox for [✓] Show Circular Floating Logo Badge.
+     - Logo Badge Toggle: Checkbox for [✓] Show Circular Floating Logo Badge.
 
   3. FORM INPUT SECTIONS (Scrolled down below style controls):
 
-     * Personal Info: Full Name (Required), Job Title, Company, Bio text.
+     - Personal Info: Full Name (Required), Job Title, Company, Bio text.
 
-     * Photos & Media Uploaders: Drag-and-drop file dropzones for Profile Photo and Logo Badge (uploading directly to Supabase Storage bucket 'card-assets').
+     - Photos & Media Uploaders: Drag-and-drop file dropzones for Profile Photo and Logo Badge (uploading directly to Supabase Storage bucket 'card-assets').
 
-     * Contact Details: Phone Number (Required), WhatsApp Number, Email Address.
+     - Contact Details: Phone Number (Required), WhatsApp Number, Email Address.
 
-     * Social Links: URLs for LinkedIn, Instagram, X/Twitter, Website.
+     - Social Links: URLs for LinkedIn, Instagram, X/Twitter, Website.
 
-     * Bilingual Fields (Optional Accordion): Arabic Name, Arabic Title, Arabic Bio.
+     - Bilingual Fields (Optional Accordion): Arabic Name, Arabic Title, Arabic Bio.
 
   4. FLOATING HELPER BUTTON: Pinned action button at bottom-right `[ ⬆️ Jump to Preview ]` that smooth-scrolls the viewport back to the top mobile preview card.
 
 - ADDITIONAL DASHBOARD TABS:
 
-  * 📊 Analytics Tab: Metric cards showing Total Scans/Views vs Total Contact Downloads.
+  - 📊 Analytics Tab: Metric cards showing Total Scans/Views vs Total Contact Downloads.
 
-  * 📥 Leads Inbox Tab: Table displaying visitor submissions from the "Exchange Info" drawer (Name, Phone, Note, Date) with CSV export and delete options.
+  - 📥 Leads Inbox Tab: Table displaying visitor submissions from the "Exchange Info" drawer (Name, Phone, Note, Date) with CSV export and delete options.
 
-  * 🔲 QR Code Generator Tab: Generates and downloads a high-resolution PNG/SVG QR code linking directly to `yourdomain.com/c/[slug]`.
+  - 🔲 QR Code Generator Tab: Generates and downloads a high-resolution PNG/SVG QR code linking directly to `yourdomain.com/c/[slug]`.
 
 ==================================================
 

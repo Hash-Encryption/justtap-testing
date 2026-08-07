@@ -6,13 +6,14 @@ import { COLOR_PRESETS, PATTERNS, slugify, type Card, type HeaderPattern } from 
 import { CardView } from "@/components/card/CardView";
 import { PhoneFrame } from "./PhoneFrame";
 import { Dropzone } from "./Dropzone";
+import { sanitizePhone, sanitizeText, sanitizeUrl } from "@/lib/sanitization";
 
 import { useTranslation } from "@/lib/i18n";
 
 async function uploadDataUrlIfNeeded(
   dataUrl: string | null | undefined,
   userId: string,
-  prefix: string
+  prefix: string,
 ): Promise<string | null> {
   if (!dataUrl) return null;
   if (!dataUrl.startsWith("data:")) return dataUrl;
@@ -52,7 +53,8 @@ export function CardEditor({ draft, setDraft, userId, isNew, onSaved }: Props) {
   const [draftRestored, setDraftRestored] = useState(false);
   const [lastAutoSaved, setLastAutoSaved] = useState<string | null>(null);
 
-  const draftKey = userId === "guest" ? "justtap_guest_pending_card" : `justtap_card_draft_${userId}`;
+  const draftKey =
+    userId === "guest" ? "justtap_guest_pending_card" : `justtap_card_draft_${userId}`;
   const THREE_DAYS_MS = 3 * 24 * 60 * 60 * 1000;
   const restoredKeyRef = useRef<string | null>(null);
 
@@ -66,15 +68,20 @@ export function CardEditor({ draft, setDraft, userId, isNew, onSaved }: Props) {
       if (stored) {
         const parsed = JSON.parse(stored) as { card?: Card; updatedAt?: number } | Card;
         const cardData = "card" in parsed && parsed.card ? parsed.card : (parsed as Card);
-        const updatedAt = "updatedAt" in parsed && typeof parsed.updatedAt === "number" ? parsed.updatedAt : null;
+        const updatedAt =
+          "updatedAt" in parsed && typeof parsed.updatedAt === "number" ? parsed.updatedAt : null;
 
         // Purge draft if inactive for more than 3 days
         if (updatedAt && Date.now() - updatedAt > THREE_DAYS_MS) {
           localStorage.removeItem(draftKey);
           sessionStorage.removeItem(draftKey);
-        } else if (cardData && (cardData.full_name || cardData.phone || cardData.title || cardData.bio)) {
+        } else if (
+          cardData &&
+          (cardData.full_name || cardData.phone || cardData.title || cardData.bio)
+        ) {
           // Only trigger state update and toast if the current draft prop is empty
-          const isCurrentDraftEmpty = !draft.full_name && !draft.phone && !draft.title && !draft.bio;
+          const isCurrentDraftEmpty =
+            !draft.full_name && !draft.phone && !draft.title && !draft.bio;
           if (isCurrentDraftEmpty) {
             setDraft(cardData);
             setShowArabic(cardData.enable_arabic);
@@ -103,7 +110,8 @@ export function CardEditor({ draft, setDraft, userId, isNew, onSaved }: Props) {
     }
   }, [draft, draftKey]);
 
-  const set = <K extends keyof Card>(key: K, value: Card[K]) => setDraft({ ...draft, [key]: value });
+  const set = <K extends keyof Card>(key: K, value: Card[K]) =>
+    setDraft({ ...draft, [key]: value });
   const setSocial = (key: string, value: string) =>
     setDraft({ ...draft, social_links: { ...(draft.social_links ?? {}), [key]: value } });
 
@@ -127,7 +135,9 @@ export function CardEditor({ draft, setDraft, userId, isNew, onSaved }: Props) {
         const payloadStr = JSON.stringify({ card: { ...draft, slug }, updatedAt: Date.now() });
         localStorage.setItem("justtap_guest_pending_card", payloadStr);
         sessionStorage.setItem("justtap_guest_pending_card", payloadStr);
-      } catch {}
+      } catch {
+        /* ignore storage errors */
+      }
       onSaved({ ...draft, slug });
       return;
     }
@@ -136,28 +146,35 @@ export function CardEditor({ draft, setDraft, userId, isNew, onSaved }: Props) {
     const avatar_url = await uploadDataUrlIfNeeded(draft.avatar_url, userId, "avatar");
     const logo_url = await uploadDataUrlIfNeeded(draft.logo_url, userId, "logo");
 
+    const sanitizedSocialLinks = {
+      linkedin: sanitizeUrl(draft.social_links?.linkedin) || "",
+      instagram: sanitizeUrl(draft.social_links?.instagram) || "",
+      twitter: sanitizeUrl(draft.social_links?.twitter) || "",
+      website: sanitizeUrl(draft.social_links?.website) || "",
+    };
+
     const payload = {
       user_id: userId,
       slug,
-      full_name: draft.full_name.trim(),
-      phone: draft.phone.trim(),
-      email: draft.email || null,
-      title: draft.title || null,
-      company: draft.company || null,
-      bio: draft.bio || null,
-      avatar_url,
-      logo_url,
+      full_name: sanitizeText(draft.full_name, 100),
+      phone: sanitizePhone(draft.phone),
+      email: draft.email ? sanitizeText(draft.email, 100) : null,
+      title: draft.title ? sanitizeText(draft.title, 100) : null,
+      company: draft.company ? sanitizeText(draft.company, 100) : null,
+      bio: draft.bio ? sanitizeText(draft.bio, 1000) : null,
+      avatar_url: avatar_url ? sanitizeUrl(avatar_url) : null,
+      logo_url: logo_url ? sanitizeUrl(logo_url) : null,
       show_logo_badge: draft.show_logo_badge,
       header_pattern: draft.header_pattern,
       accent_color: draft.accent_color,
       bg_color: draft.bg_color,
-      whatsapp_phone: draft.whatsapp_phone || null,
-      whatsapp_message: draft.whatsapp_message || null,
+      whatsapp_phone: draft.whatsapp_phone ? sanitizePhone(draft.whatsapp_phone) : null,
+      whatsapp_message: draft.whatsapp_message ? sanitizeText(draft.whatsapp_message, 250) : null,
       enable_arabic: draft.enable_arabic,
-      full_name_ar: draft.full_name_ar || null,
-      title_ar: draft.title_ar || null,
-      bio_ar: draft.bio_ar || null,
-      social_links: draft.social_links ?? {},
+      full_name_ar: draft.full_name_ar ? sanitizeText(draft.full_name_ar, 100) : null,
+      title_ar: draft.title_ar ? sanitizeText(draft.title_ar, 100) : null,
+      bio_ar: draft.bio_ar ? sanitizeText(draft.bio_ar, 1000) : null,
+      social_links: sanitizedSocialLinks,
     };
 
     const query = isNew
@@ -194,7 +211,9 @@ export function CardEditor({ draft, setDraft, userId, isNew, onSaved }: Props) {
               try {
                 localStorage.removeItem(draftKey);
                 sessionStorage.removeItem(draftKey);
-              } catch {}
+              } catch {
+                /* ignore storage errors */
+              }
               setDraftRestored(false);
             }}
             aria-label="Dismiss draft notification"
@@ -310,7 +329,11 @@ export function CardEditor({ draft, setDraft, userId, isNew, onSaved }: Props) {
       </Section>
 
       <Section title={t("personalInfo")}>
-        <Input label={t("fullName")} value={draft.full_name} onChange={(v) => set("full_name", v)} />
+        <Input
+          label={t("fullName")}
+          value={draft.full_name}
+          onChange={(v) => set("full_name", v)}
+        />
         <Input
           label={t("cardLink")}
           value={draft.slug}
@@ -318,7 +341,11 @@ export function CardEditor({ draft, setDraft, userId, isNew, onSaved }: Props) {
           hint={`/c/${slugify(draft.slug || draft.full_name) || "your-name"}`}
         />
         <Input label={t("jobTitle")} value={draft.title ?? ""} onChange={(v) => set("title", v)} />
-        <Input label={t("company")} value={draft.company ?? ""} onChange={(v) => set("company", v)} />
+        <Input
+          label={t("company")}
+          value={draft.company ?? ""}
+          onChange={(v) => set("company", v)}
+        />
         <Input label={t("bio")} value={draft.bio ?? ""} onChange={(v) => set("bio", v)} textarea />
       </Section>
 
@@ -351,7 +378,11 @@ export function CardEditor({ draft, setDraft, userId, isNew, onSaved }: Props) {
           value={draft.whatsapp_message ?? ""}
           onChange={(v) => set("whatsapp_message", v)}
         />
-        <Input label={t("emailAddress")} value={draft.email ?? ""} onChange={(v) => set("email", v)} />
+        <Input
+          label={t("emailAddress")}
+          value={draft.email ?? ""}
+          onChange={(v) => set("email", v)}
+        />
       </Section>
 
       <Section title={t("socialLinks")}>
@@ -426,7 +457,11 @@ export function CardEditor({ draft, setDraft, userId, isNew, onSaved }: Props) {
           disabled={saving}
           className="flex items-center gap-1.5 rounded-full bg-primary px-4 py-2 text-xs font-semibold text-primary-foreground transition hover:opacity-90 disabled:opacity-60"
         >
-          {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
+          {saving ? (
+            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+          ) : (
+            <Save className="h-3.5 w-3.5" />
+          )}
           {isNew ? t("publishCard") : t("saveChanges")}
         </button>
         <button

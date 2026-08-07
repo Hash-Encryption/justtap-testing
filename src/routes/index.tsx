@@ -38,11 +38,15 @@ function Landing() {
     <main className="min-h-screen grid-glow">
       <header className="mx-auto flex max-w-6xl items-center justify-between px-6 py-6">
         <span className="font-display text-lg font-bold tracking-tight">
-          {t("appName")}<span className="text-primary">.</span>
+          {t("appName")}
+          <span className="text-primary">.</span>
         </span>
         <nav className="flex items-center gap-2 text-sm">
           <LanguageSwitcher />
-          <Link to="/auth" className="rounded-full px-3.5 py-2 font-medium text-muted-foreground hover:text-foreground">
+          <Link
+            to="/auth"
+            className="rounded-full px-3.5 py-2 font-medium text-muted-foreground hover:text-foreground"
+          >
             {t("signIn")}
           </Link>
           <Link
@@ -61,9 +65,7 @@ function Landing() {
         <h1 className="mt-6 font-display text-4xl font-extrabold leading-[1.05] tracking-tight sm:text-6xl">
           {t("heroTitle")} <span className="text-primary">{t("heroTitleHighlight")}</span>.
         </h1>
-        <p className="mx-auto mt-5 max-w-xl text-base text-muted-foreground">
-          {t("heroSubtitle")}
-        </p>
+        <p className="mx-auto mt-5 max-w-xl text-base text-muted-foreground">{t("heroSubtitle")}</p>
 
         {/* 2 CLEAR CHOICES */}
         <div className="mt-8 grid gap-3 sm:grid-cols-2 max-w-md mx-auto">
@@ -71,7 +73,9 @@ function Landing() {
             to="/builder"
             className="glass flex flex-col items-center justify-center gap-1 rounded-2xl border-2 border-primary/50 bg-primary/10 p-5 text-center transition hover:scale-[1.02] hover:border-primary"
           >
-            <span className="font-display text-base font-bold text-foreground">{t("choiceCreateTitle")}</span>
+            <span className="font-display text-base font-bold text-foreground">
+              {t("choiceCreateTitle")}
+            </span>
             <span className="text-xs text-muted-foreground">{t("choiceCreateDesc")}</span>
           </Link>
 
@@ -79,7 +83,9 @@ function Landing() {
             to="/auth"
             className="glass flex flex-col items-center justify-center gap-1 rounded-2xl border border-border p-5 text-center transition hover:scale-[1.02] hover:border-foreground/30"
           >
-            <span className="font-display text-base font-bold text-foreground">{t("choiceLoginTitle")}</span>
+            <span className="font-display text-base font-bold text-foreground">
+              {t("choiceLoginTitle")}
+            </span>
             <span className="text-xs text-muted-foreground">{t("choiceLoginDesc")}</span>
           </Link>
         </div>

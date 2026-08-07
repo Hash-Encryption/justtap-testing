@@ -1,6 +1,11 @@
 import { useEffect, useState } from "react";
 import {
+  Calendar,
+  Check,
+  Copy,
   Download,
+  ExternalLink,
+  FileText,
   Globe,
   HeartHandshake,
   Instagram,
@@ -8,12 +13,18 @@ import {
   Mail,
   MessageCircle,
   Phone,
+  Share2,
+  Sparkles,
   Twitter,
+  Video,
+  Wallet,
 } from "lucide-react";
 import { toast } from "sonner";
 import { HeaderCut } from "./HeaderCut";
 import { supabase } from "@/lib/supabase";
-import { formatWhatsAppNumber, readableOn, type Card } from "@/lib/card";
+import { formatWhatsAppNumber, getEmbedVideoUrl, readableOn, type Card } from "@/lib/card";
+import { checkRateLimit } from "@/lib/rate-limit";
+import { LeadSubmissionSchema } from "@/lib/sanitization";
 import {
   Drawer,
   DrawerContent,
@@ -31,8 +42,40 @@ type Props = {
 export function CardView({ card, preview = false }: Props) {
   const [lang, setLang] = useState<"en" | "ar">("en");
   const [leadOpen, setLeadOpen] = useState(false);
+  const [shareOpen, setShareOpen] = useState(false);
+  const [copied, setCopied] = useState(false);
   const [sending, setSending] = useState(false);
   const ar = lang === "ar" && card.enable_arabic;
+
+  const cardUrl =
+    typeof window !== "undefined" ? `${window.location.origin}/c/${card.slug}` : `/c/${card.slug}`;
+
+  async function handleShare() {
+    if (preview) {
+      toast.info("Preview mode — share card is live on published profile.");
+      return;
+    }
+    if (typeof navigator !== "undefined" && navigator.share) {
+      try {
+        await navigator.share({
+          title: card.full_name,
+          text: `Digital business card for ${card.full_name}`,
+          url: cardUrl,
+        });
+        return;
+      } catch {
+        // Fallback to modal if Web Share is cancelled or unsupported
+      }
+    }
+    setShareOpen(true);
+  }
+
+  function copyCardLink() {
+    void navigator.clipboard.writeText(cardUrl);
+    setCopied(true);
+    toast.success("Card link copied to clipboard!");
+    setTimeout(() => setCopied(false), 2000);
+  }
 
   const accent = card.accent_color || "#8b5cf6";
   const bg = card.bg_color || "#ffffff";
@@ -66,28 +109,64 @@ export function CardView({ card, preview = false }: Props) {
       toast.info("Preview mode — lead capture is live on the published card.");
       return;
     }
-    const form = new FormData(e.currentTarget);
-    const sender_name = String(form.get("sender_name") || "").trim();
-    const sender_phone = String(form.get("sender_phone") || "").trim();
-    const note = String(form.get("note") || "").trim();
-    if (!sender_name || !sender_phone) {
-      toast.error(ar ? "الاسم والهاتف مطلوبان" : "Name and phone are required");
+
+    // 1. Client-side rate limiting (max 3 lead submissions per minute)
+    const rateCheck = checkRateLimit(`lead:${card.id}`, 3, 60_000);
+    if (!rateCheck.allowed) {
+      toast.error(
+        ar
+          ? "لقد تجاوزت الحد المسموح. يرجى الانتظار دقيقة."
+          : "Too many attempts. Please wait a minute before submitting again.",
+      );
       return;
     }
+
+    const form = new FormData(e.currentTarget);
+    const rawData = {
+      card_id: card.id,
+      sender_name: String(form.get("sender_name") || ""),
+      sender_phone: String(form.get("sender_phone") || ""),
+      note: String(form.get("note") || "") || null,
+    };
+
+    // 2. Validate & sanitize input via Zod schema
+    const parsed = LeadSubmissionSchema.safeParse(rawData);
+    if (!parsed.success) {
+      const issue = parsed.error.issues[0]?.message;
+      toast.error(issue || (ar ? "تأكد من البيانات المدخلة" : "Please check your inputs"));
+      return;
+    }
+
+    const sanitized = parsed.data;
+
     setSending(true);
     const { error } = await supabase.from("card_leads").insert({
-      card_id: card.id,
-      sender_name,
-      sender_phone,
-      note: note || null,
+      card_id: sanitized.card_id,
+      sender_name: sanitized.sender_name,
+      sender_phone: sanitized.sender_phone,
+      note: sanitized.note,
     });
     setSending(false);
+
     if (error) {
       toast.error(error.message);
       return;
     }
+
+    // Fire background lead email notification asynchronously
+    void fetch("/api/lead-email", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        card_id: sanitized.card_id,
+        sender_name: sanitized.sender_name,
+        sender_phone: sanitized.sender_phone,
+        note: sanitized.note,
+      }),
+    }).catch(() => {});
+
     setLeadOpen(false);
-    toast.success(ar ? "تم إرسال معلوماتك!" : "Your info was sent!");
+    toast.success(ar ? "تم إرسال معلوماتك بنجاح!" : "Your info was sent successfully!");
   }
 
   function saveContact() {
@@ -101,9 +180,7 @@ export function CardView({ card, preview = false }: Props) {
   const formattedWaNumber = formatWhatsAppNumber(card.whatsapp_phone || card.phone);
 
   const waHref = formattedWaNumber
-    ? `https://wa.me/${formattedWaNumber}?text=${encodeURIComponent(
-        card.whatsapp_message || "",
-      )}`
+    ? `https://wa.me/${formattedWaNumber}?text=${encodeURIComponent(card.whatsapp_message || "")}`
     : null;
 
   return (
@@ -113,7 +190,10 @@ export function CardView({ card, preview = false }: Props) {
       style={{ backgroundColor: bg, color: ink }}
     >
       {/* HERO */}
-      <div className="relative aspect-4/5 w-full overflow-hidden" style={{ backgroundColor: accent }}>
+      <div
+        className="relative aspect-4/5 w-full overflow-hidden"
+        style={{ backgroundColor: accent }}
+      >
         {card.avatar_url ? (
           <img
             src={card.avatar_url}
@@ -130,6 +210,16 @@ export function CardView({ card, preview = false }: Props) {
           </div>
         )}
 
+        {/* Share Button top-start */}
+        <button
+          type="button"
+          onClick={handleShare}
+          aria-label="Share card"
+          className="absolute top-4 start-4 flex h-9 w-9 items-center justify-center rounded-full bg-black/35 text-white backdrop-blur-md transition active:scale-95 hover:bg-black/50"
+        >
+          <Share2 className="h-4 w-4" />
+        </button>
+
         {card.enable_arabic && (
           <div className="absolute top-4 end-4 flex overflow-hidden rounded-full bg-black/35 p-0.5 backdrop-blur-md">
             {(["en", "ar"] as const).map((l) => (
@@ -139,9 +229,7 @@ export function CardView({ card, preview = false }: Props) {
                 onClick={() => setLang(l)}
                 className="rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-wide transition"
                 style={
-                  lang === l
-                    ? { backgroundColor: accent, color: onAccent }
-                    : { color: "#ffffff" }
+                  lang === l ? { backgroundColor: accent, color: onAccent } : { color: "#ffffff" }
                 }
               >
                 {l}
@@ -155,7 +243,11 @@ export function CardView({ card, preview = false }: Props) {
         {card.show_logo_badge && card.logo_url && (
           <div
             className="absolute bottom-3 end-6 z-10 flex h-12 w-12 items-center justify-center overflow-hidden rounded-full shadow-lg ring-2"
-            style={{ backgroundColor: bg, borderColor: accent, boxShadow: `0 6px 18px ${accent}55` }}
+            style={{
+              backgroundColor: bg,
+              borderColor: accent,
+              boxShadow: `0 6px 18px ${accent}55`,
+            }}
           >
             <img src={card.logo_url} alt="Logo" className="h-9 w-9 object-contain" />
           </div>
@@ -213,6 +305,93 @@ export function CardView({ card, preview = false }: Props) {
                 {label}
               </a>
             ))}
+          </div>
+        )}
+
+        {/* PRO SPECIAL FEATURES SECTION */}
+        {(() => {
+          const pro = card.pro_features;
+          const isProActive =
+            card.plan_tier === "pro" || card.plan_tier === "enterprise" || preview;
+          if (!pro || !isProActive) return null;
+
+          const embedUrl = getEmbedVideoUrl(pro.video_url);
+
+          return (
+            <div className="mt-5 space-y-3">
+              {/* VIDEO EMBED BLOCK */}
+              {embedUrl && (
+                <div
+                  className="overflow-hidden rounded-2xl border shadow-sm"
+                  style={{ borderColor: `${accent}33` }}
+                >
+                  <iframe
+                    src={embedUrl}
+                    title="Video Intro"
+                    className="aspect-video w-full"
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                    allowFullScreen
+                  />
+                </div>
+              )}
+
+              {/* CALENDLY BOOKING BUTTON */}
+              {pro.booking_url && (
+                <a
+                  href={pro.booking_url}
+                  target="_blank"
+                  rel="noreferrer noopener"
+                  className="flex items-center justify-between rounded-2xl px-4 py-3.5 text-sm font-semibold text-white transition active:scale-[0.98] shadow-md"
+                  style={{ backgroundColor: accent }}
+                >
+                  <div className="flex items-center gap-2.5">
+                    <Calendar className="h-4 w-4" />
+                    <span>{ar ? "حجز موعد" : "Book Meeting"}</span>
+                  </div>
+                  <ExternalLink className="h-4 w-4 opacity-70" />
+                </a>
+              )}
+
+              {/* PDF ATTACHMENT */}
+              {pro.pdf_url && (
+                <a
+                  href={pro.pdf_url}
+                  target="_blank"
+                  rel="noreferrer noopener"
+                  className="flex items-center justify-between rounded-2xl border px-4 py-3.5 text-sm font-medium transition active:scale-[0.98]"
+                  style={{ borderColor: `${accent}33`, backgroundColor: `${accent}0a` }}
+                >
+                  <div className="flex items-center gap-2.5">
+                    <FileText className="h-4 w-4" style={{ color: accent }} />
+                    <span className="truncate">
+                      {pro.pdf_label || (ar ? "تحميل ملف PDF" : "Download PDF")}
+                    </span>
+                  </div>
+                  <Download className="h-4 w-4 opacity-70" style={{ color: accent }} />
+                </a>
+              )}
+
+              {/* CUSTOM CTA ACTION BUTTON */}
+              {pro.custom_cta_label && pro.custom_cta_url && (
+                <a
+                  href={pro.custom_cta_url}
+                  target="_blank"
+                  rel="noreferrer noopener"
+                  className="flex items-center justify-between rounded-2xl border px-4 py-3.5 text-sm font-semibold transition active:scale-[0.98]"
+                  style={{ borderColor: accent, color: accent }}
+                >
+                  <span>{pro.custom_cta_label}</span>
+                  <ExternalLink className="h-4 w-4" />
+                </a>
+              )}
+            </div>
+          );
+        })()}
+
+        {/* FOOTER WATERMARK */}
+        {(!card.pro_features?.remove_branding || card.plan_tier === "free") && (
+          <div className="mt-8 text-center text-[11px] font-medium opacity-50">
+            Powered by <strong style={{ color: accent }}>JustTap</strong>
           </div>
         )}
       </div>
@@ -304,6 +483,91 @@ export function CardView({ card, preview = false }: Props) {
               {sending ? "…" : ar ? "أرسل معلوماتي" : "Send My Info"}
             </button>
           </form>
+        </DrawerContent>
+      </Drawer>
+
+      {/* SHARE DRAWER */}
+      <Drawer open={shareOpen} onOpenChange={setShareOpen}>
+        <DrawerContent className="mx-auto max-w-[430px] p-6">
+          <DrawerHeader className="px-0 pt-0 text-start">
+            <DrawerTitle>{ar ? "مشاركة البطاقة الرقمية" : "Share Digital Card"}</DrawerTitle>
+            <DrawerDescription>
+              {ar
+                ? "انشر رابط بطاقتك المعزز بالمعاينة الاجتماعية التفاعلية."
+                : "Share your card link enriched with dynamic social preview cards."}
+            </DrawerDescription>
+          </DrawerHeader>
+
+          <div className="space-y-4 pt-2">
+            {/* Copy Link Input */}
+            <div className="flex items-center gap-2 rounded-2xl border border-border bg-secondary/30 p-2">
+              <span className="flex-1 truncate px-2 text-xs font-mono opacity-80">{cardUrl}</span>
+              <button
+                type="button"
+                onClick={copyCardLink}
+                className="flex h-9 items-center gap-1.5 rounded-xl px-3 text-xs font-semibold text-white transition active:scale-95"
+                style={{ backgroundColor: accent }}
+              >
+                {copied ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
+                {copied ? (ar ? "تم النسخ" : "Copied") : ar ? "نسخ" : "Copy"}
+              </button>
+            </div>
+
+            {/* Social Sharing Icons */}
+            <div className="grid grid-cols-3 gap-3 pt-1">
+              <a
+                href={`https://wa.me/?text=${encodeURIComponent(`Check out my digital business card: ${cardUrl}`)}`}
+                target="_blank"
+                rel="noreferrer noopener"
+                className="flex flex-col items-center gap-2 rounded-2xl border border-border p-3 text-xs font-medium transition hover:bg-secondary"
+              >
+                <div className="grid h-10 w-10 place-items-center rounded-full bg-emerald-500/10 text-emerald-500">
+                  <MessageCircle className="h-5 w-5" />
+                </div>
+                WhatsApp
+              </a>
+
+              <a
+                href={`https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(cardUrl)}`}
+                target="_blank"
+                rel="noreferrer noopener"
+                className="flex flex-col items-center gap-2 rounded-2xl border border-border p-3 text-xs font-medium transition hover:bg-secondary"
+              >
+                <div className="grid h-10 w-10 place-items-center rounded-full bg-blue-500/10 text-blue-400">
+                  <Linkedin className="h-5 w-5" />
+                </div>
+                LinkedIn
+              </a>
+
+              <a
+                href={`https://twitter.com/intent/tweet?text=${encodeURIComponent(`Here is my digital card: ${cardUrl}`)}`}
+                target="_blank"
+                rel="noreferrer noopener"
+                className="flex flex-col items-center gap-2 rounded-2xl border border-border p-3 text-xs font-medium transition hover:bg-secondary"
+              >
+                <div className="grid h-10 w-10 place-items-center rounded-full bg-sky-500/10 text-sky-400">
+                  <Twitter className="h-5 w-5" />
+                </div>
+                X (Twitter)
+              </a>
+            </div>
+
+            {/* Social OpenGraph Preview Card Banner */}
+            <div className="overflow-hidden rounded-2xl border border-border/60 bg-secondary/20 p-3">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">
+                  Social Share Card Preview (OpenGraph)
+                </span>
+                <ExternalLink className="h-3 w-3 text-muted-foreground" />
+              </div>
+              <img
+                src={`/api/og/${card.slug}`}
+                alt="OpenGraph Social Preview"
+                className="w-full rounded-xl border border-border shadow-sm object-cover"
+                loading="lazy"
+              />
+            </div>
+          </div>
         </DrawerContent>
       </Drawer>
     </div>

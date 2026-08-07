@@ -12,7 +12,10 @@ export const Route = createFileRoute("/builder")({
   head: () => ({
     meta: [
       { title: "Create Your Digital Business Card — JustTap" },
-      { name: "description", content: "Design your custom NFC digital business card instantly without an account." },
+      {
+        name: "description",
+        content: "Design your custom NFC digital business card instantly without an account.",
+      },
     ],
   }),
   component: BuilderPage,
@@ -25,7 +28,8 @@ function BuilderPage() {
   const navigate = useNavigate();
   const [draft, setDraft] = useState<Card>(() => {
     try {
-      const stored = localStorage.getItem(GUEST_DRAFT_KEY) || sessionStorage.getItem(GUEST_DRAFT_KEY);
+      const stored =
+        localStorage.getItem(GUEST_DRAFT_KEY) || sessionStorage.getItem(GUEST_DRAFT_KEY);
       if (stored) {
         const parsed = JSON.parse(stored);
         const cardData = parsed?.card ? parsed.card : parsed;
@@ -33,7 +37,9 @@ function BuilderPage() {
           return cardData as Card;
         }
       }
-    } catch {}
+    } catch {
+      /* ignore storage errors */
+    }
     return { ...emptyCard, user_id: "guest" };
   });
 
@@ -57,7 +63,9 @@ function BuilderPage() {
     try {
       localStorage.setItem(GUEST_DRAFT_KEY, payload);
       sessionStorage.setItem(GUEST_DRAFT_KEY, payload);
-    } catch {}
+    } catch {
+      /* ignore storage errors */
+    }
 
     toast.success("Card draft saved! Create an account to publish it.");
     navigate({ to: "/auth", search: { mode: "signup", claim_draft: true } });
@@ -67,7 +75,10 @@ function BuilderPage() {
     <main className="min-h-screen pb-24">
       <header className="sticky top-0 z-30 border-b border-border bg-background/80 backdrop-blur-xl">
         <div className="mx-auto flex max-w-3xl items-center justify-between px-5 py-3.5">
-          <Link to="/" className="flex items-center gap-2 font-display text-sm font-semibold text-muted-foreground hover:text-foreground">
+          <Link
+            to="/"
+            className="flex items-center gap-2 font-display text-sm font-semibold text-muted-foreground hover:text-foreground"
+          >
             <ArrowLeft className="h-4 w-4 rtl:rotate-180" /> {t("backToHome")}
           </Link>
           <div className="flex items-center gap-2">
@@ -89,9 +100,7 @@ function BuilderPage() {
       <div className="mx-auto max-w-3xl px-5 py-6">
         <div className="mb-6 rounded-2xl border border-primary/20 bg-primary/5 p-4 text-center">
           <h1 className="font-display text-xl font-bold">{t("designCardTitle")}</h1>
-          <p className="mt-1 text-xs text-muted-foreground">
-            {t("designCardDesc")}
-          </p>
+          <p className="mt-1 text-xs text-muted-foreground">{t("designCardDesc")}</p>
         </div>
 
         <CardEditor

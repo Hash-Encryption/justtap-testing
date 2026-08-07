@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { FileDown, Loader2, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/lib/supabase";
+import { decodeHtmlEntities } from "@/lib/sanitization";
 
 type Lead = {
   id: string;
@@ -92,9 +93,11 @@ export function LeadsTab({ cardId }: { cardId: string }) {
             <tbody>
               {leads.map((l) => (
                 <tr key={l.id} className="border-t border-border/60">
-                  <td className="py-2.5 pr-4 font-medium">{l.sender_name}</td>
-                  <td className="py-2.5 pr-4">{l.sender_phone}</td>
-                  <td className="py-2.5 pr-4 text-muted-foreground">{l.note ?? "—"}</td>
+                  <td className="py-2.5 pr-4 font-medium">{decodeHtmlEntities(l.sender_name)}</td>
+                  <td className="py-2.5 pr-4">{decodeHtmlEntities(l.sender_phone)}</td>
+                  <td className="py-2.5 pr-4 text-muted-foreground">
+                    {l.note ? decodeHtmlEntities(l.note) : "—"}
+                  </td>
                   <td className="py-2.5 pr-4 text-xs text-muted-foreground">
                     {new Date(l.created_at).toLocaleDateString()}
                   </td>

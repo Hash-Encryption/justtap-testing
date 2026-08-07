@@ -18,15 +18,18 @@ const translations = {
     badgeText: "Multi-tenant · 100% white-label",
     heroTitle: "One tap and your contact is",
     heroTitleHighlight: "already saved",
-    heroSubtitle: "Build your personalized digital business card right now, or log in to manage your account dashboard.",
+    heroSubtitle:
+      "Build your personalized digital business card right now, or log in to manage your account dashboard.",
     choiceCreateTitle: "✨ Create Card First",
     choiceCreateDesc: "Build & preview your card now, then sign up to publish.",
     choiceLoginTitle: "🔑 Log In / Sign Up",
     choiceLoginDesc: "Sign in to your account and go straight to dashboard.",
     feature1Title: "Live white-label editor",
-    feature1Desc: "Colors, header cuts, logo badge — every change renders instantly in a mobile preview.",
+    feature1Desc:
+      "Colors, header cuts, logo badge — every change renders instantly in a mobile preview.",
     feature2Title: "Built for NFC",
-    feature2Desc: "Each card maps to a fast public /c/slug page tuned for a 375–430px tap-and-go screen.",
+    feature2Desc:
+      "Each card maps to a fast public /c/slug page tuned for a 375–430px tap-and-go screen.",
     feature3Title: "Lead capture inbox",
     feature3Desc: "Visitors exchange their details in a bottom sheet; you export them as CSV.",
     feature4Title: "Scan analytics",
@@ -53,7 +56,8 @@ const translations = {
 
     // Builder & Editor
     designCardTitle: "Design Your Digital Business Card",
-    designCardDesc: "Customize your card colors, header style, social links & contact details below. You can publish and connect it to your profile in one tap!",
+    designCardDesc:
+      "Customize your card colors, header style, social links & contact details below. You can publish and connect it to your profile in one tap!",
     signUpAndPublish: "Sign up & publish card",
     saveChanges: "Save changes",
     publishCard: "Publish card",
@@ -62,7 +66,7 @@ const translations = {
     autoSavedAt: "Auto-saved",
     restoredDraftMsg: "Restored your active draft",
     clearDraft: "Clear draft",
-    
+
     // Editor Sections
     quickStyling: "Quick styling",
     accentColor: "Accent color",
@@ -96,7 +100,8 @@ const translations = {
     leadsTab: "Leads",
     qrCodeTab: "QR code",
     welcomeTitle: "Welcome to JustTap",
-    noCardDesc: "You don't have a digital business card created yet. Create your personalized profile to start sharing your contact info.",
+    noCardDesc:
+      "You don't have a digital business card created yet. Create your personalized profile to start sharing your contact info.",
     createMyCardBtn: "Create My Digital Card",
   },
   ar: {
@@ -114,7 +119,8 @@ const translations = {
     badgeText: "منصة بطاقات عمل رقمية ذكية بالكامل",
     heroTitle: "بلمسة واحدة، معلوماتك تكون",
     heroTitleHighlight: "محفوظة فوراً",
-    heroSubtitle: "صمّم بطاقة عملك الرقمية الذكية الآن، أو سجّل الدخول لإدارة بطاقتك وتتبع التفاعلات.",
+    heroSubtitle:
+      "صمّم بطاقة عملك الرقمية الذكية الآن، أو سجّل الدخول لإدارة بطاقتك وتتبع التفاعلات.",
     choiceCreateTitle: "✨ صمّم بطاقتك أولاً",
     choiceCreateDesc: "صمّم وعاين بطاقتك الآن مجاناً، ثم أنشئ حسابك لحفظها ونشرها.",
     choiceLoginTitle: "🔑 تسجيل الدخول",
@@ -149,7 +155,8 @@ const translations = {
 
     // Builder & Editor
     designCardTitle: "صمّم بطاقتك الرقمية الذكية",
-    designCardDesc: "خصص ألوان البطاقة، نمط الهيدر، الروابط الاجتماعية ومعلومات الاتصال. يمكنك حفظها ونشرها بلمسة واحدة!",
+    designCardDesc:
+      "خصص ألوان البطاقة، نمط الهيدر، الروابط الاجتماعية ومعلومات الاتصال. يمكنك حفظها ونشرها بلمسة واحدة!",
     signUpAndPublish: "إنشاء حساب ونشر البطاقة",
     saveChanges: "حفظ التغييرات",
     publishCard: "نشر البطاقة",
@@ -214,7 +221,9 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
     try {
       const saved = localStorage.getItem("justtap_app_lang") as Language;
       if (saved === "en" || saved === "ar") return saved;
-    } catch {}
+    } catch {
+      /* ignore storage errors */
+    }
     return "en";
   });
 
@@ -222,7 +231,9 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
     setLangState(newLang);
     try {
       localStorage.setItem("justtap_app_lang", newLang);
-    } catch {}
+    } catch {
+      /* ignore storage errors */
+    }
   };
 
   const toggleLang = () => {

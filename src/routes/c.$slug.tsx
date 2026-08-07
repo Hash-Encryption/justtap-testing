@@ -21,19 +21,25 @@ export const Route = createFileRoute("/c/$slug")({
     const title = `${c.full_name}${c.title ? ` — ${c.title}` : ""}`;
     const description =
       c.bio?.slice(0, 150) ||
-      `Digital business card for ${c.full_name}${c.company ? ` at ${c.company}` : ""}.`;
+      `Digital business card for ${c.full_name}${c.company ? ` at ${c.company}` : ""}. Save contact, exchange info, and connect instantly.`;
+    const ogImageUrl = `/api/og/${c.slug}`;
+
     return {
       meta: [
         { title },
         { name: "description", content: description },
+        { property: "og:type", content: "profile" },
+        { property: "og:site_name", content: "JustTap Digital Business Cards" },
         { property: "og:title", content: title },
         { property: "og:description", content: description },
-        ...(c.avatar_url?.startsWith("https://")
-          ? [
-              { property: "og:image", content: c.avatar_url },
-              { name: "twitter:image", content: c.avatar_url },
-            ]
-          : []),
+        { property: "og:image", content: ogImageUrl },
+        { property: "og:image:type", content: "image/svg+xml" },
+        { property: "og:image:width", content: "1200" },
+        { property: "og:image:height", content: "630" },
+        { name: "twitter:card", content: "summary_large_image" },
+        { name: "twitter:title", content: title },
+        { name: "twitter:description", content: description },
+        { name: "twitter:image", content: ogImageUrl },
       ],
     };
   },
@@ -50,7 +56,10 @@ function CardNotFound() {
         <p className="mt-2 text-sm text-muted-foreground">
           The link or NFC tag may have been deactivated.
         </p>
-        <Link to="/" className="mt-6 inline-block rounded-full bg-primary px-5 py-2.5 text-sm font-semibold text-primary-foreground">
+        <Link
+          to="/"
+          className="mt-6 inline-block rounded-full bg-primary px-5 py-2.5 text-sm font-semibold text-primary-foreground"
+        >
           Go home
         </Link>
       </div>
@@ -61,10 +70,7 @@ function CardNotFound() {
 function PublicCard() {
   const { card } = Route.useLoaderData();
   return (
-    <main
-      className="min-h-screen w-full"
-      style={{ backgroundColor: card.bg_color || "#ffffff" }}
-    >
+    <main className="min-h-screen w-full" style={{ backgroundColor: card.bg_color || "#ffffff" }}>
       <CardView card={card} />
     </main>
   );

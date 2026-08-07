@@ -38,8 +38,15 @@ export function QrTab({ slug, accent }: { slug: string; accent: string }) {
       <h3 className="font-display text-sm font-semibold">QR code</h3>
       <p className="mt-1 text-xs text-muted-foreground">Points at your public card link.</p>
 
-      <div className="mx-auto mt-5 w-fit rounded-2xl bg-white p-3" style={{ boxShadow: `0 10px 40px -12px ${accent}` }}>
-        {png ? <img src={png} alt="QR code" className="h-48 w-48" /> : <div className="h-48 w-48" />}
+      <div
+        className="mx-auto mt-5 w-fit rounded-2xl bg-white p-3"
+        style={{ boxShadow: `0 10px 40px -12px ${accent}` }}
+      >
+        {png ? (
+          <img src={png} alt="QR code" className="h-48 w-48" />
+        ) : (
+          <div className="h-48 w-48" />
+        )}
       </div>
 
       <button

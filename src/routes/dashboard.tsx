@@ -1,11 +1,22 @@
 import { useEffect, useState } from "react";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { BarChart3, Inbox, LayoutGrid, Loader2, LogOut, Pencil, QrCode, Shield } from "lucide-react";
+import {
+  BarChart3,
+  Inbox,
+  LayoutGrid,
+  Loader2,
+  LogOut,
+  Pencil,
+  QrCode,
+  Shield,
+  Sparkles,
+} from "lucide-react";
 import { toast } from "sonner";
 import { STORAGE_BUCKET, supabase } from "@/lib/supabase";
 import { emptyCard, type Card } from "@/lib/card";
 import { useAuth, useIsAdmin } from "@/hooks/useAuth";
 import { CardEditor } from "@/components/dashboard/CardEditor";
+import { ProFeaturesTab } from "@/components/dashboard/ProFeaturesTab";
 import { AnalyticsTab } from "@/components/dashboard/AnalyticsTab";
 import { LeadsTab } from "@/components/dashboard/LeadsTab";
 import { QrTab } from "@/components/dashboard/QrTab";
@@ -16,7 +27,7 @@ import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 async function uploadDataUrlIfNeeded(
   dataUrl: string | null | undefined,
   userId: string,
-  prefix: string
+  prefix: string,
 ): Promise<string | null> {
   if (!dataUrl) return null;
   if (!dataUrl.startsWith("data:")) return dataUrl;
@@ -48,16 +59,20 @@ export const Route = createFileRoute("/dashboard")({
       { title: "Dashboard — build your digital card" },
       {
         name: "description",
-        content: "Design your NFC digital business card, track scans, read leads and download your QR code.",
+        content:
+          "Design your NFC digital business card, track scans, read leads and download your QR code.",
       },
       { property: "og:title", content: "Card dashboard — JustTap" },
-      { property: "og:description", content: "Live editor, analytics, leads and QR codes for your digital business card." },
+      {
+        property: "og:description",
+        content: "Live editor, analytics, leads and QR codes for your digital business card.",
+      },
     ],
   }),
   component: Dashboard,
 });
 
-type Tab = "card" | "analytics" | "leads" | "qr";
+type Tab = "card" | "pro" | "analytics" | "leads" | "qr";
 
 function Dashboard() {
   const { t } = useTranslation();
@@ -93,7 +108,9 @@ function Dashboard() {
             guestPayload = cardObj as Card;
           }
         }
-      } catch {}
+      } catch {
+        /* ignore storage errors */
+      }
 
       // Fetch user's existing cards
       const { data } = await supabase
@@ -135,6 +152,8 @@ function Dashboard() {
           title_ar: guestPayload.title_ar || null,
           bio_ar: guestPayload.bio_ar || null,
           social_links: guestPayload.social_links ?? {},
+          plan_tier: guestPayload.plan_tier || "free",
+          pro_features: guestPayload.pro_features ?? {},
         };
 
         let { data: created, error } = await supabase
@@ -155,7 +174,9 @@ function Dashboard() {
           try {
             localStorage.removeItem("justtap_guest_pending_card");
             sessionStorage.removeItem("justtap_guest_pending_card");
-          } catch {}
+          } catch {
+            /* ignore storage errors */
+          }
 
           const published = created as Card;
           setCard(published);
@@ -168,7 +189,12 @@ function Dashboard() {
       }
 
       setCard(existing);
-      setDraft(existing ?? (guestPayload ? { ...guestPayload, user_id: user.id } : { ...emptyCard, user_id: user.id }));
+      setDraft(
+        existing ??
+          (guestPayload
+            ? { ...guestPayload, user_id: user.id }
+            : { ...emptyCard, user_id: user.id }),
+      );
       setEditing(false);
       setFetching(false);
     }
@@ -195,6 +221,11 @@ function Dashboard() {
 
   const tabs: { id: Tab; label: string; icon: React.ReactNode }[] = [
     { id: "card", label: t("myCardTab"), icon: <LayoutGrid className="h-4 w-4" /> },
+    {
+      id: "pro",
+      label: "Special Features ⭐",
+      icon: <Sparkles className="h-4 w-4 text-amber-400" />,
+    },
     { id: "analytics", label: t("analyticsTab"), icon: <BarChart3 className="h-4 w-4" /> },
     { id: "leads", label: t("leadsTab"), icon: <Inbox className="h-4 w-4" /> },
     { id: "qr", label: t("qrCodeTab"), icon: <QrCode className="h-4 w-4" /> },
@@ -205,7 +236,8 @@ function Dashboard() {
       <header className="sticky top-0 z-30 border-b border-border bg-background/80 backdrop-blur-xl">
         <div className="mx-auto flex max-w-3xl items-center justify-between px-5 py-3.5">
           <Link to="/" className="font-display text-base font-bold">
-            {t("appName")}<span className="text-primary">.</span>
+            {t("appName")}
+            <span className="text-primary">.</span>
           </Link>
           <div className="flex items-center gap-1.5">
             <LanguageSwitcher />
@@ -234,7 +266,9 @@ function Dashboard() {
                 type="button"
                 onClick={() => setTab(t.id)}
                 className={`flex shrink-0 items-center gap-1.5 rounded-full px-3.5 py-1.5 text-xs font-medium transition ${
-                  tab === t.id ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-secondary"
+                  tab === t.id
+                    ? "bg-primary text-primary-foreground"
+                    : "text-muted-foreground hover:bg-secondary"
                 }`}
               >
                 {t.icon}
@@ -279,7 +313,8 @@ function Dashboard() {
               </div>
               <h1 className="font-display text-2xl font-bold">Welcome to Snap Connect</h1>
               <p className="mt-2 text-sm text-muted-foreground max-w-md mx-auto">
-                You don&apos;t have a digital business card created yet. Create your personalized profile to start sharing your contact info, social links, and QR codes via NFC.
+                You don&apos;t have a digital business card created yet. Create your personalized
+                profile to start sharing your contact info, social links, and QR codes via NFC.
               </p>
               <button
                 type="button"
@@ -303,6 +338,18 @@ function Dashboard() {
             />
           ))}
 
+        {tab === "pro" && draft && (
+          <ProFeaturesTab
+            card={draft}
+            userId={user.id}
+            onChange={(updated) => {
+              setDraft(updated);
+              if (card) {
+                setCard(updated);
+              }
+            }}
+          />
+        )}
         {tab === "analytics" && card && <AnalyticsTab cardId={card.id} />}
         {tab === "leads" && card && <LeadsTab cardId={card.id} />}
         {tab === "qr" && card && <QrTab slug={card.slug} accent={card.accent_color} />}
