@@ -59,7 +59,6 @@ export const Route = createFileRoute("/api/apple-wallet/$slug")({
 
         const card = data as Card;
         const originUrl = new URL(request.url).origin;
-        const pkpassBuffer = await buildAppleWalletPass(card, originUrl);
 
         // Log analytics event
         await client.from("card_analytics").insert({
@@ -68,13 +67,25 @@ export const Route = createFileRoute("/api/apple-wallet/$slug")({
           user_agent: sanitizeText(request.headers.get("user-agent") || "", 250) || null,
         });
 
-        return new Response(pkpassBuffer, {
-          headers: {
-            "Content-Type": "application/vnd.apple.pkpass",
-            "Content-Disposition": `inline; filename="${cleanSlug}.pkpass"`,
-            "Cache-Control": "no-store, no-cache, must-revalidate, max-age=0",
-          },
-        });
+        const hasAppleCert = Boolean(
+          typeof process !== "undefined" &&
+            process.env?.["APPLE_PASS_CERT"] &&
+            process.env?.["APPLE_PASS_KEY"],
+        );
+
+        if (hasAppleCert) {
+          const pkpassBuffer = await buildAppleWalletPass(card, originUrl);
+          return new Response(pkpassBuffer, {
+            headers: {
+              "Content-Type": "application/vnd.apple.pkpass",
+              "Content-Disposition": `inline; filename="${cleanSlug}.pkpass"`,
+              "Cache-Control": "no-store, no-cache, must-revalidate, max-age=0",
+            },
+          });
+        }
+
+        // Fallback for setups without Apple Pass Type Certificate: redirect seamlessly to vCard contact pass stream
+        return Response.redirect(`${originUrl}/api/vcard/${cleanSlug}`, 302);
       },
     },
   },
