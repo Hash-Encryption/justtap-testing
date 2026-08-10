@@ -17,6 +17,16 @@ export function checkRateLimit(
   windowMs = 60_000,
 ): { allowed: boolean; remaining: number; resetMs: number } {
   const now = Date.now();
+
+  // Lazy cleanup of expired entries to avoid memory leaks without top-level timers
+  if (memoryStore.size > 100) {
+    for (const [k, rec] of memoryStore.entries()) {
+      if (now > rec.resetAt) {
+        memoryStore.delete(k);
+      }
+    }
+  }
+
   const record = memoryStore.get(key);
 
   if (!record || now > record.resetAt) {
@@ -41,16 +51,4 @@ export function checkRateLimit(
     remaining: limit - record.count,
     resetMs: Math.max(0, record.resetAt - now),
   };
-}
-
-/** Periodic cleanup to avoid memory leaks from stale IP/rate-limit records */
-if (typeof setInterval !== "undefined") {
-  setInterval(() => {
-    const now = Date.now();
-    for (const [key, record] of memoryStore.entries()) {
-      if (now > record.resetAt) {
-        memoryStore.delete(key);
-      }
-    }
-  }, 300_000);
 }

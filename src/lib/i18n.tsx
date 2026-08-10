@@ -219,8 +219,10 @@ const LanguageContext = createContext<LanguageContextType | null>(null);
 export function LanguageProvider({ children }: { children: React.ReactNode }) {
   const [lang, setLangState] = useState<Language>(() => {
     try {
-      const saved = localStorage.getItem("justtap_app_lang") as Language;
-      if (saved === "en" || saved === "ar") return saved;
+      if (typeof window !== "undefined" && window.localStorage) {
+        const saved = window.localStorage.getItem("justtap_app_lang") as Language;
+        if (saved === "en" || saved === "ar") return saved;
+      }
     } catch {
       /* ignore storage errors */
     }
@@ -230,7 +232,9 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
   const setLang = (newLang: Language) => {
     setLangState(newLang);
     try {
-      localStorage.setItem("justtap_app_lang", newLang);
+      if (typeof window !== "undefined" && window.localStorage) {
+        window.localStorage.setItem("justtap_app_lang", newLang);
+      }
     } catch {
       /* ignore storage errors */
     }
