@@ -12,13 +12,15 @@ import {
   Plus,
   Power,
   ShieldAlert,
+  Sparkles,
   Trash2,
   UserPlus,
   Users,
+  Zap,
 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/lib/supabase";
-import { slugify, type Card } from "@/lib/card";
+import { slugify, type Card, type PlanTier } from "@/lib/card";
 import { useAuth, useIsAdmin } from "@/hooks/useAuth";
 
 export const Route = createFileRoute("/admin")({
@@ -50,6 +52,7 @@ type ProfileRow = {
   phone: string | null;
   created_at: string;
   cards_count: number;
+  plan_tier?: PlanTier;
 };
 
 function AdminPage() {
@@ -74,16 +77,18 @@ function AdminPage() {
   const [profileRows, setProfileRows] = useState<ProfileRow[]>([]);
   const [fetching, setFetching] = useState(true);
 
-  // Client Account Creation Form State (Name, Email, Phone)
+  // Client Account Creation Form State (Name, Email, Phone, Plan Tier)
   const [clientName, setClientName] = useState("");
   const [clientEmail, setClientEmail] = useState("");
   const [clientPhone, setClientPhone] = useState("");
+  const [clientPlanTier, setClientPlanTier] = useState<PlanTier>("pro");
 
-  // Card Creation Form State (Name, Slug, Phone, Client User ID)
+  // Card Creation Form State (Name, Slug, Phone, Client User ID, Plan Tier)
   const [cardName, setCardName] = useState("");
   const [cardSlug, setCardSlug] = useState("");
   const [cardPhone, setCardPhone] = useState("");
   const [cardUserId, setCardUserId] = useState("");
+  const [cardPlanTier, setCardPlanTier] = useState<PlanTier>("pro");
 
   const isAuthorizedAdmin = !!adminToken || isAdmin;
 
@@ -156,10 +161,17 @@ function AdminPage() {
     );
 
     setProfileRows(
-      rawProfiles.map((p) => ({
-        ...p,
-        cards_count: rawCards.filter((c) => c.user_id === p.user_id).length,
-      })),
+      rawProfiles.map((p) => {
+        const clientCards = rawCards.filter((c) => c.user_id === p.user_id);
+        const hasProCard = clientCards.some(
+          (c) => c.plan_tier === "pro" || c.plan_tier === "enterprise",
+        );
+        return {
+          ...p,
+          cards_count: clientCards.length,
+          plan_tier: p.plan_tier || (hasProCard ? "pro" : "free"),
+        };
+      }),
     );
 
     setFetching(false);
@@ -181,6 +193,7 @@ function AdminPage() {
       full_name: clientName.trim(),
       email: clientEmail.trim().toLowerCase(),
       phone: clientPhone.trim() || null,
+      plan_tier: clientPlanTier,
     });
 
     if (error) {
@@ -188,7 +201,7 @@ function AdminPage() {
       return;
     }
 
-    toast.success("Client account created successfully!");
+    toast.success(`Client account created with ${clientPlanTier.toUpperCase()} status!`);
     setClientName("");
     setClientEmail("");
     setClientPhone("");
@@ -208,6 +221,7 @@ function AdminPage() {
       slug: slugify(cardSlug || cardName),
       full_name: cardName.trim(),
       phone: cardPhone.trim() || "-",
+      plan_tier: cardPlanTier,
     });
 
     if (error) {
@@ -215,11 +229,66 @@ function AdminPage() {
       return;
     }
 
-    toast.success("Card created successfully!");
+    toast.success(`Card created with ${cardPlanTier.toUpperCase()} status!`);
     setCardSlug("");
     setCardName("");
     setCardUserId("");
     setCardPhone("");
+    void load();
+  }
+
+  async function toggleClientPro(profile: ProfileRow) {
+    const isCurrentlyPro =
+      profile.plan_tier === "pro" || profile.plan_tier === "enterprise";
+    const newTier: PlanTier = isCurrentlyPro ? "free" : "pro";
+
+    // Update profile table
+    try {
+      await supabase.from("profiles").update({ plan_tier: newTier }).eq("id", profile.id);
+    } catch {
+      /* ignore if column not present */
+    }
+
+    // Update all cards owned by this client user_id
+    if (profile.user_id) {
+      const { error } = await supabase
+        .from("cards")
+        .update({ plan_tier: newTier })
+        .eq("user_id", profile.user_id);
+      if (error) {
+        toast.error(`Failed updating cards: ${error.message}`);
+        return;
+      }
+    }
+
+    toast.success(
+      newTier === "pro"
+        ? `✨ Client "${profile.full_name}" is now PRO! All client cards unlocked.`
+        : `Client "${profile.full_name}" set to FREE tier.`,
+    );
+    void load();
+  }
+
+  async function toggleCardPro(cardRow: CardRow) {
+    const isCurrentlyPro =
+      cardRow.plan_tier === "pro" || cardRow.plan_tier === "enterprise";
+    const newTier: PlanTier = isCurrentlyPro ? "free" : "pro";
+
+    const { error } = await supabase
+      .from("cards")
+      .update({ plan_tier: newTier })
+      .eq("id", cardRow.id);
+
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+
+    toast.success(
+      newTier === "pro"
+        ? `✨ Card "${cardRow.full_name}" is now PRO!`
+        : `Card "${cardRow.full_name}" set to FREE tier.`,
+    );
     void load();
   }
 
@@ -231,6 +300,7 @@ function AdminPage() {
       setCardUserId(profile.user_id);
     }
     setCardSlug(slugify(profile.full_name));
+    setCardPlanTier(profile.plan_tier || "pro");
     toast.info(`Preparing card creation for ${profile.full_name}`);
   }
 
@@ -415,7 +485,7 @@ function AdminPage() {
         {/* CLIENTS TAB */}
         {activeTab === "clients" && (
           <div className="space-y-6 mt-5">
-            {/* Create Client Account Form (Name, Email, Phone) */}
+            {/* Create Client Account Form */}
             <form
               onSubmit={createClientAccount}
               className="glass rounded-2xl p-5 border border-border/60"
@@ -423,7 +493,7 @@ function AdminPage() {
               <h2 className="text-base font-semibold mb-3 flex items-center gap-2">
                 <UserPlus className="h-4 w-4 text-primary" /> Create Client Account
               </h2>
-              <div className="grid gap-3 sm:grid-cols-4">
+              <div className="grid gap-3 sm:grid-cols-5">
                 <input
                   required
                   value={clientName}
@@ -445,6 +515,14 @@ function AdminPage() {
                   placeholder="Phone Number (Optional)"
                   className="h-10 rounded-xl border border-border bg-background px-3 text-sm"
                 />
+                <select
+                  value={clientPlanTier}
+                  onChange={(e) => setClientPlanTier(e.target.value as PlanTier)}
+                  className="h-10 rounded-xl border border-border bg-background px-3 text-sm font-medium"
+                >
+                  <option value="pro">Pro Member (Unlocked)</option>
+                  <option value="free">Free Member</option>
+                </select>
                 <button
                   type="submit"
                   className="flex h-10 items-center justify-center gap-1.5 rounded-xl bg-primary text-sm font-semibold text-primary-foreground hover:opacity-90 transition-opacity"
@@ -469,46 +547,80 @@ function AdminPage() {
                       <th className="pb-3 pr-4">Client Name</th>
                       <th className="pb-3 pr-4">Email</th>
                       <th className="pb-3 pr-4">Phone</th>
+                      <th className="pb-3 pr-4">Membership</th>
                       <th className="pb-3 pr-4">Cards</th>
                       <th className="pb-3 pr-4">Created</th>
                       <th className="pb-3 pr-4 text-right">Actions</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {profileRows.map((p) => (
-                      <tr key={p.id} className="border-t border-border/60">
-                        <td className="py-3 pr-4 font-medium">{p.full_name}</td>
-                        <td className="py-3 pr-4 text-sm">{p.email}</td>
-                        <td className="py-3 pr-4 text-xs text-muted-foreground">
-                          {p.phone || "—"}
-                        </td>
-                        <td className="py-3 pr-4">
-                          <span className="rounded-full bg-primary/10 px-2.5 py-0.5 text-xs font-medium text-primary">
-                            {p.cards_count} {p.cards_count === 1 ? "card" : "cards"}
-                          </span>
-                        </td>
-                        <td className="py-3 pr-4 text-xs text-muted-foreground">
-                          {p.created_at ? new Date(p.created_at).toLocaleDateString() : "—"}
-                        </td>
-                        <td className="py-3 text-right">
-                          <button
-                            type="button"
-                            onClick={() => prepareCardForClient(p)}
-                            className="mr-2 inline-flex items-center gap-1 rounded-lg bg-secondary px-3 py-1.5 text-xs font-medium text-secondary-foreground hover:bg-secondary/80 transition-colors"
-                          >
-                            <Plus className="h-3.5 w-3.5" /> Make Card
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => void removeProfile(p)}
-                            aria-label="Delete client"
-                            className="rounded-lg p-1.5 text-muted-foreground hover:text-destructive transition-colors"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
+                    {profileRows.map((p) => {
+                      const isPro = p.plan_tier === "pro" || p.plan_tier === "enterprise";
+                      return (
+                        <tr key={p.id} className="border-t border-border/60">
+                          <td className="py-3 pr-4 font-medium">{p.full_name}</td>
+                          <td className="py-3 pr-4 text-sm">{p.email}</td>
+                          <td className="py-3 pr-4 text-xs text-muted-foreground">
+                            {p.phone || "—"}
+                          </td>
+                          <td className="py-3 pr-4">
+                            <span
+                              className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-semibold ${
+                                isPro
+                                  ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30"
+                                  : "bg-secondary text-muted-foreground"
+                              }`}
+                            >
+                              {isPro ? (
+                                <>
+                                  <Sparkles className="h-3 w-3 text-amber-400" /> PRO Client
+                                </>
+                              ) : (
+                                "Free Client"
+                              )}
+                            </span>
+                          </td>
+                          <td className="py-3 pr-4">
+                            <span className="rounded-full bg-primary/10 px-2.5 py-0.5 text-xs font-medium text-primary">
+                              {p.cards_count} {p.cards_count === 1 ? "card" : "cards"}
+                            </span>
+                          </td>
+                          <td className="py-3 pr-4 text-xs text-muted-foreground">
+                            {p.created_at ? new Date(p.created_at).toLocaleDateString() : "—"}
+                          </td>
+                          <td className="py-3 text-right whitespace-nowrap">
+                            <button
+                              type="button"
+                              onClick={() => void toggleClientPro(p)}
+                              className={`mr-2 inline-flex items-center gap-1 rounded-lg px-2.5 py-1 text-xs font-semibold transition-colors ${
+                                isPro
+                                  ? "bg-amber-500/10 text-amber-500 hover:bg-amber-500/20"
+                                  : "bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/30"
+                              }`}
+                              title={isPro ? "Downgrade to Free" : "Upgrade to Pro"}
+                            >
+                              <Zap className="h-3.5 w-3.5" />
+                              {isPro ? "Make Free" : "Make Pro"}
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => prepareCardForClient(p)}
+                              className="mr-2 inline-flex items-center gap-1 rounded-lg bg-secondary px-3 py-1 text-xs font-medium text-secondary-foreground hover:bg-secondary/80 transition-colors"
+                            >
+                              <Plus className="h-3.5 w-3.5" /> Make Card
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => void removeProfile(p)}
+                              aria-label="Delete client"
+                              className="rounded-lg p-1.5 text-muted-foreground hover:text-destructive transition-colors"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </button>
+                          </td>
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
               )}
@@ -525,7 +637,7 @@ function AdminPage() {
                 <CreditCard className="h-4 w-4 text-primary" /> Create Digital Card (Optional Admin
                 Action)
               </h2>
-              <div className="grid gap-3 sm:grid-cols-5">
+              <div className="grid gap-3 sm:grid-cols-6">
                 <input
                   required
                   value={cardName}
@@ -536,7 +648,7 @@ function AdminPage() {
                 <input
                   value={cardSlug}
                   onChange={(e) => setCardSlug(e.target.value)}
-                  placeholder="Custom slug (optional)"
+                  placeholder="Custom slug"
                   className="h-10 rounded-xl border border-border bg-background px-3 text-sm"
                 />
                 <input
@@ -548,9 +660,17 @@ function AdminPage() {
                 <input
                   value={cardUserId}
                   onChange={(e) => setCardUserId(e.target.value)}
-                  placeholder="Client User ID (uuid)"
+                  placeholder="Client User ID"
                   className="h-10 rounded-xl border border-border bg-background px-3 text-sm"
                 />
+                <select
+                  value={cardPlanTier}
+                  onChange={(e) => setCardPlanTier(e.target.value as PlanTier)}
+                  className="h-10 rounded-xl border border-border bg-background px-3 text-sm font-medium"
+                >
+                  <option value="pro">Pro Status</option>
+                  <option value="free">Free Tier</option>
+                </select>
                 <button
                   type="submit"
                   className="flex h-10 items-center justify-center gap-1.5 rounded-xl bg-primary text-sm font-semibold text-primary-foreground hover:opacity-90 transition-opacity"
@@ -575,8 +695,7 @@ function AdminPage() {
                     <tr>
                       <th className="pb-3 pr-4">Card Name</th>
                       <th className="pb-3 pr-4">Slug</th>
-                      <th className="pb-3 pr-4">Client User ID</th>
-                      <th className="pb-3 pr-4">Created</th>
+                      <th className="pb-3 pr-4">Tier</th>
                       <th className="pb-3 pr-4">Scans</th>
                       <th className="pb-3 pr-4">Saves</th>
                       <th className="pb-3 pr-4">Leads</th>
@@ -585,59 +704,86 @@ function AdminPage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {cardRows.map((r) => (
-                      <tr key={r.id} className="border-t border-border/60">
-                        <td className="py-3 pr-4 font-medium">{r.full_name}</td>
-                        <td className="py-3 pr-4">
-                          <a
-                            href={`/c/${r.slug}`}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="inline-flex items-center gap-1 text-primary hover:underline"
-                          >
-                            {r.slug} <ExternalLink className="h-3 w-3" />
-                          </a>
-                        </td>
-                        <td className="max-w-[130px] truncate py-3 pr-4 text-xs text-muted-foreground">
-                          {r.user_id ?? "—"}
-                        </td>
-                        <td className="py-3 pr-4 text-xs text-muted-foreground">
-                          {r.created_at ? new Date(r.created_at).toLocaleDateString() : "—"}
-                        </td>
-                        <td className="py-3 pr-4 font-medium">{r.views}</td>
-                        <td className="py-3 pr-4 font-medium">{r.downloads}</td>
-                        <td className="py-3 pr-4 font-medium">{r.leads}</td>
-                        <td className="py-3 pr-4">
-                          <span
-                            className={`rounded-full px-2.5 py-0.5 text-[11px] font-medium ${
-                              (r.is_active ?? true)
-                                ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400"
-                                : "bg-destructive/15 text-destructive"
-                            }`}
-                          >
-                            {(r.is_active ?? true) ? "Active" : "Disabled"}
-                          </span>
-                        </td>
-                        <td className="py-3 text-right whitespace-nowrap">
-                          <button
-                            type="button"
-                            onClick={() => void toggleActive(r)}
-                            title="Toggle active status"
-                            className="rounded-lg p-1.5 text-muted-foreground hover:text-foreground transition-colors"
-                          >
-                            <Power className="h-4 w-4" />
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => void removeCard(r)}
-                            title="Delete card"
-                            className="rounded-lg p-1.5 text-muted-foreground hover:text-destructive transition-colors"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
+                    {cardRows.map((r) => {
+                      const isProCard = r.plan_tier === "pro" || r.plan_tier === "enterprise";
+                      return (
+                        <tr key={r.id} className="border-t border-border/60">
+                          <td className="py-3 pr-4 font-medium">{r.full_name}</td>
+                          <td className="py-3 pr-4">
+                            <a
+                              href={`/c/${r.slug}`}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="inline-flex items-center gap-1 text-primary hover:underline"
+                            >
+                              {r.slug} <ExternalLink className="h-3 w-3" />
+                            </a>
+                          </td>
+                          <td className="py-3 pr-4">
+                            <span
+                              className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-semibold ${
+                                isProCard
+                                  ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30"
+                                  : "bg-secondary text-muted-foreground"
+                              }`}
+                            >
+                              {isProCard ? (
+                                <>
+                                  <Sparkles className="h-3 w-3 text-amber-400" /> PRO
+                                </>
+                              ) : (
+                                "FREE"
+                              )}
+                            </span>
+                          </td>
+                          <td className="py-3 pr-4 font-medium">{r.views}</td>
+                          <td className="py-3 pr-4 font-medium">{r.downloads}</td>
+                          <td className="py-3 pr-4 font-medium">{r.leads}</td>
+                          <td className="py-3 pr-4">
+                            <span
+                              className={`rounded-full px-2.5 py-0.5 text-[11px] font-medium ${
+                                (r.is_active ?? true)
+                                  ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400"
+                                  : "bg-destructive/15 text-destructive"
+                              }`}
+                            >
+                              {(r.is_active ?? true) ? "Active" : "Disabled"}
+                            </span>
+                          </td>
+                          <td className="py-3 text-right whitespace-nowrap">
+                            <button
+                              type="button"
+                              onClick={() => void toggleCardPro(r)}
+                              title={isProCard ? "Set to Free" : "Set to Pro"}
+                              className={`mr-2 inline-flex items-center gap-1 rounded-lg px-2.5 py-1 text-xs font-semibold transition-colors ${
+                                isProCard
+                                  ? "bg-amber-500/10 text-amber-500 hover:bg-amber-500/20"
+                                  : "bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/30"
+                              }`}
+                            >
+                              <Zap className="h-3.5 w-3.5" />
+                              {isProCard ? "Free" : "Pro"}
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => void toggleActive(r)}
+                              title="Toggle active status"
+                              className="rounded-lg p-1.5 text-muted-foreground hover:text-foreground transition-colors"
+                            >
+                              <Power className="h-4 w-4" />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => void removeCard(r)}
+                              title="Delete card"
+                              className="rounded-lg p-1.5 text-muted-foreground hover:text-destructive transition-colors"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </button>
+                          </td>
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
               )}

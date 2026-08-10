@@ -175,6 +175,8 @@ export function CardEditor({ draft, setDraft, userId, isNew, onSaved }: Props) {
       title_ar: draft.title_ar ? sanitizeText(draft.title_ar, 100) : null,
       bio_ar: draft.bio_ar ? sanitizeText(draft.bio_ar, 1000) : null,
       social_links: sanitizedSocialLinks,
+      plan_tier: draft.plan_tier || "free",
+      pro_features: draft.pro_features ?? {},
     };
 
     const query = isNew

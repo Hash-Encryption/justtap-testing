@@ -37,6 +37,7 @@ export function ProFeaturesTab({ card, onChange, userId }: Props) {
   const [upgradeOpen, setUpgradeOpen] = useState(false);
   const [testingWebhook, setTestingWebhook] = useState(false);
   const [testingEmail, setTestingEmail] = useState(false);
+  const [saving, setSaving] = useState(false);
 
   const planTier: PlanTier = card.plan_tier || "free";
   const isPro = planTier === "pro" || planTier === "enterprise";
@@ -46,6 +47,36 @@ export function ProFeaturesTab({ card, onChange, userId }: Props) {
     const updatedPro = { ...(card.pro_features || defaultProFeatures), [key]: value };
     onChange({ ...card, pro_features: updatedPro });
   };
+
+  async function saveProFeatures() {
+    if (!card.id) {
+      toast.error("Please publish your card first before saving special features.");
+      return;
+    }
+
+    setSaving(true);
+    const { data, error } = await supabase
+      .from("cards")
+      .update({
+        pro_features: card.pro_features || defaultProFeatures,
+        plan_tier: card.plan_tier || "free",
+      })
+      .eq("id", card.id)
+      .select()
+      .single();
+
+    setSaving(false);
+
+    if (error) {
+      toast.error(`Failed to save special features: ${error.message}`);
+      return;
+    }
+
+    if (data) {
+      onChange(data as Card);
+      toast.success("✨ Special features saved & published live to your digital card!");
+    }
+  }
 
   async function sendTestEmailAlert() {
     const emailToUse = pro.notify_email || card.email;
@@ -590,6 +621,24 @@ export function ProFeaturesTab({ card, onChange, userId }: Props) {
             />
           </div>
         </div>
+      </div>
+
+      {/* SAVE BUTTON BAR */}
+      <div className="sticky bottom-6 z-20 flex items-center justify-between rounded-2xl border border-primary/40 bg-background/95 p-4 shadow-xl backdrop-blur-xl">
+        <div className="flex items-center gap-2 text-xs">
+          <Sparkles className="h-4 w-4 text-primary" />
+          <span className="font-medium text-muted-foreground">
+            {isPro ? "Pro features active on your account" : "Customize special features & publish"}
+          </span>
+        </div>
+        <button
+          type="button"
+          onClick={() => void saveProFeatures()}
+          disabled={saving}
+          className="flex items-center gap-2 rounded-xl bg-primary px-5 py-2.5 text-xs font-semibold text-primary-foreground hover:opacity-90 transition-opacity disabled:opacity-50"
+        >
+          {saving ? "Saving..." : "Save & Publish Special Features"}
+        </button>
       </div>
 
       {/* UPGRADE DIALOG MODAL */}

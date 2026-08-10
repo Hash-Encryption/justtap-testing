@@ -340,7 +340,7 @@ function Dashboard() {
 
         {tab === "pro" && draft && (
           <ProFeaturesTab
-            card={draft}
+            card={isAdmin ? { ...draft, plan_tier: "pro" } : draft}
             userId={user.id}
             onChange={(updated) => {
               setDraft(updated);
