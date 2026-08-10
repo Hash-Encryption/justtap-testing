@@ -338,10 +338,14 @@ function Dashboard() {
             />
           ))}
 
-        {tab === "pro" && draft && (
+        {tab === "pro" && (draft || card) && (
           <ProFeaturesTab
-            card={isAdmin ? { ...draft, plan_tier: "pro" } : draft}
-            userId={user.id}
+            card={
+              isAdmin
+                ? { ...(draft || card || emptyCard), plan_tier: "pro" }
+                : (draft || card || emptyCard)
+            }
+            userId={user?.id ?? "guest"}
             onChange={(updated) => {
               setDraft(updated);
               if (card) {

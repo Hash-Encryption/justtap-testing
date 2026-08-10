@@ -190,7 +190,8 @@ export function ProFeaturesTab({ card, onChange, userId }: Props) {
 
     setUploadingPdf(true);
     try {
-      const path = `${userId}/docs/pdf_${crypto.randomUUID()}.pdf`;
+      const fileId = `${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
+      const path = `${userId || "guest"}/docs/pdf_${fileId}.pdf`;
       const { error } = await supabase.storage
         .from(STORAGE_BUCKET)
         .upload(path, file, { contentType: "application/pdf", upsert: true });
