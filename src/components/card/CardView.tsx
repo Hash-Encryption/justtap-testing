@@ -192,13 +192,8 @@ export function CardView({ card, preview = false }: Props) {
     }
     const walletType = getMobileWalletType();
     if (walletType === "apple") {
-      const link = document.createElement("a");
-      link.href = `/api/apple-wallet/${card.slug}`;
-      link.download = `${card.slug}.pkpass`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      toast.success(ar ? "جاري فتح محفظة Apple..." : "Opening Apple Wallet Pass...");
+      // Direct navigation allows iOS PassKit to intercept application/vnd.apple.pkpass natively
+      window.location.href = `/api/apple-wallet/${card.slug}`;
     } else {
       window.open(`/api/google-wallet/${card.slug}`, "_blank");
     }

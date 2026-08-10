@@ -71,9 +71,8 @@ export const Route = createFileRoute("/api/apple-wallet/$slug")({
         return new Response(pkpassBuffer, {
           headers: {
             "Content-Type": "application/vnd.apple.pkpass",
-            "Content-Disposition": `attachment; filename="${cleanSlug}.pkpass"`,
+            "Content-Disposition": `inline; filename="${cleanSlug}.pkpass"`,
             "Cache-Control": "no-store, no-cache, must-revalidate, max-age=0",
-            "X-Content-Type-Options": "nosniff",
           },
         });
       },
