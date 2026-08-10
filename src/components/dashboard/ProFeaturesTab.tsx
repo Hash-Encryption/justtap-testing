@@ -16,7 +16,13 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { STORAGE_BUCKET, supabase } from "@/lib/supabase";
-import { defaultProFeatures, type Card, type PlanTier, type ProFeatures } from "@/lib/card";
+import {
+  defaultProFeatures,
+  getEmbedVideoUrl,
+  type Card,
+  type PlanTier,
+  type ProFeatures,
+} from "@/lib/card";
 import { sanitizeText, sanitizeUrl } from "@/lib/sanitization";
 import {
   Dialog,
