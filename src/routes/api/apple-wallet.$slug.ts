@@ -47,7 +47,7 @@ export const Route = createFileRoute("/api/apple-wallet/$slug")({
         const { data, error } = await client
           .from("cards")
           .select("*")
-          .eq("slug", cleanSlug)
+          .ilike("slug", cleanSlug)
           .maybeSingle();
 
         if (error || !data) {
@@ -71,8 +71,13 @@ export const Route = createFileRoute("/api/apple-wallet/$slug")({
           user_agent: sanitizeText(request.headers.get("user-agent") || "", 250) || null,
         });
 
-        // 1. FAST CACHE CHECK: If pass URL already generated & cached in Supabase, return it instantly!
-        if (pro.wallet_pass_url && pro.wallet_pass_url.startsWith("http")) {
+        // 1. FAST CACHE CHECK: If pass URL already generated & cached in Supabase, return it!
+        if (
+          pro.wallet_pass_url &&
+          pro.wallet_pass_url.startsWith("http") &&
+          !pro.wallet_pass_url.includes("your-pass-id") &&
+          !pro.wallet_pass_url.includes("example.com")
+        ) {
           return Response.redirect(pro.wallet_pass_url, 302);
         }
 

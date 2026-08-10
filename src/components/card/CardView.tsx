@@ -191,7 +191,12 @@ export function CardView({ card, preview = false }: Props) {
       return;
     }
     const customPassUrl = card.pro_features?.wallet_pass_url;
-    if (customPassUrl && customPassUrl.startsWith("http")) {
+    if (
+      customPassUrl &&
+      customPassUrl.startsWith("http") &&
+      !customPassUrl.includes("your-pass-id") &&
+      !customPassUrl.includes("example.com")
+    ) {
       window.location.href = customPassUrl;
       return;
     }
