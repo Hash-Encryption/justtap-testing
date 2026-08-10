@@ -60,6 +60,9 @@ export const Route = createFileRoute("/api/apple-wallet/$slug")({
         const card = data as Card;
         const originUrl = new URL(request.url).origin;
         const cardUrl = `${originUrl}/c/${card.slug}`;
+        const pro = (typeof card.pro_features === "object" && card.pro_features !== null)
+          ? card.pro_features
+          : {};
 
         // Log analytics event
         await client.from("card_analytics").insert({
@@ -68,15 +71,24 @@ export const Route = createFileRoute("/api/apple-wallet/$slug")({
           user_agent: sanitizeText(request.headers.get("user-agent") || "", 250) || null,
         });
 
-        // 1. Check for WalletWallet.dev API key in environment
+        // 1. FAST CACHE CHECK: If pass URL already generated & cached in Supabase, return it instantly!
+        if (pro.wallet_pass_url && pro.wallet_pass_url.startsWith("http")) {
+          return Response.redirect(pro.wallet_pass_url, 302);
+        }
+
+        // 2. Check for platform WalletWallet.dev API key in environment
         const walletApiKey =
           typeof process !== "undefined"
             ? process.env?.["WALLETWALLET_API_KEY"] || process.env?.["WALLET_API_KEY"]
             : null;
 
+        const customEndpoint =
+          (typeof process !== "undefined" && process.env?.["WALLETWALLET_API_ENDPOINT"]) ||
+          "https://api.walletwallet.dev/v1/passes/apple";
+
         if (walletApiKey) {
           try {
-            const wwRes = await fetch("https://api.walletwallet.dev/v1/passes/apple", {
+            const wwRes = await fetch(customEndpoint, {
               method: "POST",
               headers: {
                 "Content-Type": "application/json",
@@ -99,9 +111,21 @@ export const Route = createFileRoute("/api/apple-wallet/$slug")({
             if (wwRes.ok) {
               const contentType = wwRes.headers.get("content-type") || "";
               if (contentType.includes("json")) {
-                const json = (await wwRes.json()) as { url?: string; download_url?: string };
-                const passUrl = json.url || json.download_url;
+                const json = (await wwRes.json()) as {
+                  url?: string;
+                  download_url?: string;
+                  pass_url?: string;
+                };
+                const passUrl = json.url || json.download_url || json.pass_url;
                 if (passUrl) {
+                  // Cache generated pass URL in Supabase card record for instant future visits
+                  await client
+                    .from("cards")
+                    .update({
+                      pro_features: { ...pro, wallet_pass_url: passUrl },
+                    })
+                    .eq("id", card.id);
+
                   return Response.redirect(passUrl, 302);
                 }
               } else {
