@@ -120,32 +120,47 @@ export function slugify(input: string) {
     .slice(0, 48);
 }
 
-/** Converts YouTube / Vimeo / Loom URLs to iframe embed URLs */
+/** Converts YouTube (watch, shorts, embed, shorts links), Vimeo, Loom, and Google Drive URLs to embeddable iframe URLs */
 export function getEmbedVideoUrl(url: string | null | undefined): string | null {
   if (!url) return null;
   const trimmed = url.trim();
   if (!trimmed) return null;
 
-  // YouTube match (watch?v=, short link, or embed)
-  const ytMatch = trimmed.match(
-    new RegExp(
-      '(?:youtube\\.com/(?:[^/]+/.+/|(?:v|e(?:mbed)?)/|.*[?&]v=)|youtu\\.be/)([^"&?/\\s]{11})',
-    ),
-  );
-  if (ytMatch && ytMatch[1]) {
-    return `https://www.youtube-nocookie.com/embed/${ytMatch[1]}`;
+  // 1. YouTube Shorts match: youtube.com/shorts/VIDEO_ID
+  const ytShorts = trimmed.match(/youtube\.com\/shorts\/([a-zA-Z0-9_-]{11})/i);
+  if (ytShorts && ytShorts[1]) {
+    return `https://www.youtube-nocookie.com/embed/${ytShorts[1]}`;
   }
 
-  // Loom match
-  const loomMatch = trimmed.match(new RegExp("loom\\.com/(?:share|embed)/([a-f0-9]+)"));
+  // 2. YouTube standard watch, embed, or short link (youtu.be/ID or watch?v=ID)
+  const ytStandard = trimmed.match(
+    /(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|watch\?.+&v=))([a-zA-Z0-9_-]{11})/i,
+  );
+  if (ytStandard && ytStandard[1]) {
+    return `https://www.youtube-nocookie.com/embed/${ytStandard[1]}`;
+  }
+
+  // 3. Loom match: loom.com/share/ID or loom.com/embed/ID
+  const loomMatch = trimmed.match(/loom\.com\/(?:share|embed)\/([a-f0-9-]+)/i);
   if (loomMatch && loomMatch[1]) {
     return `https://www.loom.com/embed/${loomMatch[1]}`;
   }
 
-  // Vimeo match
-  const vimeoMatch = trimmed.match(/vimeo\.com\/(?:video\/)?([0-9]+)/);
+  // 4. Vimeo match: vimeo.com/ID or vimeo.com/video/ID
+  const vimeoMatch = trimmed.match(/vimeo\.com\/(?:video\/)?([0-9]+)/i);
   if (vimeoMatch && vimeoMatch[1]) {
     return `https://player.vimeo.com/video/${vimeoMatch[1]}`;
+  }
+
+  // 5. Google Drive video file match: drive.google.com/file/d/FILE_ID/view
+  const driveMatch = trimmed.match(/drive\.google\.com\/file\/d\/([a-zA-Z0-9_-]+)/i);
+  if (driveMatch && driveMatch[1]) {
+    return `https://drive.google.com/file/d/${driveMatch[1]}/preview`;
+  }
+
+  // 6. Direct HTTPS embed link fallback
+  if (trimmed.startsWith("https://") || trimmed.startsWith("http://")) {
+    return trimmed;
   }
 
   return null;

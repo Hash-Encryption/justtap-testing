@@ -294,13 +294,36 @@ export function ProFeaturesTab({ card, onChange, userId }: Props) {
             type="url"
             value={pro.video_url || ""}
             onChange={(e) => updatePro("video_url", sanitizeUrl(e.target.value) || e.target.value)}
-            placeholder="https://www.youtube.com/watch?v=... or Loom / Vimeo URL"
+            placeholder="https://www.youtube.com/watch?v=... or YouTube Shorts / Loom / Vimeo link"
             className="h-11 w-full rounded-xl border border-border bg-transparent px-4 text-xs outline-none focus:border-primary"
           />
+          <p className="text-[11px] text-muted-foreground">
+            Supports YouTube Shorts, YouTube Watch, Loom, Vimeo, and Google Drive video URLs.
+          </p>
+
           {pro.video_url && (
-            <p className="text-[11px] text-emerald-400">
-              ✓ Valid video link attached. Preview is ready in the mobile frame!
-            </p>
+            <div className="mt-2 space-y-2">
+              {getEmbedVideoUrl(pro.video_url) ? (
+                <div className="space-y-1.5">
+                  <p className="text-[11px] font-semibold text-emerald-400">
+                    ✓ Valid Video Link Detected — Live Preview Below:
+                  </p>
+                  <div className="overflow-hidden rounded-2xl border border-border aspect-video w-full max-w-md shadow-md">
+                    <iframe
+                      src={getEmbedVideoUrl(pro.video_url)!}
+                      title="Video Intro Preview"
+                      className="w-full h-full"
+                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                      allowFullScreen
+                    />
+                  </div>
+                </div>
+              ) : (
+                <p className="text-[11px] font-medium text-amber-400">
+                  ⚠️ Unsupported video URL format. Please paste a valid YouTube, Loom, Vimeo, or Google Drive link.
+                </p>
+              )}
+            </div>
           )}
         </div>
       </div>

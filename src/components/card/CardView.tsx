@@ -43,6 +43,7 @@ export function CardView({ card, preview = false }: Props) {
   const [lang, setLang] = useState<"en" | "ar">("en");
   const [leadOpen, setLeadOpen] = useState(false);
   const [shareOpen, setShareOpen] = useState(false);
+  const [walletOpen, setWalletOpen] = useState(false);
   const [copied, setCopied] = useState(false);
   const [sending, setSending] = useState(false);
   const ar = lang === "ar" && card.enable_arabic;
@@ -371,6 +372,22 @@ export function CardView({ card, preview = false }: Props) {
                 </a>
               )}
 
+              {/* APPLE & GOOGLE WALLET PASS BUTTON */}
+              {pro.enable_wallet_pass !== false && (
+                <button
+                  type="button"
+                  onClick={() => setWalletOpen(true)}
+                  className="flex w-full items-center justify-between rounded-2xl border px-4 py-3.5 text-sm font-semibold transition active:scale-[0.98] shadow-sm"
+                  style={{ borderColor: `${accent}44`, backgroundColor: `${accent}0d` }}
+                >
+                  <div className="flex items-center gap-2.5">
+                    <Wallet className="h-4 w-4" style={{ color: accent }} />
+                    <span>{ar ? "إضافة إلى محفظة Apple / Google" : "Add to Apple & Google Wallet"}</span>
+                  </div>
+                  <Sparkles className="h-4 w-4 text-amber-400" />
+                </button>
+              )}
+
               {/* CUSTOM CTA ACTION BUTTON */}
               {pro.custom_cta_label && pro.custom_cta_url && (
                 <a
@@ -567,6 +584,71 @@ export function CardView({ card, preview = false }: Props) {
                 loading="lazy"
               />
             </div>
+          </div>
+        </DrawerContent>
+      </Drawer>
+
+      {/* WALLET PASS DRAWER */}
+      <Drawer open={walletOpen} onOpenChange={setWalletOpen}>
+        <DrawerContent className="mx-auto max-w-[430px] p-6 text-center">
+          <DrawerHeader className="px-0 pt-0 text-center">
+            <div
+              className="mx-auto grid h-14 w-14 place-items-center rounded-2xl text-white shadow-lg mb-2"
+              style={{ backgroundColor: accent }}
+            >
+              <Wallet className="h-7 w-7" />
+            </div>
+            <DrawerTitle className="font-display text-xl font-bold">
+              {ar ? "محفظة Apple & Google الرقمية" : "Apple & Google Wallet Pass"}
+            </DrawerTitle>
+            <DrawerDescription className="text-xs text-muted-foreground">
+              {ar
+                ? "احفظ بطاقة الأعمال الرقمية مباشرة في محفظة الجوال الخاصة بك مع جهات الاتصال."
+                : "Save this digital business card pass directly to your mobile wallet or address book."}
+            </DrawerDescription>
+          </DrawerHeader>
+
+          {/* Pass Preview Card */}
+          <div
+            className="my-4 rounded-2xl p-5 text-left text-white shadow-xl relative overflow-hidden"
+            style={{ backgroundColor: accent }}
+          >
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] font-bold uppercase tracking-widest opacity-80">
+                JUSTTAP DIGITAL PASS
+              </span>
+              <Sparkles className="h-4 w-4 text-amber-300" />
+            </div>
+            <h3 className="mt-3 font-display text-lg font-bold truncate">{name}</h3>
+            <p className="text-xs opacity-90 truncate">{title || card.company || "Digital Pass"}</p>
+            {card.phone && (
+              <p className="mt-2 text-xs font-mono opacity-80" dir="ltr">
+                {card.phone}
+              </p>
+            )}
+          </div>
+
+          <div className="space-y-2 pt-1">
+            <button
+              type="button"
+              onClick={() => {
+                saveContact();
+                setWalletOpen(false);
+              }}
+              className="flex h-12 w-full items-center justify-center gap-2 rounded-2xl text-sm font-bold text-white shadow-md transition active:scale-[0.98]"
+              style={{ backgroundColor: accent }}
+            >
+              <Download className="h-4 w-4" />
+              {ar ? "تحميل جهة الاتصال والبطاقة (.vcf)" : "Save Contact & Wallet Pass (.vcf)"}
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setWalletOpen(false)}
+              className="h-10 w-full rounded-2xl text-xs font-medium text-muted-foreground hover:text-foreground"
+            >
+              {ar ? "إغلاق" : "Close"}
+            </button>
           </div>
         </DrawerContent>
       </Drawer>
