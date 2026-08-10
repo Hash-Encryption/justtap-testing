@@ -25,6 +25,7 @@ export function QrWalletHub({ card, onUpgradeRequest }: QrWalletHubProps) {
   const [profileQrUrl, setProfileQrUrl] = useState<string>('');
   const [offlineQrUrl, setOfflineQrUrl] = useState<string>('');
   const [showUpgradeModal, setShowUpgradeModal] = useState<boolean>(false);
+  const [activeQr, setActiveQr] = useState<'profile' | 'offline'>('profile');
 
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
@@ -34,13 +35,14 @@ export function QrWalletHub({ card, onUpgradeRequest }: QrWalletHubProps) {
 
   const isPro = card.plan === 'pro';
 
+  const isProfile = activeQr === 'profile';
+  const activeQrUrl = isProfile ? profileQrUrl : offlineQrUrl;
+  const activeSlugSuffix = isProfile ? 'profile' : 'offline';
+
   useEffect(() => {
-    // Generate Dynamic Profile QR Code
     QRCode.toDataURL(cardProfileUrl, { margin: 1, width: 300 }, (err, url) => {
       if (!err && url) setProfileQrUrl(url);
     });
-
-    // Generate Offline vCard QR Code
     QRCode.toDataURL(offlineVCardData, { margin: 1, width: 300 }, (err, url) => {
       if (!err && url) setOfflineQrUrl(url);
     });
@@ -200,96 +202,77 @@ export function QrWalletHub({ card, onUpgradeRequest }: QrWalletHubProps) {
         )}
       </div>
 
-      {/* QR CARDS GRID */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* 1. DYNAMIC PROFILE QR CODE */}
-        <div className="bg-slate-900/60 border border-slate-800 rounded-3xl p-6 flex flex-col items-center text-center space-y-4 shadow-xl">
-          <div className="flex items-center space-x-2 text-xs font-bold text-violet-400 uppercase tracking-wider">
-            <Sparkles className="w-4 h-4" />
-            <span>Dynamic Profile QR</span>
-          </div>
-          <p className="text-xs text-slate-400 max-w-xs">
-            Links directly to your live public profile (<code className="text-violet-300">/c/{card.slug}</code>).
-          </p>
-
-          <div className="p-4 bg-white rounded-2xl shadow-inner border border-slate-200">
-            {profileQrUrl ? (
-              <img src={profileQrUrl} alt="Dynamic Profile QR" className="w-48 h-48 object-contain" />
-            ) : (
-              <div className="w-48 h-48 bg-slate-100 flex items-center justify-center text-slate-400 text-xs">
-                Generating QR...
-              </div>
-            )}
-          </div>
-
-          <div className="w-full pt-2 space-y-2">
-            <a
-              href={profileQrUrl}
-              download={`JustTap_QR_profile_${card.slug}.png`}
-              className="w-full py-2.5 px-4 bg-slate-800 hover:bg-slate-700 text-white font-semibold text-xs rounded-xl border border-slate-700 flex items-center justify-center space-x-2 transition-colors"
-            >
-              <Download className="w-4 h-4" />
-              <span>Standard PNG Download</span>
-            </a>
-
-            <button
-              onClick={() => handleDownloadHighResQr('profile')}
-              className={`w-full py-2.5 px-4 text-xs font-semibold rounded-xl border flex items-center justify-center space-x-2 transition-all ${
-                isPro
-                  ? 'bg-violet-600/20 hover:bg-violet-600/30 text-violet-300 border-violet-500/30'
-                  : 'bg-slate-900/50 text-slate-500 border-slate-800 cursor-pointer'
-              }`}
-            >
-              {!isPro && <Lock className="w-3.5 h-3.5 text-amber-400" />}
-              <span>High-Res PNG (2000px)</span>
-              {!isPro && <span className="text-[10px] text-amber-400 font-bold ml-1">PRO</span>}
-            </button>
-          </div>
+      {/* QR TOGGLE + SINGLE PANEL */}
+      <div className="bg-slate-900/60 border border-slate-800 rounded-3xl p-6 flex flex-col items-center space-y-5 shadow-xl">
+        {/* Toggle pill */}
+        <div className="flex items-center bg-slate-800/80 rounded-2xl p-1 border border-slate-700/60">
+          <button
+            onClick={() => setActiveQr('profile')}
+            className={`flex items-center space-x-2 px-4 py-2 rounded-xl text-xs font-bold transition-all ${
+              isProfile
+                ? 'bg-violet-600 text-white shadow-md shadow-violet-600/30'
+                : 'text-slate-400 hover:text-slate-200'
+            }`}
+          >
+            <Sparkles className="w-3.5 h-3.5" />
+            <span>Dynamic Profile</span>
+          </button>
+          <button
+            onClick={() => setActiveQr('offline')}
+            className={`flex items-center space-x-2 px-4 py-2 rounded-xl text-xs font-bold transition-all ${
+              !isProfile
+                ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/30'
+                : 'text-slate-400 hover:text-slate-200'
+            }`}
+          >
+            <Zap className="w-3.5 h-3.5" />
+            <span>Offline vCard</span>
+          </button>
         </div>
 
-        {/* 2. OFFLINE VCARD QR CODE */}
-        <div className="bg-slate-900/60 border border-slate-800 rounded-3xl p-6 flex flex-col items-center text-center space-y-4 shadow-xl">
-          <div className="flex items-center space-x-2 text-xs font-bold text-emerald-400 uppercase tracking-wider">
-            <Zap className="w-4 h-4" />
-            <span>Offline vCard QR</span>
-          </div>
-          <p className="text-xs text-slate-400 max-w-xs">
-            Encodes raw vCard text. Scannable directly into contacts without internet!
-          </p>
+        {/* Description */}
+        <p className="text-xs text-slate-400 text-center max-w-xs">
+          {isProfile
+            ? <>Links to your live public profile (<code className="text-violet-300">/c/{card.slug}</code>). Requires internet.</>
+            : 'Encodes raw vCard text. Phone cameras save the contact directly — no internet needed.'}
+        </p>
 
-          <div className="p-4 bg-white rounded-2xl shadow-inner border border-slate-200">
-            {offlineQrUrl ? (
-              <img src={offlineQrUrl} alt="Offline vCard QR" className="w-48 h-48 object-contain" />
-            ) : (
-              <div className="w-48 h-48 bg-slate-100 flex items-center justify-center text-slate-400 text-xs">
-                Generating QR...
-              </div>
-            )}
-          </div>
+        {/* QR Image */}
+        <div className="p-4 bg-white rounded-2xl shadow-inner border border-slate-200">
+          {activeQrUrl ? (
+            <img src={activeQrUrl} alt={isProfile ? 'Dynamic Profile QR' : 'Offline vCard QR'} className="w-52 h-52 object-contain" />
+          ) : (
+            <div className="w-52 h-52 bg-slate-100 flex items-center justify-center text-slate-400 text-xs">
+              Generating QR...
+            </div>
+          )}
+        </div>
 
-          <div className="w-full pt-2 space-y-2">
-            <a
-              href={offlineQrUrl}
-              download={`JustTap_QR_offline_${card.slug}.png`}
-              className="w-full py-2.5 px-4 bg-slate-800 hover:bg-slate-700 text-white font-semibold text-xs rounded-xl border border-slate-700 flex items-center justify-center space-x-2 transition-colors"
-            >
-              <Download className="w-4 h-4" />
-              <span>Standard PNG Download</span>
-            </a>
+        {/* Download buttons */}
+        <div className="w-full max-w-xs space-y-2">
+          <a
+            href={activeQrUrl}
+            download={`JustTap_QR_${activeSlugSuffix}_${card.slug}.png`}
+            className="w-full py-2.5 px-4 bg-slate-800 hover:bg-slate-700 text-white font-semibold text-xs rounded-xl border border-slate-700 flex items-center justify-center space-x-2 transition-colors"
+          >
+            <Download className="w-4 h-4" />
+            <span>Standard PNG Download</span>
+          </a>
 
-            <button
-              onClick={() => handleDownloadHighResQr('offline')}
-              className={`w-full py-2.5 px-4 text-xs font-semibold rounded-xl border flex items-center justify-center space-x-2 transition-all ${
-                isPro
-                  ? 'bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-300 border-emerald-500/30'
-                  : 'bg-slate-900/50 text-slate-500 border-slate-800 cursor-pointer'
-              }`}
-            >
-              {!isPro && <Lock className="w-3.5 h-3.5 text-amber-400" />}
-              <span>High-Res PNG (2000px)</span>
-              {!isPro && <span className="text-[10px] text-amber-400 font-bold ml-1">PRO</span>}
-            </button>
-          </div>
+          <button
+            onClick={() => handleDownloadHighResQr(activeQr)}
+            className={`w-full py-2.5 px-4 text-xs font-semibold rounded-xl border flex items-center justify-center space-x-2 transition-all ${
+              isPro
+                ? isProfile
+                  ? 'bg-violet-600/20 hover:bg-violet-600/30 text-violet-300 border-violet-500/30'
+                  : 'bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-300 border-emerald-500/30'
+                : 'bg-slate-900/50 text-slate-500 border-slate-800 cursor-pointer'
+            }`}
+          >
+            {!isPro && <Lock className="w-3.5 h-3.5 text-amber-400" />}
+            <span>High-Res PNG (2000px)</span>
+            {!isPro && <span className="text-[10px] text-amber-400 font-bold ml-1">PRO</span>}
+          </button>
         </div>
       </div>
 
