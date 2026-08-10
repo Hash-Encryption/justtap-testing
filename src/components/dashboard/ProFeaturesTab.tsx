@@ -55,7 +55,7 @@ export function ProFeaturesTab({ card, onChange, userId }: Props) {
     }
 
     setSaving(true);
-    const { data, error } = await supabase
+    let { data, error } = await supabase
       .from("cards")
       .update({
         pro_features: card.pro_features || defaultProFeatures,
@@ -65,10 +65,28 @@ export function ProFeaturesTab({ card, onChange, userId }: Props) {
       .select()
       .single();
 
+    // Fail-safe retry if plan_tier column is missing from Supabase schema
+    if (error && error.message.includes("plan_tier")) {
+      const retry = await supabase
+        .from("cards")
+        .update({
+          pro_features: card.pro_features || defaultProFeatures,
+        })
+        .eq("id", card.id)
+        .select()
+        .single();
+      data = retry.data;
+      error = retry.error;
+    }
+
     setSaving(false);
 
     if (error) {
-      toast.error(`Failed to save special features: ${error.message}`);
+      toast.error(
+        error.message.includes("column")
+          ? "Please run the SQL snippet in Supabase SQL Editor to add plan_tier & pro_features columns."
+          : `Failed to save special features: ${error.message}`,
+      );
       return;
     }
 

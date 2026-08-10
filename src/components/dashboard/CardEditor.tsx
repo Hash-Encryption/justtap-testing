@@ -179,11 +179,20 @@ export function CardEditor({ draft, setDraft, userId, isNew, onSaved }: Props) {
       pro_features: draft.pro_features ?? {},
     };
 
-    const query = isNew
-      ? supabase.from("cards").insert(payload).select().single()
-      : supabase.from("cards").update(payload).eq("id", draft.id).select().single();
+    let { data, error } = await query;
 
-    const { data, error } = await query;
+    if (error && (error.message.includes("plan_tier") || error.message.includes("pro_features"))) {
+      const fallbackPayload = { ...payload };
+      delete (fallbackPayload as Record<string, unknown>).plan_tier;
+      delete (fallbackPayload as Record<string, unknown>).pro_features;
+      const retryQuery = isNew
+        ? supabase.from("cards").insert(fallbackPayload).select().single()
+        : supabase.from("cards").update(fallbackPayload).eq("id", draft.id).select().single();
+      const retry = await retryQuery;
+      data = retry.data;
+      error = retry.error;
+    }
+
     setSaving(false);
     if (error) {
       toast.error(

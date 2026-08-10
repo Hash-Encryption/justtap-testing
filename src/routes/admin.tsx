@@ -256,7 +256,11 @@ function AdminPage() {
         .update({ plan_tier: newTier })
         .eq("user_id", profile.user_id);
       if (error) {
-        toast.error(`Failed updating cards: ${error.message}`);
+        if (error.message.includes("column")) {
+          toast.error("Please run SQL script in Supabase: ALTER TABLE cards ADD COLUMN IF NOT EXISTS plan_tier text DEFAULT 'free';");
+        } else {
+          toast.error(`Failed updating cards: ${error.message}`);
+        }
         return;
       }
     }
@@ -280,7 +284,11 @@ function AdminPage() {
       .eq("id", cardRow.id);
 
     if (error) {
-      toast.error(error.message);
+      if (error.message.includes("column")) {
+        toast.error("Please run SQL script in Supabase: ALTER TABLE cards ADD COLUMN IF NOT EXISTS plan_tier text DEFAULT 'free';");
+      } else {
+        toast.error(error.message);
+      }
       return;
     }
 
