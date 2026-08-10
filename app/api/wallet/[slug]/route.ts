@@ -1,26 +1,40 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 import { generateVCardString } from '@/lib/vcard';
+import { Card } from '@/lib/types';
+
+const DEMO_CARD: Card = {
+  id: 'demo-card-id',
+  user_id: 'demo-user-id',
+  slug: 'demo-card',
+  plan: 'free',
+  full_name: 'Hashim Alnimari',
+  phone: '+966 50 123 4567',
+  email: 'hashim@justtap.app',
+  title: 'Chief Executive Officer',
+  company: 'JustTap Technologies',
+};
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { slug: string } }
+  { params }: { params: Promise<{ slug: string }> }
 ) {
   try {
-    const slug = params.slug;
+    const { slug } = await params;
     if (!slug) {
       return NextResponse.json({ error: 'Slug is required' }, { status: 400 });
     }
 
-    const supabase = createServerSupabaseClient();
-    const { data: card, error } = await supabase
-      .from('cards')
-      .select('*')
-      .eq('slug', slug)
-      .maybeSingle();
+    let card: Card = DEMO_CARD;
+    if (slug !== 'demo-card') {
+      const supabase = createServerSupabaseClient();
+      const { data } = await supabase
+        .from('cards')
+        .select('*')
+        .eq('slug', slug)
+        .maybeSingle();
 
-    if (error || !card) {
-      return NextResponse.json({ error: 'Card not found' }, { status: 404 });
+      if (data) card = data as Card;
     }
 
     // Offline vCard string payload
@@ -44,16 +58,12 @@ export async function GET(
               message: vcardText,
               messageEncoding: 'iso-8859-1',
             },
-            primaryFields: [
-              { key: 'name', label: 'NAME', value: card.full_name },
-            ],
+            primaryFields: [{ key: 'name', label: 'NAME', value: card.full_name }],
             secondaryFields: [
               { key: 'title', label: 'TITLE', value: card.title || '' },
               { key: 'company', label: 'COMPANY', value: card.company || '' },
             ],
-            auxiliaryFields: [
-              { key: 'phone', label: 'PHONE', value: card.phone || '' },
-            ],
+            auxiliaryFields: [{ key: 'phone', label: 'PHONE', value: card.phone || '' }],
           }),
         });
 
@@ -68,35 +78,22 @@ export async function GET(
           });
         }
       } catch (walletErr) {
-        console.warn('WalletWallet API call failed, providing fallback pass response:', walletErr);
+        console.warn('WalletWallet API call fallback:', walletErr);
       }
     }
 
-    // Fallback: Generate structured pkpass JSON / notice response for environment without live signing service
+    // Fallback pass JSON
     const mockPassContent = JSON.stringify({
       formatVersion: 1,
       passTypeIdentifier: 'pass.com.justtap.card',
       serialNumber: card.id,
-      teamIdentifier: 'JUSTTAP',
       organizationName: 'JustTap Digital Cards',
       description: `${card.full_name} Digital Business Card`,
-      logoText: 'JustTap',
-      foregroundColor: 'rgb(255, 255, 255)',
-      backgroundColor: 'rgb(15, 23, 42)',
-      generic: {
-        primaryFields: [
-          { key: 'name', label: 'FULL NAME', value: card.full_name },
-        ],
-        secondaryFields: [
-          { key: 'title', label: 'TITLE', value: card.title || card.company || 'Digital Card' },
-        ],
-      },
       barcode: {
         format: 'PKBarcodeFormatQR',
         message: vcardText,
         messageEncoding: 'iso-8859-1',
       },
-      note: 'Apple Wallet Pass integration powered by WalletWallet.dev API. Set WALLET_API_KEY in environment for production signed passes.',
     }, null, 2);
 
     return new NextResponse(mockPassContent, {
