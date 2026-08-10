@@ -59,7 +59,7 @@ export const Route = createFileRoute("/api/apple-wallet/$slug")({
 
         const card = data as Card;
         const originUrl = new URL(request.url).origin;
-        const pkpassBuffer = await buildAppleWalletPass(card, originUrl);
+        const cardUrl = `${originUrl}/c/${card.slug}`;
 
         // Log analytics event
         await client.from("card_analytics").insert({
@@ -67,6 +67,61 @@ export const Route = createFileRoute("/api/apple-wallet/$slug")({
           event_type: "apple_wallet_download",
           user_agent: sanitizeText(request.headers.get("user-agent") || "", 250) || null,
         });
+
+        // 1. Check for WalletWallet.dev API key in environment
+        const walletApiKey =
+          typeof process !== "undefined"
+            ? process.env?.["WALLETWALLET_API_KEY"] || process.env?.["WALLET_API_KEY"]
+            : null;
+
+        if (walletApiKey) {
+          try {
+            const wwRes = await fetch("https://api.walletwallet.dev/v1/passes/apple", {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${walletApiKey}`,
+                "X-API-Key": walletApiKey,
+              },
+              body: JSON.stringify({
+                card_id: card.id,
+                slug: card.slug,
+                full_name: card.full_name,
+                title: card.title || "",
+                company: card.company || "",
+                phone: card.phone || "",
+                email: card.email || "",
+                accent_color: card.accent_color || "#2563eb",
+                qr_url: cardUrl,
+              }),
+            });
+
+            if (wwRes.ok) {
+              const contentType = wwRes.headers.get("content-type") || "";
+              if (contentType.includes("json")) {
+                const json = (await wwRes.json()) as { url?: string; download_url?: string };
+                const passUrl = json.url || json.download_url;
+                if (passUrl) {
+                  return Response.redirect(passUrl, 302);
+                }
+              } else {
+                const arrayBuffer = await wwRes.arrayBuffer();
+                return new Response(arrayBuffer, {
+                  headers: {
+                    "Content-Type": "application/vnd.apple.pkpass",
+                    "Content-Disposition": `attachment; filename="${cleanSlug}.pkpass"`,
+                    "Cache-Control": "no-store, no-cache, must-revalidate, max-age=0",
+                  },
+                });
+              }
+            }
+          } catch (wwErr) {
+            console.error("WalletWallet API error:", wwErr);
+          }
+        }
+
+        // 2. Local Apple Wallet pass builder fallback
+        const pkpassBuffer = await buildAppleWalletPass(card, originUrl);
 
         return new Response(pkpassBuffer, {
           headers: {
