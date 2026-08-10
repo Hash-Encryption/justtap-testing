@@ -1,0 +1,3 @@
+# Bun Configuration for Cloudflare Pages cross-platform build
+[install]
+frozenLockfile = false
