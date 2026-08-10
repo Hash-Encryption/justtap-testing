@@ -39,13 +39,24 @@ export function ProFeaturesTab({ card, onChange, userId }: Props) {
   const [testingEmail, setTestingEmail] = useState(false);
   const [saving, setSaving] = useState(false);
 
-  const planTier: PlanTier = card.plan_tier || "free";
+  const planTier: PlanTier = card?.plan_tier || "free";
   const isPro = planTier === "pro" || planTier === "enterprise";
-  const pro: ProFeatures = card.pro_features || defaultProFeatures;
+  const pro: ProFeatures = {
+    ...defaultProFeatures,
+    ...(typeof card?.pro_features === "object" && card?.pro_features !== null
+      ? card.pro_features
+      : {}),
+  };
 
   const updatePro = <K extends keyof ProFeatures>(key: K, value: ProFeatures[K]) => {
-    const updatedPro = { ...(card.pro_features || defaultProFeatures), [key]: value };
-    onChange({ ...card, pro_features: updatedPro });
+    const updatedPro = {
+      ...defaultProFeatures,
+      ...(typeof card?.pro_features === "object" && card?.pro_features !== null
+        ? card.pro_features
+        : {}),
+      [key]: value,
+    };
+    onChange({ ...(card || {}), pro_features: updatedPro });
   };
 
   async function saveProFeatures() {

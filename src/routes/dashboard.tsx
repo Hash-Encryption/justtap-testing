@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import React, { Component, useEffect, useState, type ReactNode } from "react";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import {
   BarChart3,
@@ -23,6 +23,42 @@ import { QrTab } from "@/components/dashboard/QrTab";
 
 import { useTranslation } from "@/lib/i18n";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
+
+class TabErrorBoundary extends Component<
+  { children: ReactNode },
+  { hasError: boolean; error: Error | null }
+> {
+  constructor(props: { children: ReactNode }) {
+    super(props);
+    this.state = { hasError: false, error: null };
+  }
+  static getDerivedStateFromError(error: Error) {
+    return { hasError: true, error };
+  }
+  componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
+    console.error("Tab render error:", error, errorInfo);
+  }
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="glass rounded-3xl p-8 text-center border border-border/60">
+          <h2 className="text-lg font-bold text-foreground">Special Features Editor</h2>
+          <p className="mt-2 text-xs text-muted-foreground">
+            {this.state.error?.message || "Temporarily unable to render features component."}
+          </p>
+          <button
+            type="button"
+            onClick={() => this.setState({ hasError: false, error: null })}
+            className="mt-4 rounded-xl bg-primary px-4 py-2 text-xs font-semibold text-primary-foreground"
+          >
+            Reload Component
+          </button>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
 
 async function uploadDataUrlIfNeeded(
   dataUrl: string | null | undefined,
@@ -338,21 +374,23 @@ function Dashboard() {
             />
           ))}
 
-        {tab === "pro" && (draft || card) && (
-          <ProFeaturesTab
-            card={
-              isAdmin
-                ? { ...(draft || card || emptyCard), plan_tier: "pro" }
-                : (draft || card || emptyCard)
-            }
-            userId={user?.id ?? "guest"}
-            onChange={(updated) => {
-              setDraft(updated);
-              if (card) {
-                setCard(updated);
+        {tab === "pro" && (
+          <TabErrorBoundary>
+            <ProFeaturesTab
+              card={
+                isAdmin
+                  ? { ...(draft || card || emptyCard), plan_tier: "pro" }
+                  : (draft || card || emptyCard)
               }
-            }}
-          />
+              userId={user?.id ?? "guest"}
+              onChange={(updated) => {
+                setDraft(updated);
+                if (card) {
+                  setCard(updated);
+                }
+              }}
+            />
+          </TabErrorBoundary>
         )}
         {tab === "analytics" && card && <AnalyticsTab cardId={card.id} />}
         {tab === "leads" && card && <LeadsTab cardId={card.id} />}
