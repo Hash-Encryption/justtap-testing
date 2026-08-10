@@ -17,7 +17,6 @@ import {
   Sparkles,
   Twitter,
   Video,
-  Wallet,
 } from "lucide-react";
 import { toast } from "sonner";
 import { HeaderCut } from "./HeaderCut";
@@ -176,36 +175,6 @@ export function CardView({ card, preview = false }: Props) {
       return;
     }
     window.location.href = `/api/vcard/${card.slug}`;
-  }
-
-  function getMobileWalletType(): "apple" | "google" {
-    if (typeof navigator === "undefined") return "google";
-    const ua = navigator.userAgent.toLowerCase();
-    const isApple = /iphone|ipad|ipod|macintosh|mac os x/.test(ua);
-    return isApple ? "apple" : "google";
-  }
-
-  function saveToWallet() {
-    if (preview) {
-      toast.info("Preview mode — Wallet pass download is live on published profile.");
-      return;
-    }
-    const customPassUrl = card.pro_features?.wallet_pass_url;
-    if (
-      customPassUrl &&
-      customPassUrl.startsWith("http") &&
-      !customPassUrl.includes("your-pass-id") &&
-      !customPassUrl.includes("example.com")
-    ) {
-      window.location.href = customPassUrl;
-      return;
-    }
-    const walletType = getMobileWalletType();
-    if (walletType === "apple") {
-      window.location.href = `/api/apple-wallet/${card.slug}`;
-    } else {
-      window.open(`/api/google-wallet/${card.slug}`, "_blank");
-    }
   }
 
   const formattedWaNumber = formatWhatsAppNumber(card.whatsapp_phone || card.phone);
@@ -402,22 +371,6 @@ export function CardView({ card, preview = false }: Props) {
                 </a>
               )}
 
-              {/* SAVE TO WALLET BUTTON */}
-              {pro.enable_wallet_pass !== false && (
-                <button
-                  type="button"
-                  onClick={saveToWallet}
-                  className="flex w-full items-center justify-between rounded-2xl border px-4 py-3.5 text-sm font-semibold transition active:scale-[0.98] shadow-sm"
-                  style={{ borderColor: `${accent}44`, backgroundColor: `${accent}0d` }}
-                >
-                  <div className="flex items-center gap-2.5">
-                    <Wallet className="h-4 w-4" style={{ color: accent }} />
-                    <span>{ar ? "حفظ في المحفظة" : "Save to Wallet"}</span>
-                  </div>
-                  <Sparkles className="h-4 w-4 text-amber-400" />
-                </button>
-              )}
-
               {/* CUSTOM CTA ACTION BUTTON */}
               {pro.custom_cta_label && pro.custom_cta_url && (
                 <a
@@ -468,21 +421,11 @@ export function CardView({ card, preview = false }: Props) {
           <button
             type="button"
             onClick={saveContact}
-            className="flex h-12 flex-1 items-center justify-center gap-1.5 rounded-full text-xs font-bold tracking-wider transition active:scale-[0.98] px-3"
+            className="flex h-12 flex-1 items-center justify-center gap-2 rounded-full text-sm font-semibold tracking-wide transition active:scale-[0.98]"
             style={{ backgroundColor: accent, color: onAccent }}
           >
-            <Download className="h-4 w-4 shrink-0" />
-            <span className="truncate">{ar ? "حفظ جهة الاتصال" : "SAVE CONTACT"}</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={saveToWallet}
-            className="flex h-12 flex-1 items-center justify-center gap-1.5 rounded-full text-xs font-bold tracking-wider transition active:scale-[0.98] px-3 shadow-md"
-            style={{ backgroundColor: "#000000", color: "#ffffff" }}
-          >
-            <Wallet className="h-4 w-4 shrink-0 text-white" />
-            <span className="truncate">{ar ? "حفظ في المحفظة" : "SAVE TO WALLET"}</span>
+            <Download className="h-4 w-4" />
+            {ar ? "حفظ جهة الاتصال" : "SAVE CONTACT"}
           </button>
 
           <a

@@ -11,7 +11,6 @@ import {
   Sparkles,
   Upload,
   Video,
-  Wallet,
   Zap,
 } from "lucide-react";
 import { toast } from "sonner";
@@ -633,31 +632,8 @@ export function ProFeaturesTab({ card, onChange, userId }: Props) {
         )}
       </div>
 
-      {/* FEATURE 6: APPLE & GOOGLE WALLET & BRANDING TOGGLES */}
-      <div className="grid gap-4 md:grid-cols-2">
-        <div className="glass rounded-2xl border border-border/60 p-5">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="grid h-10 w-10 place-items-center rounded-xl bg-sky-500/10 text-sky-400">
-                <Wallet className="h-5 w-5" />
-              </div>
-              <div>
-                <h4 className="text-xs font-semibold">Apple & Google Wallet Pass</h4>
-                <p className="text-[11px] text-muted-foreground">
-                  Allow visitors to save card to Apple Wallet.
-                </p>
-              </div>
-            </div>
-
-            <input
-              type="checkbox"
-              checked={pro.enable_wallet_pass ?? true}
-              onChange={(e) => updatePro("enable_wallet_pass", e.target.checked)}
-              className="h-4 w-4 rounded border-border text-primary focus:ring-primary"
-            />
-          </div>
-        </div>
-
+      {/* FEATURE 6: REMOVE BRANDING TOGGLE */}
+      <div>
         <div className="glass rounded-2xl border border-border/60 p-5">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
