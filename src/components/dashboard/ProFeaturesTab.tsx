@@ -635,7 +635,7 @@ export function ProFeaturesTab({ card, onChange, userId }: Props) {
 
       {/* FEATURE 6: APPLE & GOOGLE WALLET & BRANDING TOGGLES */}
       <div className="grid gap-4 md:grid-cols-2">
-        <div className="glass rounded-2xl border border-border/60 p-5">
+        <div className="glass rounded-2xl border border-border/60 p-5 space-y-3">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div className="grid h-10 w-10 place-items-center rounded-xl bg-sky-500/10 text-sky-400">
@@ -656,6 +656,23 @@ export function ProFeaturesTab({ card, onChange, userId }: Props) {
               className="h-4 w-4 rounded border-border text-primary focus:ring-primary"
             />
           </div>
+
+          {pro.enable_wallet_pass !== false && (
+            <div className="pt-2 border-t border-border/40">
+              <label className="mb-1 block text-[11px] font-medium text-muted-foreground">
+                WalletWallet / PassKit URL (Optional)
+              </label>
+              <input
+                type="url"
+                value={pro.wallet_pass_url || ""}
+                onChange={(e) =>
+                  updatePro("wallet_pass_url", sanitizeUrl(e.target.value) || e.target.value)
+                }
+                placeholder="https://walletwallet.dev/p/your-pass-id"
+                className="h-9 w-full rounded-xl border border-border bg-transparent px-3 text-xs outline-none focus:border-primary"
+              />
+            </div>
+          )}
         </div>
 
         <div className="glass rounded-2xl border border-border/60 p-5">

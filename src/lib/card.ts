@@ -17,6 +17,7 @@ export type ProFeatures = {
   custom_cta_label?: string | null;
   custom_cta_url?: string | null;
   enable_wallet_pass?: boolean;
+  wallet_pass_url?: string | null;
   remove_branding?: boolean;
   enable_email_alerts?: boolean;
   notify_email?: string | null;

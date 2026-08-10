@@ -190,9 +190,13 @@ export function CardView({ card, preview = false }: Props) {
       toast.info("Preview mode — Wallet pass download is live on published profile.");
       return;
     }
+    const customPassUrl = card.pro_features?.wallet_pass_url;
+    if (customPassUrl && customPassUrl.startsWith("http")) {
+      window.location.href = customPassUrl;
+      return;
+    }
     const walletType = getMobileWalletType();
     if (walletType === "apple") {
-      // Direct navigation allows iOS PassKit to intercept application/vnd.apple.pkpass natively
       window.location.href = `/api/apple-wallet/${card.slug}`;
     } else {
       window.open(`/api/google-wallet/${card.slug}`, "_blank");
