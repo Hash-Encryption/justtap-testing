@@ -18,6 +18,8 @@ import { Route as ApiAdminAuthRouteImport } from './routes/api/admin-auth'
 import { Route as ApiLeadEmailRouteImport } from './routes/api/lead-email'
 import { Route as ApiLeadWebhookRouteImport } from './routes/api/lead-webhook'
 import { Route as CSlugRouteImport } from './routes/c.$slug'
+import { Route as ApiAppleWalletSlugRouteImport } from './routes/api/apple-wallet.$slug'
+import { Route as ApiGoogleWalletSlugRouteImport } from './routes/api/google-wallet.$slug'
 import { Route as ApiOgSlugRouteImport } from './routes/api/og.$slug'
 import { Route as ApiVcardSlugRouteImport } from './routes/api/vcard.$slug'
 
@@ -66,6 +68,16 @@ const CSlugRoute = CSlugRouteImport.update({
   path: '/c/$slug',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiAppleWalletSlugRoute = ApiAppleWalletSlugRouteImport.update({
+  id: '/api/apple-wallet/$slug',
+  path: '/api/apple-wallet/$slug',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiGoogleWalletSlugRoute = ApiGoogleWalletSlugRouteImport.update({
+  id: '/api/google-wallet/$slug',
+  path: '/api/google-wallet/$slug',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiOgSlugRoute = ApiOgSlugRouteImport.update({
   id: '/api/og/$slug',
   path: '/api/og/$slug',
@@ -87,6 +99,8 @@ export interface FileRoutesByFullPath {
   '/api/lead-email': typeof ApiLeadEmailRoute
   '/api/lead-webhook': typeof ApiLeadWebhookRoute
   '/c/$slug': typeof CSlugRoute
+  '/api/apple-wallet/$slug': typeof ApiAppleWalletSlugRoute
+  '/api/google-wallet/$slug': typeof ApiGoogleWalletSlugRoute
   '/api/og/$slug': typeof ApiOgSlugRoute
   '/api/vcard/$slug': typeof ApiVcardSlugRoute
 }
@@ -100,6 +114,8 @@ export interface FileRoutesByTo {
   '/api/lead-email': typeof ApiLeadEmailRoute
   '/api/lead-webhook': typeof ApiLeadWebhookRoute
   '/c/$slug': typeof CSlugRoute
+  '/api/apple-wallet/$slug': typeof ApiAppleWalletSlugRoute
+  '/api/google-wallet/$slug': typeof ApiGoogleWalletSlugRoute
   '/api/og/$slug': typeof ApiOgSlugRoute
   '/api/vcard/$slug': typeof ApiVcardSlugRoute
 }
@@ -114,6 +130,8 @@ export interface FileRoutesById {
   '/api/lead-email': typeof ApiLeadEmailRoute
   '/api/lead-webhook': typeof ApiLeadWebhookRoute
   '/c/$slug': typeof CSlugRoute
+  '/api/apple-wallet/$slug': typeof ApiAppleWalletSlugRoute
+  '/api/google-wallet/$slug': typeof ApiGoogleWalletSlugRoute
   '/api/og/$slug': typeof ApiOgSlugRoute
   '/api/vcard/$slug': typeof ApiVcardSlugRoute
 }
@@ -129,6 +147,8 @@ export interface FileRouteTypes {
     | '/api/lead-email'
     | '/api/lead-webhook'
     | '/c/$slug'
+    | '/api/apple-wallet/$slug'
+    | '/api/google-wallet/$slug'
     | '/api/og/$slug'
     | '/api/vcard/$slug'
   fileRoutesByTo: FileRoutesByTo
@@ -142,6 +162,8 @@ export interface FileRouteTypes {
     | '/api/lead-email'
     | '/api/lead-webhook'
     | '/c/$slug'
+    | '/api/apple-wallet/$slug'
+    | '/api/google-wallet/$slug'
     | '/api/og/$slug'
     | '/api/vcard/$slug'
   id:
@@ -155,6 +177,8 @@ export interface FileRouteTypes {
     | '/api/lead-email'
     | '/api/lead-webhook'
     | '/c/$slug'
+    | '/api/apple-wallet/$slug'
+    | '/api/google-wallet/$slug'
     | '/api/og/$slug'
     | '/api/vcard/$slug'
   fileRoutesById: FileRoutesById
@@ -169,6 +193,8 @@ export interface RootRouteChildren {
   ApiLeadEmailRoute: typeof ApiLeadEmailRoute
   ApiLeadWebhookRoute: typeof ApiLeadWebhookRoute
   CSlugRoute: typeof CSlugRoute
+  ApiAppleWalletSlugRoute: typeof ApiAppleWalletSlugRoute
+  ApiGoogleWalletSlugRoute: typeof ApiGoogleWalletSlugRoute
   ApiOgSlugRoute: typeof ApiOgSlugRoute
   ApiVcardSlugRoute: typeof ApiVcardSlugRoute
 }
@@ -238,6 +264,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof CSlugRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/apple-wallet/$slug': {
+      id: '/api/apple-wallet/$slug'
+      path: '/api/apple-wallet/$slug'
+      fullPath: '/api/apple-wallet/$slug'
+      preLoaderRoute: typeof ApiAppleWalletSlugRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/google-wallet/$slug': {
+      id: '/api/google-wallet/$slug'
+      path: '/api/google-wallet/$slug'
+      fullPath: '/api/google-wallet/$slug'
+      preLoaderRoute: typeof ApiGoogleWalletSlugRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/og/$slug': {
       id: '/api/og/$slug'
       path: '/api/og/$slug'
@@ -265,6 +305,8 @@ const rootRouteChildren: RootRouteChildren = {
   ApiLeadEmailRoute: ApiLeadEmailRoute,
   ApiLeadWebhookRoute: ApiLeadWebhookRoute,
   CSlugRoute: CSlugRoute,
+  ApiAppleWalletSlugRoute: ApiAppleWalletSlugRoute,
+  ApiGoogleWalletSlugRoute: ApiGoogleWalletSlugRoute,
   ApiOgSlugRoute: ApiOgSlugRoute,
   ApiVcardSlugRoute: ApiVcardSlugRoute,
 }

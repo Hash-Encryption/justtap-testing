@@ -178,6 +178,32 @@ export function CardView({ card, preview = false }: Props) {
     window.location.href = `/api/vcard/${card.slug}`;
   }
 
+  function getMobileWalletType(): "apple" | "google" {
+    if (typeof navigator === "undefined") return "google";
+    const ua = navigator.userAgent.toLowerCase();
+    const isApple = /iphone|ipad|ipod|macintosh|mac os x/.test(ua);
+    return isApple ? "apple" : "google";
+  }
+
+  function saveToWallet() {
+    if (preview) {
+      toast.info("Preview mode — Wallet pass download is live on published profile.");
+      return;
+    }
+    const walletType = getMobileWalletType();
+    if (walletType === "apple") {
+      const link = document.createElement("a");
+      link.href = `/api/apple-wallet/${card.slug}`;
+      link.download = `${card.slug}.pkpass`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      toast.success(ar ? "جاري فتح محفظة Apple..." : "Opening Apple Wallet Pass...");
+    } else {
+      window.open(`/api/google-wallet/${card.slug}`, "_blank");
+    }
+  }
+
   const formattedWaNumber = formatWhatsAppNumber(card.whatsapp_phone || card.phone);
 
   const waHref = formattedWaNumber
@@ -372,17 +398,17 @@ export function CardView({ card, preview = false }: Props) {
                 </a>
               )}
 
-              {/* APPLE & GOOGLE WALLET PASS BUTTON */}
+              {/* SAVE TO WALLET BUTTON */}
               {pro.enable_wallet_pass !== false && (
                 <button
                   type="button"
-                  onClick={() => setWalletOpen(true)}
+                  onClick={saveToWallet}
                   className="flex w-full items-center justify-between rounded-2xl border px-4 py-3.5 text-sm font-semibold transition active:scale-[0.98] shadow-sm"
                   style={{ borderColor: `${accent}44`, backgroundColor: `${accent}0d` }}
                 >
                   <div className="flex items-center gap-2.5">
                     <Wallet className="h-4 w-4" style={{ color: accent }} />
-                    <span>{ar ? "إضافة إلى محفظة Apple / Google" : "Add to Apple & Google Wallet"}</span>
+                    <span>{ar ? "حفظ في المحفظة" : "Save to Wallet"}</span>
                   </div>
                   <Sparkles className="h-4 w-4 text-amber-400" />
                 </button>
@@ -422,7 +448,7 @@ export function CardView({ card, preview = false }: Props) {
         }
       >
         <div
-          className="flex items-center justify-between gap-3 rounded-full border p-2 backdrop-blur-xl"
+          className="flex items-center justify-between gap-2.5 rounded-full border p-2 backdrop-blur-xl"
           style={{ backgroundColor: `${bg}d9`, borderColor: `${accent}2e` }}
         >
           <button
@@ -438,11 +464,21 @@ export function CardView({ card, preview = false }: Props) {
           <button
             type="button"
             onClick={saveContact}
-            className="flex h-12 flex-1 items-center justify-center gap-2 rounded-full text-sm font-semibold tracking-wide transition active:scale-[0.98]"
+            className="flex h-12 flex-1 items-center justify-center gap-1.5 rounded-full text-xs font-bold tracking-wider transition active:scale-[0.98] px-3"
             style={{ backgroundColor: accent, color: onAccent }}
           >
-            <Download className="h-4 w-4" />
-            {ar ? "حفظ جهة الاتصال" : "SAVE CONTACT"}
+            <Download className="h-4 w-4 shrink-0" />
+            <span className="truncate">{ar ? "حفظ جهة الاتصال" : "SAVE CONTACT"}</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={saveToWallet}
+            className="flex h-12 flex-1 items-center justify-center gap-1.5 rounded-full text-xs font-bold tracking-wider transition active:scale-[0.98] px-3 shadow-md"
+            style={{ backgroundColor: "#000000", color: "#ffffff" }}
+          >
+            <Wallet className="h-4 w-4 shrink-0 text-white" />
+            <span className="truncate">{ar ? "حفظ في المحفظة" : "SAVE TO WALLET"}</span>
           </button>
 
           <a
@@ -628,24 +664,44 @@ export function CardView({ card, preview = false }: Props) {
             )}
           </div>
 
-          <div className="space-y-2 pt-1">
+          <div className="space-y-2.5 pt-1">
+            <a
+              href={`/api/apple-wallet/${card.slug}`}
+              download={`${card.slug}.pkpass`}
+              className="flex h-12 w-full items-center justify-center gap-2 rounded-2xl text-sm font-bold text-white shadow-md transition active:scale-[0.98]"
+              style={{ backgroundColor: "#000000" }}
+            >
+              <Wallet className="h-4 w-4 text-white" />
+              {ar ? "إضافة إلى محفظة Apple (.pkpass)" : "Add to Apple Wallet (.pkpass)"}
+            </a>
+
+            <a
+              href={`/api/google-wallet/${card.slug}`}
+              target="_blank"
+              rel="noreferrer noopener"
+              className="flex h-12 w-full items-center justify-center gap-2 rounded-2xl text-sm font-bold text-white shadow-md transition active:scale-[0.98]"
+              style={{ backgroundColor: "#4285F4" }}
+            >
+              <Wallet className="h-4 w-4 text-white" />
+              {ar ? "حفظ في محفظة Google" : "Save to Google Wallet"}
+            </a>
+
             <button
               type="button"
               onClick={() => {
                 saveContact();
                 setWalletOpen(false);
               }}
-              className="flex h-12 w-full items-center justify-center gap-2 rounded-2xl text-sm font-bold text-white shadow-md transition active:scale-[0.98]"
-              style={{ backgroundColor: accent }}
+              className="flex h-11 w-full items-center justify-center gap-2 rounded-2xl text-xs font-semibold border border-border text-foreground transition active:scale-[0.98]"
             >
               <Download className="h-4 w-4" />
-              {ar ? "تحميل جهة الاتصال والبطاقة (.vcf)" : "Save Contact & Wallet Pass (.vcf)"}
+              {ar ? "تحميل جهة الاتصال (.vcf)" : "Save Contact Card (.vcf)"}
             </button>
 
             <button
               type="button"
               onClick={() => setWalletOpen(false)}
-              className="h-10 w-full rounded-2xl text-xs font-medium text-muted-foreground hover:text-foreground"
+              className="h-9 w-full rounded-2xl text-xs font-medium text-muted-foreground hover:text-foreground"
             >
               {ar ? "إغلاق" : "Close"}
             </button>
