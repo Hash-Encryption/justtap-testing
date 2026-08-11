@@ -2,11 +2,7 @@ import { createClient } from "@supabase/supabase-js";
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { SUPABASE_ANON_KEY, SUPABASE_URL } from "./supabase";
-import {
-  PUBLIC_CARD_SELECT,
-  resolvePublicCardBySlug,
-  type PublicCardLookupResult,
-} from "./public-card";
+import { resolvePublicCardBySlug, type PublicCardLookupResult } from "./public-card";
 
 function createPublicSupabaseClient() {
   return createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
@@ -21,9 +17,7 @@ export async function resolvePublicCardFromSupabase(slug: string): Promise<Publi
     slug,
     async (normalizedSlug) => {
       const { data, error } = await client
-        .from("cards")
-        .select(PUBLIC_CARD_SELECT)
-        .eq("slug", normalizedSlug)
+        .rpc("get_public_card_by_slug", { _slug: normalizedSlug })
         .maybeSingle();
 
       return { data, error };

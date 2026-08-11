@@ -14,6 +14,7 @@ describe("public card architecture", () => {
     expect(activeSource).not.toContain("window.location.pathname");
     expect(activeSource).not.toContain("localStorage");
     expect(route).not.toContain('.from("cards")');
+    expect(route).not.toContain('select("*")');
   });
 
   it("has no legacy public-card route or c.html redirect", () => {

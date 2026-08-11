@@ -4,7 +4,7 @@ Last updated: 2026-08-11
 
 ## Current phase
 
-Phase 01 - Public Card + Slug Core. Implementation and validation are complete on `v2/01-public-card-core`. The phase is intentionally uncommitted and awaiting architecture review under the phase checkpoint rule.
+Phase 02 - Database Schema, Versioned Migrations, RLS & Trust Boundaries. Work is on `v2/02-database-rls` from approved Phase 01 checkpoint `e6dcb4e`; it remains uncommitted for review.
 
 ## Completed
 
@@ -25,7 +25,8 @@ Phase 01 - Public Card + Slug Core. Implementation and validation are complete o
 
 ## In progress
 
-- User architecture review of the uncommitted Phase 01 changes.
+- Phase 02 migration and application review. The migration has not been applied because the current operator session lacks authenticated Supabase dashboard/CLI access.
+- Required real-RLS User A/User B and staging acceptance remain pending; no result is inferred from local tests.
 - External rotation of credentials identified during Phase 00.
 
 ## Known architectural conflicts

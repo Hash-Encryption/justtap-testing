@@ -22,7 +22,7 @@ Do not add features to the legacy Next.js application. Do not delete it wholesal
 | Public cards           | TanStack `/c/$slug` is the only public-card route and resolves current Supabase state dynamically.          |
 | Data access            | Public slug reads use one server-only resolver; other subsystems still contain direct Supabase access.       |
 | Deployment             | Vite/Nitro emits a Cloudflare Pages worker under `dist`; `wrangler.json` targets that artifact.              |
-| Database evolution     | A single mutable `supabase/schema.sql` contains tables, grants, policies, triggers, and storage rules.      |
+| Database evolution     | `supabase/migrations/` is the ordered migration source; `supabase/schema.sql` is a legacy inventory snapshot. |
 | NFC                    | No permanent immutable NFC tag resolver exists.                                                             |
 
 The current conflicts and subsystem-level detail are recorded in [INVENTORY.md](./INVENTORY.md).
@@ -126,7 +126,7 @@ Supabase is the persistent source of truth. Target access boundaries are explici
 - service-role access: server-only and limited to operations that require it
 - billing entitlement: written by trusted server/database logic only
 
-Database changes will move to ordered, versioned migrations. Phase 01 does not change the live database or current RLS policies.
+Database changes use ordered, versioned migrations. `public.get_public_card_by_slug(text)` is a `SECURITY DEFINER` function with a fixed `search_path`, one validated slug parameter, and an explicit public return shape. Anonymous callers cannot select `public.cards`; the function returns only active cards and never ownership, timestamps, plan tier, private notification settings, or webhook configuration. Authenticated owners operate only on their own rows through RLS, while a trigger rejects browser-role changes to `plan_tier`. Future billing/webhooks must use a trusted server or service-role operation to change entitlements.
 
 ### Cloudflare
 

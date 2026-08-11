@@ -29,17 +29,13 @@ describe("public card resolver", () => {
     expect(result).toEqual({ status: "not_found" });
   });
 
-  it("does not return an inactive card", async () => {
+  it("preserves the public feature flags supplied by the database boundary", async () => {
     const result = await resolvePublicCardBySlug("known-card", async () => ({
-      data: makePublicCardRow({ is_active: false }),
-      error: null,
-    }));
-    expect(result).toEqual({ status: "inactive" });
-  });
-
-  it("does not expose unpublished Pro content for a free card", async () => {
-    const result = await resolvePublicCardBySlug("known-card", async () => ({
-      data: makePublicCardRow({ plan_tier: "free" }),
+      data: makePublicCardRow({
+        public_features_enabled: false,
+        public_features: null,
+        show_branding: true,
+      }),
       error: null,
     }));
     expect(result.status).toBe("found");

@@ -27,6 +27,16 @@ export type PublicCardTestRow = Pick<
   plan_tier: Card["plan_tier"];
   pro_features: ProFeatures;
   is_active: boolean;
+  public_features: {
+    video_url?: string | null;
+    pdf_url?: string | null;
+    pdf_label?: string | null;
+    booking_url?: string | null;
+    custom_cta_label?: string | null;
+    custom_cta_url?: string | null;
+  } | null;
+  public_features_enabled: boolean;
+  show_branding: boolean;
 };
 
 export function makePublicCardRow(overrides: Partial<PublicCardTestRow> = {}): PublicCardTestRow {
@@ -67,6 +77,16 @@ export function makePublicCardRow(overrides: Partial<PublicCardTestRow> = {}): P
       enable_lead_webhook: true,
     },
     is_active: true,
+    public_features: {
+      video_url: "https://example.com/video",
+      pdf_url: "https://example.com/file.pdf",
+      pdf_label: "Profile",
+      booking_url: "https://example.com/book",
+      custom_cta_label: "Contact",
+      custom_cta_url: "https://example.com/contact",
+    },
+    public_features_enabled: true,
+    show_branding: false,
     ...overrides,
   };
 }

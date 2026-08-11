@@ -25,15 +25,6 @@ const PUBLIC_CARD_FIELDS = [
   "social_links",
 ] as const;
 
-export const PUBLIC_CARD_SELECT = [
-  ...PUBLIC_CARD_FIELDS,
-  // These three fields are consumed only by the server mapper and are not
-  // returned as part of PublicCard.
-  "plan_tier",
-  "pro_features",
-  "is_active",
-].join(",");
-
 export type PublicProFeatures = Pick<
   ProFeatures,
   "video_url" | "pdf_url" | "pdf_label" | "booking_url" | "custom_cta_label" | "custom_cta_url"
@@ -85,29 +76,7 @@ export async function resolvePublicCardBySlug(
 
   if (!result.data) return { status: "not_found" };
 
-  const row = result.data as PublicCardFields & {
-    plan_tier?: Card["plan_tier"];
-    pro_features?: ProFeatures | null;
-    is_active?: boolean | null;
-  };
-
-  // Fail closed if activation state is missing or false.
-  if (row.is_active !== true) return { status: "inactive" };
-
-  const publicFeaturesEnabled = row.plan_tier === "pro" || row.plan_tier === "enterprise";
-  const pro = row.pro_features;
-  const publicFeatures: PublicProFeatures | null =
-    publicFeaturesEnabled && pro
-      ? {
-          video_url: pro.video_url ?? null,
-          pdf_url: pro.pdf_url ?? null,
-          pdf_label: pro.pdf_label ?? null,
-          booking_url: pro.booking_url ?? null,
-          custom_cta_label: pro.custom_cta_label ?? null,
-          custom_cta_url: pro.custom_cta_url ?? null,
-        }
-      : null;
-
+  const row = result.data as PublicCard;
   const card = Object.fromEntries(
     PUBLIC_CARD_FIELDS.map((field) => [field, row[field]]),
   ) as PublicCardFields;
@@ -116,9 +85,9 @@ export async function resolvePublicCardBySlug(
     status: "found",
     card: {
       ...card,
-      public_features: publicFeatures,
-      public_features_enabled: publicFeaturesEnabled,
-      show_branding: !publicFeaturesEnabled || pro?.remove_branding !== true,
+      public_features: row.public_features,
+      public_features_enabled: row.public_features_enabled === true,
+      show_branding: row.show_branding !== false,
     },
   };
 }
