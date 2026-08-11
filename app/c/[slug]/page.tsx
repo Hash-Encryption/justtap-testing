@@ -10,7 +10,17 @@ interface PageProps {
 }
 
 export async function generateStaticParams() {
-  return [{ slug: 'card' }];
+  try {
+    const supabase = createServerSupabaseClient();
+    const { data: cards } = await supabase.from('cards').select('slug');
+    const paramsList = (cards || []).map((c) => ({ slug: c.slug }));
+    if (!paramsList.some((p) => p.slug === 'card')) {
+      paramsList.push({ slug: 'card' });
+    }
+    return paramsList;
+  } catch {
+    return [{ slug: 'card' }];
+  }
 }
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
