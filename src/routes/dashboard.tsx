@@ -123,7 +123,9 @@ function Dashboard() {
   const [tab, setTab] = useState<Tab>("card");
 
   useEffect(() => {
-    if (!loading && !user) navigate({ to: "/auth", replace: true });
+    if (!loading && !user) {
+      void navigate({ to: "/auth", search: { redirect: "/dashboard" }, replace: true });
+    }
   }, [loading, user, navigate]);
 
   useEffect(() => {

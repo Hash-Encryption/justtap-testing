@@ -70,7 +70,10 @@ function BuilderPage() {
     }
 
     toast.success("Card draft saved! Create an account to publish it.");
-    navigate({ to: "/auth", search: { mode: "signup", claim_draft: true } });
+    void navigate({
+      to: "/auth",
+      search: { mode: "signup", claim_draft: true, redirect: "/dashboard" },
+    });
   };
 
   return (

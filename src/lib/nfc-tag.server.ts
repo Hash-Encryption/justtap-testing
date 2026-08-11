@@ -1,18 +1,21 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
-import { SUPABASE_ANON_KEY, SUPABASE_URL } from "./supabase";
+import { getSupabaseAnonKey, getSupabaseUrl } from "./supabase";
 import { resolveSlugByTagToken, type TagLookupResult } from "./nfc-tag";
 
 export async function resolveTagTokenFromSupabase(token: string): Promise<TagLookupResult> {
+  const url = getSupabaseUrl();
+  const anonKey = getSupabaseAnonKey();
+
   return resolveSlugByTagToken(
     token,
     async (validatedToken) => {
       try {
-        const response = await fetch(`${SUPABASE_URL}/rest/v1/rpc/get_public_card_by_tag_token`, {
+        const response = await fetch(`${url}/rest/v1/rpc/get_public_card_by_tag_token`, {
           method: "POST",
           headers: {
-            apikey: SUPABASE_ANON_KEY,
-            Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+            apikey: anonKey,
+            Authorization: `Bearer ${anonKey}`,
             "Content-Type": "application/json",
           },
           body: JSON.stringify({ _token: validatedToken }),

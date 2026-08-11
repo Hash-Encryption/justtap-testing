@@ -1,10 +1,10 @@
 # JustTap V2 Status
 
-Last updated: 2026-08-11
+Last updated: 2026-08-12
 
 ## Current phase
 
-Phase 03 — Permanent NFC / QR Identity Infrastructure. Implementation, real Supabase migration verification, and live Cloudflare staging acceptance complete on `v2/03-permanent-tag-identity` from approved Phase 02 checkpoint `0f57b7cf2e3a1d0111ad55cacc54c72d5ebb187a`; it remains UNCOMMITTED pending final authorization.
+Phase 04 — Authentication + Account Model. Implementation, real Supabase DB verification, unit/integration testing, and live Cloudflare staging acceptance complete on `v2/04-auth-account-model` from approved Phase 03 checkpoint `f36faf245818a0dc770cccb28dbe3bad9769ae96`; it remains UNCOMMITTED pending final authorization.
 
 ## Completed
 
@@ -14,29 +14,34 @@ Phase 03 — Permanent NFC / QR Identity Infrastructure. Implementation, real Su
 - Committed approved Phase 00 checkpoint as `9609dea`.
 - Made TanStack `/c/$slug` the only public-card route and moved slug lookup into one server-only resolver.
 - Passed Phase 01 acceptance and Phase 02 schema / versioned migration `20260811193000_phase02_cards_rls.sql` with owner RLS, narrow RPC, and client entitlement triggers at checkpoint `0f57b7cf2e3a1d0111ad55cacc54c72d5ebb187a`.
-- Added Phase 03 migration `20260811220000_phase03_nfc_tags.sql` introducing `public.nfc_tags`, 24-byte base64url CSPRNG tokens (32 chars), token immutability trigger, assignment timestamp trigger, RLS restrictions, and hardened `get_public_card_by_tag_token` RPC.
-- Implemented `/t/$token` route in `src/routes/t.$token.tsx` issuing HTTP redirects (307/302) to `/c/$slug`.
+- Added Phase 03 migration `20260811220000_phase03_nfc_tags.sql` introducing `public.nfc_tags`, CSPRNG 32-char tokens, tag immutability, assignment timestamp triggers, and `get_public_card_by_tag_token` RPC at checkpoint `f36faf245818a0dc770cccb28dbe3bad9769ae96`.
+- Completed Phase 04 Authentication & Account Model:
+  - Unified Supabase Auth session authority (`useAuth`, `auth.tsx`, `dashboard.tsx`).
+  - Account/Profile identity model mapped to `public.profiles` (`auth.uid() = user_id`) and auto-created via `on_auth_user_created` trigger.
+  - Safe return URL sanitization preventing open redirects (`validateRedirectUrl`).
+  - Formatted user-facing authentication error handling (`formatAuthErrorMessage`).
+  - Owner-scoped card mutation isolation (`saveCardRecord` with `user_id` RLS).
+  - Protected owner routes (`/dashboard`) redirecting unauthenticated traffic safely to `/auth`.
 - Real Supabase Acceptance PASSED on project `nlumgigqlaymjiwgpvtp`:
-  - `20260811193000_phase02_cards_rls.sql` & `20260811220000_phase03_nfc_tags.sql` applied.
-  - Direct anonymous `public.nfc_tags` access blocked with Postgres `42501`.
-  - RPC function `get_public_card_by_tag_token` active and functioning.
+  - Verified `public.profiles` table exists and anonymous access (SELECT/INSERT/UPDATE) is denied by RLS.
+  - Verified client entitlement trigger blocks `plan_tier` self-escalation.
+  - Verified RPC functions (`get_public_card_by_slug`, `get_public_card_by_tag_token`).
 - Cloudflare Pages Staging Deployment & Live Acceptance PASSED on project `justtap-v2-staging`:
-  - Worker artifact deployed via Wrangler (`https://justtap-v2-staging.pages.dev`).
-  - Homepage (`/` -> 200 OK) & Auth (`/auth` -> 200 OK) verified.
-  - Active public card (`/c/testing-admin` -> 200 OK) & missing card (`/c/missing-slug` -> 404) verified.
-  - Active permanent tag (`/t/:token` -> 307 -> `/c/testing-admin`) verified.
-  - Live slug-rename invariant verified without Worker rebuild.
-  - Malformed & unknown tokens return safe 404.
-- Passed 46 automated unit, integration, and live staging tests (`npx vitest run`).
+  - Deployed worker artifact via Wrangler (`https://justtap-v2-staging.pages.dev`).
+  - Verified homepage (`/` -> 200 OK), auth (`/auth` -> 200 OK), dashboard (`/dashboard` -> 200 OK), active public card (`/c/testing-admin` -> 200 OK), missing card (`/c/missing-slug` -> 404), active permanent tag (`/t/:token` -> 307 -> `/c/testing-admin`).
+  - Zero hydration errors, worker exceptions, or redirect loops.
+- Passed 52 automated unit, integration, RLS, and live staging tests (`npx vitest run`).
+- TypeScript (`tsc --noEmit`), ESLint (`npm run lint:v2`), production build (`npm run build`), `git diff --check` passed cleanly.
 
 ## In progress
 
-- Phase 03 final checkpoint approval.
+- Phase 04 final checkpoint review and authorization.
 
 ## Deferred work
 
-- Provisioning UI, dashboard redesign, QR download UI, Apple/Google Wallet, billing, analytics redesign, new card templates.
+- Phase 05 Admin Portal & Provisioning UI, Phase 06 Card Editor redesign, Wallet, billing lifecycle, analytics redesign.
 
 ## Next phase
 
-Do not begin Phase 04. Stop for Phase 03 final authorization.
+Do not begin Phase 05. Stop for Phase 04 final authorization.
+

@@ -3,11 +3,13 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { Mail, Lock, User, ArrowRight } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { z } from "zod";
+import { formatAuthErrorMessage, validateRedirectUrl } from "@/lib/auth";
 
 export const Route = createFileRoute("/auth")({
   validateSearch: z.object({
     mode: z.enum(["signin", "signup"]).optional(),
     claim_draft: z.boolean().optional(),
+    redirect: z.string().optional(),
   }),
   head: () => ({
     meta: [
@@ -31,6 +33,8 @@ function AuthPage() {
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<{ type: "error" | "success"; text: string } | null>(null);
 
+  const redirectTarget = validateRedirectUrl(search.redirect);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -50,10 +54,10 @@ function AuthPage() {
 
         setMessage({
           type: "success",
-          text: "Account created! Redirecting to dashboard...",
+          text: "Account created! Redirecting...",
         });
 
-        setTimeout(() => navigate({ to: "/dashboard" }), 1200);
+        setTimeout(() => void navigate({ to: redirectTarget as "/dashboard" }), 1200);
       } else {
         const { data, error } = await supabase.auth.signInWithPassword({
           email,
@@ -63,13 +67,13 @@ function AuthPage() {
         if (error) throw error;
 
         setMessage({ type: "success", text: "Sign in successful! Redirecting..." });
-        setTimeout(() => navigate({ to: "/dashboard" }), 800);
+        setTimeout(() => void navigate({ to: redirectTarget as "/dashboard" }), 800);
       }
     } catch (err: unknown) {
       console.error("Auth error:", err);
       setMessage({
         type: "error",
-        text: err instanceof Error && err.message ? err.message : "Authentication failed",
+        text: formatAuthErrorMessage(err),
       });
     } finally {
       setLoading(false);

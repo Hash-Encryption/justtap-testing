@@ -1,18 +1,21 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
-import { SUPABASE_ANON_KEY, SUPABASE_URL } from "./supabase";
+import { getSupabaseAnonKey, getSupabaseUrl } from "./supabase";
 import { resolvePublicCardBySlug, type PublicCardLookupResult } from "./public-card";
 
 export async function resolvePublicCardFromSupabase(slug: string): Promise<PublicCardLookupResult> {
+  const url = getSupabaseUrl();
+  const anonKey = getSupabaseAnonKey();
+
   return resolvePublicCardBySlug(
     slug,
     async (normalizedSlug) => {
       try {
-        const response = await fetch(`${SUPABASE_URL}/rest/v1/rpc/get_public_card_by_slug`, {
+        const response = await fetch(`${url}/rest/v1/rpc/get_public_card_by_slug`, {
           method: "POST",
           headers: {
-            apikey: SUPABASE_ANON_KEY,
-            Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+            apikey: anonKey,
+            Authorization: `Bearer ${anonKey}`,
             "Content-Type": "application/json",
           },
           body: JSON.stringify({ _slug: normalizedSlug }),

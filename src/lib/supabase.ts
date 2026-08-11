@@ -1,10 +1,26 @@
 import { createClient } from "@supabase/supabase-js";
 import { env, isPublicSupabaseConfigured } from "./env";
 
-// Inert build-time values keep Vite compilation independent of production credentials.
-// Runtime requests fail closed until the public Supabase environment is configured.
-export const SUPABASE_URL = env.SUPABASE_URL ?? "https://supabase.invalid";
-export const SUPABASE_ANON_KEY = env.SUPABASE_ANON_KEY ?? "missing-public-anon-key";
+export function getSupabaseUrl(): string {
+  return (
+    (typeof import.meta !== "undefined" && import.meta.env?.VITE_SUPABASE_URL) ||
+    (typeof process !== "undefined" && process.env?.VITE_SUPABASE_URL) ||
+    env.SUPABASE_URL ||
+    "https://supabase.invalid"
+  );
+}
+
+export function getSupabaseAnonKey(): string {
+  return (
+    (typeof import.meta !== "undefined" && import.meta.env?.VITE_SUPABASE_ANON_KEY) ||
+    (typeof process !== "undefined" && process.env?.VITE_SUPABASE_ANON_KEY) ||
+    env.SUPABASE_ANON_KEY ||
+    "missing-public-anon-key"
+  );
+}
+
+export const SUPABASE_URL = getSupabaseUrl();
+export const SUPABASE_ANON_KEY = getSupabaseAnonKey();
 export const IS_SUPABASE_CONFIGURED = isPublicSupabaseConfigured;
 
 export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {

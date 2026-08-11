@@ -19,13 +19,13 @@ export function CardNotFound() {
   );
 }
 
-export function CardServiceError() {
+export function CardServiceError({ error }: { error?: { message?: string } }) {
   return (
     <main className="grid min-h-screen place-items-center px-6 text-center">
       <div>
         <h1 className="font-display text-2xl font-bold">Card service unavailable</h1>
         <p className="mt-2 text-sm text-muted-foreground">
-          We couldn&apos;t load this card right now. Please try again shortly.
+          {error?.message || "We couldn't load this card right now. Please try again shortly."}
         </p>
         <Link
           to="/"

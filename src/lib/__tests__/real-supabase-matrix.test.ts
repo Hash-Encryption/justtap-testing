@@ -78,4 +78,21 @@ describe("REAL Supabase Database Live Matrix", () => {
 
     expect(error).not.toBeNull(); // Blocked by RLS/Trigger
   });
+
+  it("verifies public.profiles table exists and anonymous access is blocked by RLS", async () => {
+    // 1. Anonymous SELECT attempt on profiles
+    const { data: selectData, error: selectError } = await anonClient.from("profiles").select("*");
+    expect(selectError?.code).not.toBe("PGRST205"); // Table exists!
+    expect(selectData === null || selectData.length === 0).toBe(true);
+
+    // 2. Anonymous INSERT attempt on profiles
+    const { error: insertError } = await anonClient.from("profiles").insert([
+      {
+        user_id: "00000000-0000-0000-0000-000000000000",
+        full_name: "Anonymous Attacker",
+        email: "attacker@example.com",
+      },
+    ]);
+    expect(insertError).not.toBeNull();
+  });
 });

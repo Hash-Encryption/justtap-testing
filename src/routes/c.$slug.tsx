@@ -1,11 +1,11 @@
 import { createFileRoute, notFound } from "@tanstack/react-router";
-import { getPublicCardBySlug } from "@/lib/public-card.server";
+import { resolvePublicCardFromSupabase } from "@/lib/public-card.server";
 import { CardView } from "@/components/card/CardView";
 import { CardNotFound, CardServiceError } from "@/components/card/CardStatusPages";
 
 export const Route = createFileRoute("/c/$slug")({
   loader: async ({ params }) => {
-    const result = await getPublicCardBySlug({ data: { slug: params.slug } });
+    const result = await resolvePublicCardFromSupabase(params.slug);
     if (result.status === "service_error") {
       throw new Error(`Public card service error: ${result.message || "Unknown"}`);
     }
