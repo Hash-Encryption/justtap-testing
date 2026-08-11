@@ -64,7 +64,7 @@ export function CardEditor({ card, onSaveSuccess, draft, onSaved }: CardEditorPr
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const [uploadingLogo, setUploadingLogo] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
-  const [arabicAccordionOpen, setArabicAccordionOpen] = useState(card.enable_arabic ?? false);
+  const [arabicAccordionOpen, setArabicAccordionOpen] = useState(activeCard.enable_arabic ?? false);
 
   const handleInputChange = (field: keyof Card, value: any) => {
     setFormData((prev) => ({ ...prev, [field]: value }));

@@ -5,10 +5,10 @@
   "sideEffects": false,
   "type": "module",
   "scripts": {
-    "dev": "vite dev",
-    "dev:next": "next dev",
-    "build": "vite build",
-    "build:next": "next build",
+    "dev": "next dev",
+    "dev:vite": "vite dev",
+    "build": "next build",
+    "build:vite": "vite build",
     "start": "next start",
     "lint": "next lint"
   },
