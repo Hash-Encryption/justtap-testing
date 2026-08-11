@@ -1,5 +1,4 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { env } from "@/lib/env";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { sanitizeText } from "@/lib/sanitization";
 
@@ -8,6 +7,16 @@ export const Route = createFileRoute("/api/admin-auth")({
     handlers: {
       POST: async ({ request }) => {
         try {
+          const { getAdminEnvironment } = await import("@/lib/server-env");
+          const adminEnv = getAdminEnvironment();
+
+          if (!adminEnv) {
+            return new Response(JSON.stringify({ error: "Admin authentication is unavailable" }), {
+              status: 503,
+              headers: { "Content-Type": "application/json" },
+            });
+          }
+
           const clientIp =
             request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
             request.headers.get("cf-connecting-ip") ||
@@ -32,7 +41,7 @@ export const Route = createFileRoute("/api/admin-auth")({
 
           // Action 1: Verify Token
           if (action === "verify") {
-            const expectedToken = btoa(`${env.ADMIN_USERNAME}:${env.ADMIN_SECRET_KEY}`);
+            const expectedToken = btoa(`${adminEnv.ADMIN_USERNAME}:${adminEnv.ADMIN_SECRET_KEY}`);
             const isValid = token === expectedToken;
             return new Response(JSON.stringify({ authenticated: isValid }), {
               status: 200,
@@ -44,16 +53,16 @@ export const Route = createFileRoute("/api/admin-auth")({
           const cleanUser = sanitizeText(username || "", 100).trim();
           const cleanPass = String(password || "").trim();
 
-          const isUserMatch = cleanUser.toLowerCase() === env.ADMIN_USERNAME.toLowerCase();
-          const isPassMatch = cleanPass === env.ADMIN_PASSWORD;
+          const isUserMatch = cleanUser.toLowerCase() === adminEnv.ADMIN_USERNAME.toLowerCase();
+          const isPassMatch = cleanPass === adminEnv.ADMIN_PASSWORD;
 
           if (isUserMatch && isPassMatch) {
-            const sessionToken = btoa(`${env.ADMIN_USERNAME}:${env.ADMIN_SECRET_KEY}`);
+            const sessionToken = btoa(`${adminEnv.ADMIN_USERNAME}:${adminEnv.ADMIN_SECRET_KEY}`);
             return new Response(
               JSON.stringify({
                 success: true,
                 token: sessionToken,
-                username: env.ADMIN_USERNAME,
+                username: adminEnv.ADMIN_USERNAME,
                 message: "Admin authentication successful",
               }),
               {

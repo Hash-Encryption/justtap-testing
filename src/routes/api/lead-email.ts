@@ -19,11 +19,17 @@ export const Route = createFileRoute("/api/lead-email")({
             });
           }
 
-          // Query card and pro features securely
-          const apiKey =
-            (typeof process !== "undefined" && process.env?.["SUPABASE_SERVICE_ROLE_KEY"]) ||
-            SUPABASE_ANON_KEY;
+          const { getResendApiKey, getSupabaseServiceRoleKey } = await import("@/lib/server-env");
+          const resendKey = getResendApiKey();
 
+          if (!resendKey) {
+            return new Response(JSON.stringify({ error: "Email delivery is unavailable" }), {
+              status: 503,
+              headers: { "Content-Type": "application/json" },
+            });
+          }
+
+          const apiKey = getSupabaseServiceRoleKey() || SUPABASE_ANON_KEY;
           const client = createClient(SUPABASE_URL, apiKey, {
             auth: { persistSession: false, autoRefreshToken: false },
           });
@@ -40,9 +46,7 @@ export const Route = createFileRoute("/api/lead-email")({
           const card = data as Card;
           const pro = card.pro_features;
           const recipientEmail = pro?.notify_email || card.email;
-
-          // Check if email alerts are enabled
-          const isEmailEnabled = pro?.enable_email_alerts !== false; // enabled by default
+          const isEmailEnabled = pro?.enable_email_alerts !== false;
 
           if (!isEmailEnabled && !is_test) {
             return new Response(
@@ -63,8 +67,8 @@ export const Route = createFileRoute("/api/lead-email")({
           const cleanNote = sanitizeText(note || "", 500);
 
           const emailSubject = is_test
-            ? `🧪 [TEST] JustTap Lead Alert for ${card.full_name}`
-            : `🔔 New Lead Captured: ${cleanName} on your JustTap Card`;
+            ? `[TEST] JustTap Lead Alert for ${card.full_name}`
+            : `New Lead Captured: ${cleanName} on your JustTap Card`;
 
           const emailHtml = `
             <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 560px; margin: 0 auto; padding: 24px; background: #0f172a; color: #f8fafc; border-radius: 16px; border: 1px solid #334155;">
@@ -75,7 +79,7 @@ export const Route = createFileRoute("/api/lead-email")({
 
               <div style="padding: 24px 0;">
                 <h2 style="font-size: 18px; font-weight: 700; color: #8b5cf6; margin: 0 0 16px 0;">
-                  ${is_test ? "🧪 Test Lead Alert" : "🎉 Someone just scanned your card & exchanged info!"}
+                  ${is_test ? "Test Lead Alert" : "Someone just scanned your card and exchanged info!"}
                 </h2>
 
                 <div style="background: #1e293b; padding: 20px; border-radius: 12px; border: 1px solid #334155;">
@@ -83,22 +87,18 @@ export const Route = createFileRoute("/api/lead-email")({
                     <span style="font-size: 11px; text-transform: uppercase; color: #94a3b8; font-weight: 700; letter-spacing: 0.5px;">Contact Name</span>
                     <p style="font-size: 16px; font-weight: 700; color: #ffffff; margin: 2px 0 0 0;">${cleanName}</p>
                   </div>
-
                   <div style="margin-bottom: 12px;">
                     <span style="font-size: 11px; text-transform: uppercase; color: #94a3b8; font-weight: 700; letter-spacing: 0.5px;">Phone Number</span>
                     <p style="font-size: 16px; font-weight: 700; color: #38bdf8; margin: 2px 0 0 0;">
                       <a href="tel:${cleanPhone}" style="color: #38bdf8; text-decoration: none;">${cleanPhone}</a>
                     </p>
                   </div>
-
                   ${
                     cleanNote
-                      ? `
-                  <div>
+                      ? `<div>
                     <span style="font-size: 11px; text-transform: uppercase; color: #94a3b8; font-weight: 700; letter-spacing: 0.5px;">Short Note</span>
                     <p style="font-size: 14px; color: #cbd5e1; margin: 2px 0 0 0; font-style: italic;">"${cleanNote}"</p>
-                  </div>
-                  `
+                  </div>`
                       : ""
                   }
                 </div>
@@ -112,37 +112,30 @@ export const Route = createFileRoute("/api/lead-email")({
             </div>
           `;
 
-          // Resend API Key configuration with fallback to configured key
-          const resendKey =
-            (typeof process !== "undefined" && process.env?.["RESEND_API_KEY"]) ||
-            "re_Gwh6acZL_NkvapMH4zAyS4VxozxgAJsS6";
-          let emailStatus = "simulated_success";
+          let emailStatus = "resend_not_attempted";
 
-          if (resendKey) {
-            try {
-              const resendRes = await fetch("https://api.resend.com/emails", {
-                method: "POST",
-                headers: {
-                  Authorization: `Bearer ${resendKey}`,
-                  "Content-Type": "application/json",
-                },
-                body: JSON.stringify({
-                  from: "JustTap <noreply@justtap.me>",
-                  to: [recipientEmail],
-                  subject: emailSubject,
-                  html: emailHtml,
-                }),
-              });
-              const resData = await resendRes.json();
-              emailStatus = resendRes.ok
-                ? "sent_via_resend"
-                : `resend_error_${resendRes.status}_${resData?.message || ""}`;
-            } catch (err) {
-              emailStatus = "resend_fetch_error";
-            }
+          try {
+            const resendRes = await fetch("https://api.resend.com/emails", {
+              method: "POST",
+              headers: {
+                Authorization: `Bearer ${resendKey}`,
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({
+                from: "JustTap <noreply@justtap.me>",
+                to: [recipientEmail],
+                subject: emailSubject,
+                html: emailHtml,
+              }),
+            });
+            const resData = await resendRes.json();
+            emailStatus = resendRes.ok
+              ? "sent_via_resend"
+              : `resend_error_${resendRes.status}_${resData?.message || ""}`;
+          } catch {
+            emailStatus = "resend_fetch_error";
           }
 
-          // Optional secondary HTTP Webhook if enabled
           if (pro?.enable_lead_webhook && pro.webhook_url) {
             void fetch(pro.webhook_url, {
               method: "POST",
@@ -166,7 +159,7 @@ export const Route = createFileRoute("/api/lead-email")({
               headers: { "Content-Type": "application/json" },
             },
           );
-        } catch (err) {
+        } catch {
           return new Response(
             JSON.stringify({ error: "Failed to process lead notification email" }),
             {
