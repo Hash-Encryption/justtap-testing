@@ -1,5 +1,5 @@
-import PublicCardPage from './[slug]/page';
+import { PublicCardClientView } from '@/components/card/PublicCardClientView';
 
-export default async function CardIndexPage() {
-  return <PublicCardPage params={Promise.resolve({ slug: 'demo-card' })} />;
+export default function CardIndexPage() {
+  return <PublicCardClientView />;
 }

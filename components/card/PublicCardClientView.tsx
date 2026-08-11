@@ -1,90 +1,59 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
+import Link from 'next/link';
 import { supabase } from '@/lib/supabase/client';
 import { PublicCardView } from './PublicCardView';
 import { Card } from '@/lib/types';
-import { Loader2 } from 'lucide-react';
+import { Loader2, ArrowLeft } from 'lucide-react';
 
 interface PublicCardClientViewProps {
-  slug: string;
-  initialCard: Card;
+  slug?: string;
+  initialCard?: Card | null;
 }
 
 export function PublicCardClientView({ slug: propSlug, initialCard }: PublicCardClientViewProps) {
-  // Extract real slug from browser location if available (e.g. /c/my-custom-name)
   const getBrowserSlug = () => {
     if (typeof window !== 'undefined') {
-      const pathParts = window.location.pathname.split('/c/');
-      if (pathParts.length > 1 && pathParts[1]) {
-        return decodeURIComponent(pathParts[1].replace(/\/$/, ''));
+      const parts = window.location.pathname.split('/c/');
+      if (parts.length > 1 && parts[1]) {
+        return decodeURIComponent(parts[1].replace(/\/$/, ''));
       }
     }
-    return propSlug || 'demo-card';
+    return propSlug || '';
   };
 
-  const [activeSlug, setActiveSlug] = useState<string>(getBrowserSlug);
-  const [card, setCard] = useState<Card>(initialCard);
-  const [loading, setLoading] = useState<boolean>(true);
+  const [card, setCard] = useState<Card | null>(initialCard || null);
+  const [loading, setLoading] = useState<boolean>(!initialCard?.id);
 
   useEffect(() => {
-    const currentSlug = getBrowserSlug();
-    setActiveSlug(currentSlug);
+    const slug = getBrowserSlug();
+    if (!slug) {
+      setLoading(false);
+      return;
+    }
 
     let isMounted = true;
-
     async function fetchCard() {
-      if (currentSlug === 'demo-card') {
-        if (isMounted) {
-          setCard(initialCard || DEMO_CARD_FALLBACK);
-          setLoading(false);
-        }
-        return;
-      }
-
       setLoading(true);
       try {
-        const { data, error } = await supabase
+        const { data } = await supabase
           .from('cards')
           .select('*')
-          .eq('slug', currentSlug)
+          .eq('slug', slug)
           .maybeSingle();
 
         if (isMounted) {
-          if (!error && data) {
-            setCard(data as Card);
-          } else {
-            // If not found in DB yet or previewing draft, construct formatted preview card
-            const formattedName = currentSlug
-              .replace(/-/g, ' ')
-              .replace(/\b\w/g, (c) => c.toUpperCase());
-
-            setCard({
-              ...initialCard,
-              slug: currentSlug,
-              full_name: formattedName || 'Digital Business Card',
-            });
-          }
+          setCard((data as Card) || null);
         }
-      } catch (err) {
-        if (isMounted) {
-          const formattedName = currentSlug
-            .replace(/-/g, ' ')
-            .replace(/\b\w/g, (c) => c.toUpperCase());
-
-          setCard({
-            ...initialCard,
-            slug: currentSlug,
-            full_name: formattedName || 'Digital Business Card',
-          });
-        }
+      } catch {
+        if (isMounted) setCard(null);
       } finally {
         if (isMounted) setLoading(false);
       }
     }
 
     fetchCard();
-
     return () => {
       isMounted = false;
     };
@@ -99,34 +68,27 @@ export function PublicCardClientView({ slug: propSlug, initialCard }: PublicCard
     );
   }
 
+  if (!card) {
+    return (
+      <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center text-slate-100 p-4 font-sans text-center">
+        <div className="max-w-md bg-slate-900/90 border border-slate-800 rounded-3xl p-8 space-y-4 shadow-2xl backdrop-blur-xl">
+          <h1 className="text-2xl font-black text-white">Card Not Found</h1>
+          <p className="text-xs text-slate-400 leading-relaxed">
+            The card link or NFC tag you scanned does not exist or has not been published yet.
+          </p>
+          <div className="pt-2">
+            <Link
+              href="/"
+              className="inline-flex items-center space-x-2 py-3 px-5 bg-violet-600 hover:bg-violet-700 text-white text-xs font-bold rounded-2xl transition-all shadow-lg shadow-violet-600/30"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              <span>Go to JustTap Homepage</span>
+            </Link>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return <PublicCardView card={card} />;
 }
-
-const DEMO_CARD_FALLBACK: Card = {
-  id: 'demo-card-id',
-  user_id: 'demo-user-id',
-  slug: 'demo-card',
-  plan: 'free',
-  full_name: 'Hashim Alnimari',
-  phone: '+966 50 123 4567',
-  email: 'hashim@justtap.app',
-  title: 'Chief Executive Officer',
-  company: 'JustTap Technologies',
-  bio: 'Building physical NFC digital business cards and contact sharing apps.',
-  avatar_url: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=400&q=80',
-  logo_url: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=200&q=80',
-  show_logo_badge: true,
-  whatsapp_phone: '+966501234567',
-  whatsapp_message: 'Hi Hashim! I just scanned your JustTap digital card.',
-  enable_arabic: true,
-  full_name_ar: 'هاشم النمري',
-  title_ar: 'الرئيس التنفيذي',
-  bio_ar: 'نطور الجيل القادم من بطاقات الأعمال الرقمية الذكية وتقنيات التواصل النقال.',
-  social_links: {
-    linkedin: 'https://linkedin.com',
-    instagram: 'https://instagram.com',
-    twitter: 'https://x.com',
-    website: 'https://justtap.app',
-  },
-  created_at: new Date().toISOString(),
-};

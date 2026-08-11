@@ -5,20 +5,8 @@ import { Card } from '@/lib/types';
 
 export const dynamic = 'force-static';
 export async function generateStaticParams() {
-  return [{ slug: 'demo-card' }];
+  return [{ slug: 'card' }];
 }
-
-const DEMO_CARD: Card = {
-  id: 'demo-card-id',
-  user_id: 'demo-user-id',
-  slug: 'demo-card',
-  plan: 'free',
-  full_name: 'Hashim Alnimari',
-  phone: '+966 50 123 4567',
-  email: 'hashim@justtap.app',
-  title: 'Chief Executive Officer',
-  company: 'JustTap Technologies',
-};
 
 export async function GET(
   request: NextRequest,
@@ -30,23 +18,21 @@ export async function GET(
       return NextResponse.json({ error: 'Slug is required' }, { status: 400 });
     }
 
-    let card: Card = DEMO_CARD;
-    if (slug !== 'demo-card') {
-      const supabase = createServerSupabaseClient();
-      const { data } = await supabase
-        .from('cards')
-        .select('*')
-        .eq('slug', slug)
-        .maybeSingle();
+    const supabase = createServerSupabaseClient();
+    const { data: cardData, error } = await supabase
+      .from('cards')
+      .select('*')
+      .eq('slug', slug)
+      .maybeSingle();
 
-      if (data) card = data as Card;
+    if (error || !cardData) {
+      return NextResponse.json({ error: 'Card not found' }, { status: 404 });
     }
 
-    // Offline vCard string payload
+    const card = cardData as Card;
     const vcardText = generateVCardString(card);
     const walletApiKey = process.env.WALLET_API_KEY;
 
-    // Send POST request to WalletWallet.dev API if key is available
     if (walletApiKey && !walletApiKey.includes('demo')) {
       try {
         const walletResponse = await fetch('https://api.walletwallet.dev/v1/passes/apple', {
@@ -87,7 +73,6 @@ export async function GET(
       }
     }
 
-    // Fallback pass JSON
     const mockPassContent = JSON.stringify({
       formatVersion: 1,
       passTypeIdentifier: 'pass.com.justtap.card',

@@ -2,7 +2,6 @@ import React from 'react';
 import { Metadata } from 'next';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 import { PublicCardClientView } from '@/components/card/PublicCardClientView';
-import { Card } from '@/lib/types';
 
 interface PageProps {
   params: Promise<{
@@ -10,47 +9,12 @@ interface PageProps {
   }>;
 }
 
-const DEMO_CARD: Card = {
-  id: 'demo-card-id',
-  user_id: 'demo-user-id',
-  slug: 'demo-card',
-  plan: 'free',
-  full_name: 'Hashim Alnimari',
-  phone: '+966 50 123 4567',
-  email: 'hashim@justtap.app',
-  title: 'Chief Executive Officer',
-  company: 'JustTap Technologies',
-  bio: 'Building physical NFC digital business cards and contact sharing apps.',
-  avatar_url: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=400&q=80',
-  logo_url: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=200&q=80',
-  show_logo_badge: true,
-  whatsapp_phone: '+966501234567',
-  whatsapp_message: 'Hi Hashim! I just scanned your JustTap digital card.',
-  enable_arabic: true,
-  full_name_ar: 'هاشم النمري',
-  title_ar: 'الرئيس التنفيذي',
-  bio_ar: 'نطور الجيل القادم من بطاقات الأعمال الرقمية الذكية وتقنيات التواصل النقال.',
-  social_links: {
-    linkedin: 'https://linkedin.com',
-    instagram: 'https://instagram.com',
-    twitter: 'https://x.com',
-    website: 'https://justtap.app',
-  },
-  created_at: new Date().toISOString(),
-};
-
 export async function generateStaticParams() {
-  return [{ slug: 'demo-card' }];
+  return [{ slug: 'card' }];
 }
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { slug } = await params;
-  if (slug === 'demo-card') {
-    return {
-      title: `${DEMO_CARD.full_name} — ${DEMO_CARD.title}`,
-      description: DEMO_CARD.bio,
-    };
-  }
 
   const supabase = createServerSupabaseClient();
   const { data: card } = await supabase
@@ -61,7 +25,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 
   if (!card) {
     return {
-      title: 'Card Preview — JustTap',
+      title: 'Digital Business Card — JustTap',
     };
   }
 
@@ -79,10 +43,6 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 export default async function PublicCardPage({ params }: PageProps) {
   const { slug } = await params;
 
-  if (slug === 'demo-card') {
-    return <PublicCardClientView slug="demo-card" initialCard={DEMO_CARD} />;
-  }
-
   const supabase = createServerSupabaseClient();
   const { data: card } = await supabase
     .from('cards')
@@ -90,11 +50,5 @@ export default async function PublicCardPage({ params }: PageProps) {
     .eq('slug', slug)
     .maybeSingle();
 
-  const initialCard = card || {
-    ...DEMO_CARD,
-    slug,
-    full_name: slug.replace(/-/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase()),
-  };
-
-  return <PublicCardClientView slug={slug} initialCard={initialCard} />;
+  return <PublicCardClientView slug={slug} initialCard={card || null} />;
 }

@@ -76,12 +76,11 @@ export default function HomePage() {
             </Link>
 
             <Link
-              href="/c/demo-card"
-              target="_blank"
+              href="/builder"
               className="w-full sm:w-auto py-4 px-8 bg-slate-900 hover:bg-slate-800 text-slate-200 font-bold text-sm rounded-2xl border border-slate-800 flex items-center justify-center space-x-2 transition-all"
             >
               <Smartphone className="w-4 h-4 text-violet-400" />
-              <span>View Live Demo Profile</span>
+              <span>Instant Guest Sandbox</span>
             </Link>
           </div>
         </div>
@@ -135,7 +134,7 @@ export default function HomePage() {
         <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
           <span>&copy; {new Date().getFullYear()} JustTap. All rights reserved.</span>
           <div className="flex items-center space-x-4">
-            <Link href="/c/demo-card" className="hover:text-slate-300">Demo Card</Link>
+            <Link href="/builder" className="hover:text-slate-300">Guest Sandbox</Link>
             <Link href="/dashboard" className="hover:text-slate-300">Client Portal</Link>
             <Link href="/admin" className="hover:text-slate-300">Admin Portal</Link>
           </div>

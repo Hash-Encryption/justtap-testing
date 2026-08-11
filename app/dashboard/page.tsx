@@ -106,14 +106,16 @@ export default function DashboardPage() {
           </div>
 
           <div className="flex items-center space-x-3">
-            <Link
-              href={`/c/${card?.slug || 'demo-card'}`}
-              target="_blank"
-              className="py-2 px-3 bg-slate-800 hover:bg-slate-700 text-xs font-semibold text-slate-200 rounded-xl border border-slate-700 flex items-center space-x-1.5 transition-colors"
-            >
-              <span>{card?.slug ? `View My Card (/c/${card.slug})` : 'Preview Demo Card'}</span>
-              <ExternalLink className="w-3.5 h-3.5 text-slate-400" />
-            </Link>
+            {card?.slug && (
+              <Link
+                href={`/c/${card.slug}`}
+                target="_blank"
+                className="py-2 px-3 bg-slate-800 hover:bg-slate-700 text-xs font-semibold text-slate-200 rounded-xl border border-slate-700 flex items-center space-x-1.5 transition-colors"
+              >
+                <span>View Card</span>
+                <ExternalLink className="w-3.5 h-3.5 text-slate-400" />
+              </Link>
+            )}
 
             <button
               onClick={handleLogout}
