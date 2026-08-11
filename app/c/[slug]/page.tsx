@@ -40,6 +40,10 @@ const DEMO_CARD: Card = {
   created_at: new Date().toISOString(),
 };
 
+export async function generateStaticParams() {
+  return [{ slug: 'demo-card' }];
+}
+
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { slug } = await params;
   if (slug === 'demo-card') {

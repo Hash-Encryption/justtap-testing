@@ -3,6 +3,11 @@ import { createServerSupabaseClient } from '@/lib/supabase/server';
 import { generateVCardString } from '@/lib/vcard';
 import { Card } from '@/lib/types';
 
+export const dynamic = 'force-static';
+export async function generateStaticParams() {
+  return [{ slug: 'demo-card' }];
+}
+
 const DEMO_CARD: Card = {
   id: 'demo-card-id',
   user_id: 'demo-user-id',

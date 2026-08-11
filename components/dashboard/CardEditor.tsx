@@ -23,35 +23,41 @@ import { supabase } from '@/lib/supabase/client';
 import { Card } from '@/lib/types';
 
 interface CardEditorProps {
-  card: Partial<Card>;
-  onSaveSuccess: (updatedCard: Card) => void;
+  card?: Partial<Card>;
+  onSaveSuccess?: (updatedCard: Card) => void;
+  draft?: Partial<Card>;
+  setDraft?: (c: any) => void;
+  userId?: string;
+  isNew?: boolean;
+  onSaved?: (saved: any) => void;
 }
 
-export function CardEditor({ card, onSaveSuccess }: CardEditorProps) {
+export function CardEditor({ card, onSaveSuccess, draft, onSaved }: CardEditorProps) {
+  const activeCard = card || draft || {};
   const [formData, setFormData] = useState<Partial<Card>>({
-    full_name: card.full_name || '',
-    slug: card.slug || '',
-    phone: card.phone || '',
-    email: card.email || '',
-    title: card.title || '',
-    company: card.company || '',
-    bio: card.bio || '',
-    avatar_url: card.avatar_url || '',
-    logo_url: card.logo_url || '',
-    show_logo_badge: card.show_logo_badge ?? true,
-    whatsapp_phone: card.whatsapp_phone || card.phone || '',
-    whatsapp_message: card.whatsapp_message || 'Hi! I just scanned your digital card.',
-    enable_arabic: card.enable_arabic ?? false,
-    full_name_ar: card.full_name_ar || '',
-    title_ar: card.title_ar || '',
-    bio_ar: card.bio_ar || '',
+    full_name: activeCard.full_name || '',
+    slug: activeCard.slug || '',
+    phone: activeCard.phone || '',
+    email: activeCard.email || '',
+    title: activeCard.title || '',
+    company: activeCard.company || '',
+    bio: activeCard.bio || '',
+    avatar_url: activeCard.avatar_url || '',
+    logo_url: activeCard.logo_url || '',
+    show_logo_badge: activeCard.show_logo_badge ?? true,
+    whatsapp_phone: activeCard.whatsapp_phone || activeCard.phone || '',
+    whatsapp_message: activeCard.whatsapp_message || 'Hi! I just scanned your digital card.',
+    enable_arabic: activeCard.enable_arabic ?? false,
+    full_name_ar: activeCard.full_name_ar || '',
+    title_ar: activeCard.title_ar || '',
+    bio_ar: activeCard.bio_ar || '',
     social_links: {
-      linkedin: card.social_links?.linkedin || '',
-      instagram: card.social_links?.instagram || '',
-      twitter: card.social_links?.twitter || '',
-      website: card.social_links?.website || '',
+      linkedin: activeCard.social_links?.linkedin || '',
+      instagram: activeCard.social_links?.instagram || '',
+      twitter: activeCard.social_links?.twitter || '',
+      website: activeCard.social_links?.website || '',
     },
-    plan: card.plan || 'free',
+    plan: activeCard.plan || 'free',
   });
 
   const [saving, setSaving] = useState(false);
