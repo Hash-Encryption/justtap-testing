@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { supabase } from '@/lib/supabase/client';
 import { PublicCardView } from './PublicCardView';
 import { Card } from '@/lib/types';
-import { Loader2, ArrowLeft } from 'lucide-react';
+import { Loader2, ArrowLeft, SearchX } from 'lucide-react';
 
 interface PublicCardClientViewProps {
   slug?: string;
@@ -23,12 +23,22 @@ export function PublicCardClientView({ slug: propSlug, initialCard }: PublicCard
     return propSlug || '';
   };
 
-  const [card, setCard] = useState<Card | null>(initialCard || null);
-  const [loading, setLoading] = useState<boolean>(!initialCard?.id);
+  const [activeSlug, setActiveSlug] = useState<string>('');
+  const [card, setCard] = useState<Card | null>(null);
+  const [loading, setLoading] = useState<boolean>(true);
 
   useEffect(() => {
     const slug = getBrowserSlug();
+    setActiveSlug(slug);
+
     if (!slug) {
+      setLoading(false);
+      return;
+    }
+
+    // If initialCard matches current browser slug, use it immediately
+    if (initialCard && initialCard.slug === slug) {
+      setCard(initialCard);
       setLoading(false);
       return;
     }
@@ -37,16 +47,20 @@ export function PublicCardClientView({ slug: propSlug, initialCard }: PublicCard
     async function fetchCard() {
       setLoading(true);
       try {
-        const { data } = await supabase
+        const { data, error } = await supabase
           .from('cards')
           .select('*')
           .eq('slug', slug)
           .maybeSingle();
 
         if (isMounted) {
-          setCard((data as Card) || null);
+          if (!error && data) {
+            setCard(data as Card);
+          } else {
+            setCard(null);
+          }
         }
-      } catch {
+      } catch (err) {
         if (isMounted) setCard(null);
       } finally {
         if (isMounted) setLoading(false);
@@ -72,9 +86,12 @@ export function PublicCardClientView({ slug: propSlug, initialCard }: PublicCard
     return (
       <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center text-slate-100 p-4 font-sans text-center">
         <div className="max-w-md bg-slate-900/90 border border-slate-800 rounded-3xl p-8 space-y-4 shadow-2xl backdrop-blur-xl">
+          <div className="w-14 h-14 bg-red-500/10 text-red-400 rounded-2xl flex items-center justify-center mx-auto border border-red-500/20">
+            <SearchX className="w-7 h-7" />
+          </div>
           <h1 className="text-2xl font-black text-white">Card Not Found</h1>
           <p className="text-xs text-slate-400 leading-relaxed">
-            The card link or NFC tag you scanned does not exist or has not been published yet.
+            The card profile <code className="text-violet-400">/c/{activeSlug || 'unknown'}</code> does not exist or has not been saved yet.
           </p>
           <div className="pt-2">
             <Link
