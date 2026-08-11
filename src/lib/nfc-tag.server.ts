@@ -1,21 +1,21 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { SUPABASE_ANON_KEY, SUPABASE_URL } from "./supabase";
-import { resolvePublicCardBySlug, type PublicCardLookupResult } from "./public-card";
+import { resolveSlugByTagToken, type TagLookupResult } from "./nfc-tag";
 
-export async function resolvePublicCardFromSupabase(slug: string): Promise<PublicCardLookupResult> {
-  return resolvePublicCardBySlug(
-    slug,
-    async (normalizedSlug) => {
+export async function resolveTagTokenFromSupabase(token: string): Promise<TagLookupResult> {
+  return resolveSlugByTagToken(
+    token,
+    async (validatedToken) => {
       try {
-        const response = await fetch(`${SUPABASE_URL}/rest/v1/rpc/get_public_card_by_slug`, {
+        const response = await fetch(`${SUPABASE_URL}/rest/v1/rpc/get_public_card_by_tag_token`, {
           method: "POST",
           headers: {
             apikey: SUPABASE_ANON_KEY,
             Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
             "Content-Type": "application/json",
           },
-          body: JSON.stringify({ _slug: normalizedSlug }),
+          body: JSON.stringify({ _token: validatedToken }),
         });
 
         if (!response.ok) {
@@ -38,12 +38,12 @@ export async function resolvePublicCardFromSupabase(slug: string): Promise<Publi
                 message: "message" in error ? String(error.message) : "Unknown query failure",
               }
             : { message: String(error) };
-        console.error("[public-card] Supabase lookup failed", { slug, ...diagnostic });
+        console.error("[nfc-tag] Supabase lookup failed", { token, ...diagnostic });
       },
     },
   );
 }
 
-export const getPublicCardBySlug = createServerFn({ method: "GET" })
-  .validator(z.object({ slug: z.string() }))
-  .handler(async ({ data }) => resolvePublicCardFromSupabase(data.slug));
+export const getPublicCardByTagToken = createServerFn({ method: "GET" })
+  .validator(z.object({ token: z.string() }))
+  .handler(async ({ data }) => resolveTagTokenFromSupabase(data.token));

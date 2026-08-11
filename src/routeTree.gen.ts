@@ -18,6 +18,7 @@ import { Route as ApiAdminAuthRouteImport } from './routes/api/admin-auth'
 import { Route as ApiLeadEmailRouteImport } from './routes/api/lead-email'
 import { Route as ApiLeadWebhookRouteImport } from './routes/api/lead-webhook'
 import { Route as CSlugRouteImport } from './routes/c.$slug'
+import { Route as TTokenRouteImport } from './routes/t.$token'
 import { Route as ApiOgSlugRouteImport } from './routes/api/og.$slug'
 import { Route as ApiVcardSlugRouteImport } from './routes/api/vcard.$slug'
 
@@ -66,6 +67,11 @@ const CSlugRoute = CSlugRouteImport.update({
   path: '/c/$slug',
   getParentRoute: () => rootRouteImport,
 } as any)
+const TTokenRoute = TTokenRouteImport.update({
+  id: '/t/$token',
+  path: '/t/$token',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiOgSlugRoute = ApiOgSlugRouteImport.update({
   id: '/api/og/$slug',
   path: '/api/og/$slug',
@@ -87,6 +93,7 @@ export interface FileRoutesByFullPath {
   '/api/lead-email': typeof ApiLeadEmailRoute
   '/api/lead-webhook': typeof ApiLeadWebhookRoute
   '/c/$slug': typeof CSlugRoute
+  '/t/$token': typeof TTokenRoute
   '/api/og/$slug': typeof ApiOgSlugRoute
   '/api/vcard/$slug': typeof ApiVcardSlugRoute
 }
@@ -100,6 +107,7 @@ export interface FileRoutesByTo {
   '/api/lead-email': typeof ApiLeadEmailRoute
   '/api/lead-webhook': typeof ApiLeadWebhookRoute
   '/c/$slug': typeof CSlugRoute
+  '/t/$token': typeof TTokenRoute
   '/api/og/$slug': typeof ApiOgSlugRoute
   '/api/vcard/$slug': typeof ApiVcardSlugRoute
 }
@@ -114,6 +122,7 @@ export interface FileRoutesById {
   '/api/lead-email': typeof ApiLeadEmailRoute
   '/api/lead-webhook': typeof ApiLeadWebhookRoute
   '/c/$slug': typeof CSlugRoute
+  '/t/$token': typeof TTokenRoute
   '/api/og/$slug': typeof ApiOgSlugRoute
   '/api/vcard/$slug': typeof ApiVcardSlugRoute
 }
@@ -129,6 +138,7 @@ export interface FileRouteTypes {
     | '/api/lead-email'
     | '/api/lead-webhook'
     | '/c/$slug'
+    | '/t/$token'
     | '/api/og/$slug'
     | '/api/vcard/$slug'
   fileRoutesByTo: FileRoutesByTo
@@ -142,6 +152,7 @@ export interface FileRouteTypes {
     | '/api/lead-email'
     | '/api/lead-webhook'
     | '/c/$slug'
+    | '/t/$token'
     | '/api/og/$slug'
     | '/api/vcard/$slug'
   id:
@@ -155,6 +166,7 @@ export interface FileRouteTypes {
     | '/api/lead-email'
     | '/api/lead-webhook'
     | '/c/$slug'
+    | '/t/$token'
     | '/api/og/$slug'
     | '/api/vcard/$slug'
   fileRoutesById: FileRoutesById
@@ -169,6 +181,7 @@ export interface RootRouteChildren {
   ApiLeadEmailRoute: typeof ApiLeadEmailRoute
   ApiLeadWebhookRoute: typeof ApiLeadWebhookRoute
   CSlugRoute: typeof CSlugRoute
+  TTokenRoute: typeof TTokenRoute
   ApiOgSlugRoute: typeof ApiOgSlugRoute
   ApiVcardSlugRoute: typeof ApiVcardSlugRoute
 }
@@ -238,6 +251,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof CSlugRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/t/$token': {
+      id: '/t/$token'
+      path: '/t/$token'
+      fullPath: '/t/$token'
+      preLoaderRoute: typeof TTokenRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/og/$slug': {
       id: '/api/og/$slug'
       path: '/api/og/$slug'
@@ -265,6 +285,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiLeadEmailRoute: ApiLeadEmailRoute,
   ApiLeadWebhookRoute: ApiLeadWebhookRoute,
   CSlugRoute: CSlugRoute,
+  TTokenRoute: TTokenRoute,
   ApiOgSlugRoute: ApiOgSlugRoute,
   ApiVcardSlugRoute: ApiVcardSlugRoute,
 }

@@ -52,7 +52,7 @@ describe("public card resolver", () => {
       async () => ({ data: null, error: { code: "PGRST000", message: "network failure" } }),
       { onServiceError },
     );
-    expect(result).toEqual({ status: "service_error" });
+    expect(result).toMatchObject({ status: "service_error" });
     expect(onServiceError).toHaveBeenCalledOnce();
   });
 });

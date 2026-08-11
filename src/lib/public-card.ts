@@ -40,7 +40,8 @@ export type PublicCard = PublicCardFields & {
 
 export type PublicCardLookupResult =
   | { status: "found"; card: PublicCard }
-  | { status: "invalid_slug" | "not_found" | "inactive" | "service_error" };
+  | { status: "invalid_slug" | "not_found" | "inactive" }
+  | { status: "service_error"; message?: string };
 
 export type PublicCardQueryResult = {
   data: unknown | null;
@@ -66,17 +67,24 @@ export async function resolvePublicCardBySlug(
     result = await lookup(validated.slug);
   } catch (error) {
     options.onServiceError?.(error);
-    return { status: "service_error" };
+    return { status: "service_error", message: String(error) };
   }
 
   if (result.error) {
     options.onServiceError?.(result.error);
-    return { status: "service_error" };
+    return { status: "service_error", message: result.error.message };
   }
 
   if (!result.data) return { status: "not_found" };
 
-  const row = result.data as PublicCard;
+  const rows = Array.isArray(result.data) ? result.data : [result.data];
+  if (rows.length === 0 || !rows[0] || typeof rows[0] !== "object") {
+    return { status: "not_found" };
+  }
+
+  const row = rows[0] as PublicCard;
+  if (!row.id || !row.full_name) return { status: "not_found" };
+
   const card = Object.fromEntries(
     PUBLIC_CARD_FIELDS.map((field) => [field, row[field]]),
   ) as PublicCardFields;
