@@ -106,16 +106,14 @@ export default function DashboardPage() {
           </div>
 
           <div className="flex items-center space-x-3">
-            {card && (
-              <Link
-                href={`/c/${card.slug}`}
-                target="_blank"
-                className="py-2 px-3 bg-slate-800 hover:bg-slate-700 text-xs font-semibold text-slate-200 rounded-xl border border-slate-700 flex items-center space-x-1.5 transition-colors"
-              >
-                <span>View Card</span>
-                <ExternalLink className="w-3.5 h-3.5 text-slate-400" />
-              </Link>
-            )}
+            <Link
+              href={`/c/${card?.slug || 'demo-card'}`}
+              target="_blank"
+              className="py-2 px-3 bg-slate-800 hover:bg-slate-700 text-xs font-semibold text-slate-200 rounded-xl border border-slate-700 flex items-center space-x-1.5 transition-colors"
+            >
+              <span>{card?.slug ? `View My Card (/c/${card.slug})` : 'Preview Demo Card'}</span>
+              <ExternalLink className="w-3.5 h-3.5 text-slate-400" />
+            </Link>
 
             <button
               onClick={handleLogout}
@@ -157,7 +155,7 @@ export default function DashboardPage() {
                   {card?.avatar_url ? (
                     <img src={card.avatar_url} alt={card.full_name} className="w-full h-full object-cover" />
                   ) : (
-                    card?.full_name.substring(0, 2).toUpperCase()
+                    card?.full_name?.substring(0, 2).toUpperCase() || 'JT'
                   )}
                 </div>
                 <div>
@@ -187,7 +185,7 @@ export default function DashboardPage() {
                   className="flex-1 sm:flex-none py-2.5 px-4 bg-violet-600 hover:bg-violet-700 text-white font-bold text-xs rounded-xl shadow-lg shadow-violet-600/25 flex items-center justify-center space-x-1.5 transition-all"
                 >
                   <ExternalLink className="w-4 h-4" />
-                  <span>Preview Card</span>
+                  <span>View My Live Card (/c/{card?.slug})</span>
                 </Link>
               </div>
             </div>
