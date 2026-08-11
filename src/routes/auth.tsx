@@ -1,164 +1,185 @@
-import { useEffect, useState } from "react";
-import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
-import { toast } from "sonner";
-import { supabase } from "@/lib/supabase";
-import { useTranslation } from "@/lib/i18n";
-import { LanguageSwitcher } from "@/components/LanguageSwitcher";
-
-type AuthSearch = {
-  mode?: "signin" | "signup" | undefined;
-  claim_draft?: boolean | undefined;
-};
+import React, { useState } from "react";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { Mail, Lock, User, ArrowRight } from "lucide-react";
+import { supabase } from "@/lib/supabase/client";
 
 export const Route = createFileRoute("/auth")({
-  ssr: false,
-  validateSearch: (search: Record<string, unknown>): AuthSearch => ({
-    mode: typeof search["mode"] === "string" ? (search["mode"] as "signin" | "signup") : undefined,
-    claim_draft:
-      search["claim_draft"] === true || search["claim_draft"] === "true" ? true : undefined,
-  }),
   head: () => ({
     meta: [
-      { title: "Sign in — JustTap digital business cards" },
+      { title: "Sign in — JustTap NFC Digital Business Cards" },
       {
         name: "description",
-        content: "Sign in or create an account to build and manage your NFC digital business card.",
+        content: "Sign in or create an account to manage your NFC digital business card.",
       },
-      { property: "og:title", content: "Sign in — JustTap" },
-      { property: "og:description", content: "Access your digital business card dashboard." },
     ],
   }),
   component: AuthPage,
 });
 
 function AuthPage() {
-  const { t } = useTranslation();
   const navigate = useNavigate();
-  const search = Route.useSearch();
-  const [mode, setMode] = useState<"signin" | "signup">(search.mode || "signin");
+  const [isSignUp, setIsSignUp] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [busy, setBusy] = useState(false);
-  const [hasPendingDraft, setHasPendingDraft] = useState(false);
+  const [fullName, setFullName] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [message, setMessage] = useState<{ type: "error" | "success"; text: string } | null>(null);
 
-  useEffect(() => {
-    try {
-      const stored =
-        localStorage.getItem("justtap_guest_pending_card") ||
-        sessionStorage.getItem("justtap_guest_pending_card");
-      if (stored) {
-        const parsed = JSON.parse(stored);
-        if (parsed?.card?.full_name) {
-          setHasPendingDraft(true);
-        }
-      }
-    } catch {
-      /* ignore storage errors */
-    }
-  }, []);
-
-  useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => {
-      if (data.session) navigate({ to: "/dashboard", replace: true });
-    });
-  }, [navigate]);
-
-  async function submit(e: React.FormEvent): Promise<void> {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setBusy(true);
-    if (mode === "signup") {
-      const redirectUrl =
-        typeof window !== "undefined" ? `${window.location.origin}/dashboard` : undefined;
-      const { data, error } = await supabase.auth.signUp({
-        email,
-        password,
-        options: { emailRedirectTo: redirectUrl },
-      });
-      setBusy(false);
-      if (error) {
-        toast.error(error.message);
-        return;
+    setLoading(true);
+    setMessage(null);
+
+    try {
+      if (isSignUp) {
+        const { data, error } = await supabase.auth.signUp({
+          email,
+          password,
+          options: {
+            data: { full_name: fullName },
+          },
+        });
+
+        if (error) throw error;
+
+        setMessage({
+          type: "success",
+          text: "Account created! Redirecting to dashboard...",
+        });
+
+        setTimeout(() => navigate({ to: "/dashboard" }), 1200);
+      } else {
+        const { data, error } = await supabase.auth.signInWithPassword({
+          email,
+          password,
+        });
+
+        if (error) throw error;
+
+        setMessage({ type: "success", text: "Sign in successful! Redirecting..." });
+        setTimeout(() => navigate({ to: "/dashboard" }), 800);
       }
-      if (data.user && data.user.identities && data.user.identities.length === 0) {
-        toast.error("An account with this email already exists. Please sign in.");
-        setMode("signin");
-        return;
-      }
-      if (!data.session) {
-        toast.success("Check your email to confirm your account.");
-        return;
-      }
-      navigate({ to: "/dashboard" });
-    } else {
-      const { error } = await supabase.auth.signInWithPassword({ email, password });
-      setBusy(false);
-      if (error) {
-        toast.error(error.message);
-        return;
-      }
-      navigate({ to: "/dashboard" });
+    } catch (err: any) {
+      console.error("Auth error:", err);
+      setMessage({ type: "error", text: err.message || "Authentication failed" });
+    } finally {
+      setLoading(false);
     }
-  }
+  };
 
   return (
-    <main className="grid min-h-screen place-items-center grid-glow px-6">
-      <div className="glass w-full max-w-sm rounded-3xl p-7">
-        <div className="flex items-center justify-between">
-          <Link to="/" className="font-display text-lg font-bold">
-            {t("appName")}
-            <span className="text-primary">.</span>
-          </Link>
-          <LanguageSwitcher />
+    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col items-center justify-center p-4 font-sans selection:bg-violet-500 selection:text-white">
+      {/* BRANDING */}
+      <Link to="/" className="mb-8 flex items-center space-x-2 group">
+        <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-violet-600 to-indigo-500 flex items-center justify-center font-extrabold text-white text-xl shadow-lg shadow-violet-600/30 group-hover:scale-105 transition-transform">
+          J
         </div>
-        <h1 className="mt-6 font-display text-2xl font-bold">
-          {mode === "signin" ? t("welcomeBack") : t("createAccount")}
-        </h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          {mode === "signin" ? t("signInDesc") : t("signUpDesc")}
-        </p>
+        <span className="font-extrabold text-2xl text-white tracking-tight">JustTap</span>
+      </Link>
 
-        {hasPendingDraft && (
-          <div className="mt-4 rounded-xl border border-primary/30 bg-primary/10 p-3 text-xs text-primary">
-            <span className="font-semibold">{t("draftNoticeTitle")}</span>
-            <p className="mt-0.5 opacity-90">{t("draftNoticeDesc")}</p>
+      {/* AUTH CARD */}
+      <div className="w-full max-w-md bg-slate-900/80 border border-slate-800 rounded-3xl p-6 sm:p-8 shadow-2xl backdrop-blur-xl space-y-6">
+        <div className="text-center space-y-1">
+          <h2 className="text-2xl font-extrabold text-white">
+            {isSignUp ? "Create JustTap Account" : "Welcome Back"}
+          </h2>
+          <p className="text-xs text-slate-400">
+            {isSignUp
+              ? "Start building your physical NFC and digital business card profile"
+              : "Sign in to access your card editor, leads, and analytics"}
+          </p>
+        </div>
+
+        {message && (
+          <div
+            className={`p-3.5 rounded-2xl text-xs font-semibold border ${
+              message.type === "success"
+                ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-400"
+                : "bg-red-500/10 border-red-500/20 text-red-400"
+            }`}
+          >
+            {message.text}
           </div>
         )}
 
-        <form onSubmit={submit} className="mt-6 space-y-3">
-          <input
-            type="email"
-            required
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            placeholder={t("emailPlaceholder")}
-            className="h-12 w-full rounded-xl border border-border bg-transparent px-4 text-sm outline-none focus:border-ring"
-          />
-          <input
-            type="password"
-            required
-            minLength={6}
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            placeholder={t("passwordPlaceholder")}
-            className="h-12 w-full rounded-xl border border-border bg-transparent px-4 text-sm outline-none focus:border-ring"
-          />
+        <form onSubmit={handleSubmit} className="space-y-4">
+          {isSignUp && (
+            <div>
+              <label className="block text-xs font-semibold text-slate-300 mb-1">
+                Full Name
+              </label>
+              <div className="relative">
+                <User className="w-4 h-4 text-slate-400 absolute left-3 top-3.5" />
+                <input
+                  type="text"
+                  required
+                  value={fullName}
+                  onChange={(e) => setFullName(e.target.value)}
+                  placeholder="Hashim Alnimari"
+                  className="w-full pl-9 pr-4 py-2.5 bg-slate-800 border border-slate-700 rounded-xl text-sm text-white focus:outline-none focus:ring-2 focus:ring-violet-500"
+                />
+              </div>
+            </div>
+          )}
+
+          <div>
+            <label className="block text-xs font-semibold text-slate-300 mb-1">
+              Email Address
+            </label>
+            <div className="relative">
+              <Mail className="w-4 h-4 text-slate-400 absolute left-3 top-3.5" />
+              <input
+                type="email"
+                required
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="you@example.com"
+                className="w-full pl-9 pr-4 py-2.5 bg-slate-800 border border-slate-700 rounded-xl text-sm text-white focus:outline-none focus:ring-2 focus:ring-violet-500"
+              />
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-xs font-semibold text-slate-300 mb-1">
+              Password
+            </label>
+            <div className="relative">
+              <Lock className="w-4 h-4 text-slate-400 absolute left-3 top-3.5" />
+              <input
+                type="password"
+                required
+                minLength={6}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="••••••••"
+                className="w-full pl-9 pr-4 py-2.5 bg-slate-800 border border-slate-700 rounded-xl text-sm text-white focus:outline-none focus:ring-2 focus:ring-violet-500"
+              />
+            </div>
+          </div>
+
           <button
             type="submit"
-            disabled={busy}
-            className="h-12 w-full rounded-xl bg-primary text-sm font-semibold text-primary-foreground disabled:opacity-60"
+            disabled={loading}
+            className="w-full py-3.5 px-4 bg-violet-600 hover:bg-violet-700 text-white font-bold rounded-2xl shadow-xl shadow-violet-600/30 flex items-center justify-center space-x-2 transition-all disabled:opacity-50 mt-2"
           >
-            {busy ? t("pleaseWait") : mode === "signin" ? t("submitSignIn") : t("submitSignUp")}
+            <span>{loading ? "Processing..." : isSignUp ? "Create Free Account" : "Sign In"}</span>
+            <ArrowRight className="w-4 h-4" />
           </button>
         </form>
 
-        <button
-          type="button"
-          onClick={() => setMode(mode === "signin" ? "signup" : "signin")}
-          className="mt-4 w-full text-center text-sm text-muted-foreground hover:text-foreground"
-        >
-          {mode === "signin" ? t("noAccountPrompt") : t("hasAccountPrompt")}
-        </button>
+        <div className="pt-2 text-center border-t border-slate-800">
+          <button
+            type="button"
+            onClick={() => {
+              setIsSignUp(!isSignUp);
+              setMessage(null);
+            }}
+            className="text-xs text-slate-400 hover:text-violet-400 font-medium transition-colors"
+          >
+            {isSignUp ? "Already have an account? Sign in" : "Don't have an account? Sign up free"}
+          </button>
+        </div>
       </div>
-    </main>
+    </div>
   );
 }
