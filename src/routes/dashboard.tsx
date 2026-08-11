@@ -231,7 +231,7 @@ function Dashboard() {
             ? { ...guestPayload, user_id: user.id }
             : { ...emptyCard, user_id: user.id }),
       );
-      setEditing(false);
+      setEditing(true);
       setFetching(false);
     }
 

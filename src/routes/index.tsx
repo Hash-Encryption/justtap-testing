@@ -1,21 +1,27 @@
+import React from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { Nfc, QrCode, BarChart3, Inbox, Languages, Palette } from "lucide-react";
-import { useTranslation } from "@/lib/i18n";
-import { LanguageSwitcher } from "@/components/LanguageSwitcher";
+import {
+  Smartphone,
+  Zap,
+  QrCode,
+  Globe2,
+  ArrowRight,
+  Sparkles,
+} from "lucide-react";
 
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "JustTap — White-label NFC Digital Business Cards" },
+      { title: "JustTap — Multi-Tenant NFC & Digital Business Cards" },
       {
         name: "description",
         content:
-          "Launch a fully white-label digital business card platform for NFC cards: live editor, lead capture, analytics and QR codes.",
+          "One tap to share your entire professional identity. Optimized for physical NFC business cards and digital sharing.",
       },
-      { property: "og:title", content: "JustTap — White-label NFC Digital Business Cards" },
+      { property: "og:title", content: "JustTap — Multi-Tenant NFC Digital Cards" },
       {
         property: "og:description",
-        content: "One tap. Contact saved. Multi-tenant digital business cards for NFC.",
+        content: "One tap. Contact saved. Digital business cards for NFC.",
       },
     ],
   }),
@@ -23,83 +29,131 @@ export const Route = createFileRoute("/")({
 });
 
 function Landing() {
-  const { t } = useTranslation();
-
-  const features = [
-    { Icon: Palette, title: t("feature1Title"), body: t("feature1Desc") },
-    { Icon: Nfc, title: t("feature2Title"), body: t("feature2Desc") },
-    { Icon: Inbox, title: t("feature3Title"), body: t("feature3Desc") },
-    { Icon: BarChart3, title: t("feature4Title"), body: t("feature4Desc") },
-    { Icon: QrCode, title: t("feature5Title"), body: t("feature5Desc") },
-    { Icon: Languages, title: t("feature6Title"), body: t("feature6Desc") },
-  ];
-
   return (
-    <main className="min-h-screen grid-glow">
-      <header className="mx-auto flex max-w-6xl items-center justify-between px-6 py-6">
-        <span className="font-display text-lg font-bold tracking-tight">
-          {t("appName")}
-          <span className="text-primary">.</span>
-        </span>
-        <nav className="flex items-center gap-2 text-sm">
-          <LanguageSwitcher />
-          <Link
-            to="/auth"
-            className="rounded-full px-3.5 py-2 font-medium text-muted-foreground hover:text-foreground"
-          >
-            {t("signIn")}
+    <div className="min-h-screen bg-slate-950 text-slate-100 font-sans selection:bg-violet-500 selection:text-white flex flex-col justify-between">
+      {/* NAVBAR */}
+      <header className="w-full border-b border-slate-800/80 bg-slate-900/60 backdrop-blur-xl sticky top-0 z-50">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4 flex items-center justify-between">
+          <Link to="/" className="flex items-center space-x-2.5">
+            <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-violet-600 to-indigo-500 flex items-center justify-center font-extrabold text-white text-xl shadow-lg shadow-violet-600/30">
+              J
+            </div>
+            <span className="font-extrabold text-xl text-white tracking-tight">JustTap</span>
           </Link>
-          <Link
-            to="/builder"
-            className="rounded-full bg-primary px-4 py-2 font-semibold text-primary-foreground transition hover:opacity-90"
-          >
-            {t("createCardFirst")}
-          </Link>
-        </nav>
+
+          <div className="flex items-center space-x-3">
+            <Link
+              to="/auth"
+              className="py-2.5 px-4 text-xs font-semibold text-slate-300 hover:text-white transition-colors"
+            >
+              Sign In
+            </Link>
+
+            <Link
+              to="/dashboard"
+              className="py-2.5 px-5 bg-violet-600 hover:bg-violet-700 text-white font-bold text-xs rounded-2xl shadow-lg shadow-violet-600/25 flex items-center space-x-1.5 transition-all hover:scale-[1.02]"
+            >
+              <span>Client Portal</span>
+              <ArrowRight className="w-4 h-4" />
+            </Link>
+          </div>
+        </div>
       </header>
 
-      <section className="mx-auto max-w-3xl px-6 pb-16 pt-10 text-center sm:pt-20">
-        <span className="inline-flex items-center gap-2 rounded-full border border-border px-3 py-1 text-xs text-muted-foreground">
-          <Nfc className="h-3.5 w-3.5 text-primary" /> {t("badgeText")}
-        </span>
-        <h1 className="mt-6 font-display text-4xl font-extrabold leading-[1.05] tracking-tight sm:text-6xl">
-          {t("heroTitle")} <span className="text-primary">{t("heroTitleHighlight")}</span>.
-        </h1>
-        <p className="mx-auto mt-5 max-w-xl text-base text-muted-foreground">{t("heroSubtitle")}</p>
+      {/* HERO SECTION */}
+      <section className="relative pt-16 pb-20 px-4 sm:px-6 overflow-hidden">
+        {/* Background glow circle */}
+        <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-violet-600/15 blur-[120px] rounded-full pointer-events-none" />
 
-        {/* 2 CLEAR CHOICES */}
-        <div className="mt-8 grid gap-3 sm:grid-cols-2 max-w-md mx-auto">
-          <Link
-            to="/builder"
-            className="glass flex flex-col items-center justify-center gap-1 rounded-2xl border-2 border-primary/50 bg-primary/10 p-5 text-center transition hover:scale-[1.02] hover:border-primary"
-          >
-            <span className="font-display text-base font-bold text-foreground">
-              {t("choiceCreateTitle")}
-            </span>
-            <span className="text-xs text-muted-foreground">{t("choiceCreateDesc")}</span>
-          </Link>
+        <div className="max-w-4xl mx-auto text-center space-y-8 relative z-10">
+          <div className="inline-flex items-center space-x-2 px-4 py-1.5 rounded-full bg-violet-500/10 border border-violet-500/20 text-xs font-bold text-violet-400">
+            <Sparkles className="w-4 h-4" />
+            <span>Multi-Tenant NFC & Digital Business Card SaaS</span>
+          </div>
 
-          <Link
-            to="/auth"
-            className="glass flex flex-col items-center justify-center gap-1 rounded-2xl border border-border p-5 text-center transition hover:scale-[1.02] hover:border-foreground/30"
-          >
-            <span className="font-display text-base font-bold text-foreground">
-              {t("choiceLoginTitle")}
-            </span>
-            <span className="text-xs text-muted-foreground">{t("choiceLoginDesc")}</span>
-          </Link>
+          <h1 className="text-4xl sm:text-6xl font-black text-white tracking-tight leading-[1.15]">
+            One Tap to Share Your Entire Professional Identity
+          </h1>
+
+          <p className="text-sm sm:text-lg text-slate-300 max-w-2xl mx-auto leading-relaxed">
+            Optimized for physical NFC business cards and digital sharing. Stream dynamic vCards, Apple Wallet passes, collect visitor leads, and track analytics seamlessly.
+          </p>
+
+          {/* CTA BUTTONS */}
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-4">
+            <Link
+              to="/auth"
+              className="w-full sm:w-auto py-4 px-8 bg-violet-600 hover:bg-violet-700 text-white font-extrabold text-sm rounded-2xl shadow-xl shadow-violet-600/30 flex items-center justify-center space-x-2 transition-all hover:scale-[1.03]"
+            >
+              <span>Create Your Card Free</span>
+              <ArrowRight className="w-4 h-4" />
+            </Link>
+
+            <Link
+              to="/builder"
+              className="w-full sm:w-auto py-4 px-8 bg-slate-900 hover:bg-slate-800 text-slate-200 font-bold text-sm rounded-2xl border border-slate-800 flex items-center justify-center space-x-2 transition-all"
+            >
+              <Smartphone className="w-4 h-4 text-violet-400" />
+              <span>Instant Guest Sandbox</span>
+            </Link>
+          </div>
         </div>
       </section>
 
-      <section className="mx-auto grid max-w-5xl gap-4 px-6 pb-24 sm:grid-cols-2 lg:grid-cols-3">
-        {features.map(({ Icon, title, body }) => (
-          <article key={title} className="glass rounded-2xl p-5">
-            <Icon className="h-5 w-5 text-primary" />
-            <h2 className="mt-3 font-display text-base font-semibold">{title}</h2>
-            <p className="mt-1.5 text-sm text-muted-foreground">{body}</p>
-          </article>
-        ))}
+      {/* FEATURE CARDS GRID */}
+      <section className="max-w-7xl mx-auto px-4 sm:px-6 py-16 space-y-12">
+        <div className="text-center space-y-2">
+          <h2 className="text-2xl sm:text-3xl font-extrabold text-white">Everything You Need in One Tap</h2>
+          <p className="text-xs sm:text-sm text-slate-400">Built for physical NFC cards, QR codes, and digital networking</p>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          {/* Card 1 */}
+          <div className="bg-slate-900/60 border border-slate-800 rounded-3xl p-8 space-y-4 hover:border-violet-500/40 transition-colors">
+            <div className="w-12 h-12 rounded-2xl bg-violet-500/10 border border-violet-500/20 text-violet-400 flex items-center justify-center">
+              <Zap className="w-6 h-6" />
+            </div>
+            <h3 className="text-lg font-bold text-white">Dynamic vCard & Apple Wallet</h3>
+            <p className="text-xs text-slate-400 leading-relaxed">
+              Instant contact downloading via dynamic <code className="text-violet-300">.vcf</code> generation and signed Apple Wallet <code className="text-violet-300">.pkpass</code> passes.
+            </p>
+          </div>
+
+          {/* Card 2 */}
+          <div className="bg-slate-900/60 border border-slate-800 rounded-3xl p-8 space-y-4 hover:border-violet-500/40 transition-colors">
+            <div className="w-12 h-12 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 flex items-center justify-center">
+              <Globe2 className="w-6 h-6" />
+            </div>
+            <h3 className="text-lg font-bold text-white">Bilingual Arabic & English</h3>
+            <p className="text-xs text-slate-400 leading-relaxed">
+              Native RTL layout support and custom Arabic translations for full name, job title, and bio fields.
+            </p>
+          </div>
+
+          {/* Card 3 */}
+          <div className="bg-slate-900/60 border border-slate-800 rounded-3xl p-8 space-y-4 hover:border-violet-500/40 transition-colors">
+            <div className="w-12 h-12 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-amber-400 flex items-center justify-center">
+              <QrCode className="w-6 h-6" />
+            </div>
+            <h3 className="text-lg font-bold text-white">Offline QR & Lockscreen Wallpaper</h3>
+            <p className="text-xs text-slate-400 leading-relaxed">
+              Generate offline scannable QR codes and custom 1080x1920px smartphone lockscreen wallpapers.
+            </p>
+          </div>
+        </div>
       </section>
-    </main>
+
+      {/* FOOTER */}
+      <footer className="border-t border-slate-800 py-8 px-4 text-center text-xs text-slate-500">
+        <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
+          <span>&copy; {new Date().getFullYear()} JustTap. All rights reserved.</span>
+          <div className="flex items-center space-x-4">
+            <Link to="/builder" className="hover:text-slate-300">Guest Sandbox</Link>
+            <Link to="/dashboard" className="hover:text-slate-300">Client Portal</Link>
+            <Link to="/admin" className="hover:text-slate-300">Admin Portal</Link>
+          </div>
+        </div>
+      </footer>
+    </div>
   );
 }
