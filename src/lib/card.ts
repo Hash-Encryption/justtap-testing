@@ -1,3 +1,5 @@
+import { normalizeSlug } from "./slug";
+
 export type SocialLinks = {
   linkedin?: string;
   instagram?: string;
@@ -16,6 +18,7 @@ export type ProFeatures = {
   booking_url?: string | null;
   custom_cta_label?: string | null;
   custom_cta_url?: string | null;
+  enable_wallet_pass?: boolean;
   remove_branding?: boolean;
   enable_email_alerts?: boolean;
   notify_email?: string | null;
@@ -110,13 +113,7 @@ export const emptyCard: Card = {
 };
 
 export function slugify(input: string) {
-  return input
-    .toLowerCase()
-    .trim()
-    .replace(/[^a-z0-9\s-]/g, "")
-    .replace(/\s+/g, "-")
-    .replace(/-+/g, "-")
-    .slice(0, 48);
+  return normalizeSlug(input);
 }
 
 /** Converts YouTube (watch, shorts, embed, shorts links), Vimeo, Loom, and Google Drive URLs to embeddable iframe URLs */
@@ -176,7 +173,9 @@ export function readableOn(hex: string) {
   return lum > 0.6 ? "#111827" : "#ffffff";
 }
 
-export function buildVCard(card: Card) {
+export function buildVCard(
+  card: Pick<Card, "full_name" | "company" | "title" | "phone" | "email" | "social_links" | "bio">,
+) {
   const parts = card.full_name.trim().split(/\s+/);
   const last = parts.length > 1 ? parts[parts.length - 1] : "";
   const first = parts.length > 1 ? parts.slice(0, -1).join(" ") : card.full_name;

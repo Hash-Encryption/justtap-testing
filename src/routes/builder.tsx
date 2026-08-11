@@ -1,11 +1,12 @@
 import { useState } from "react";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { emptyCard, slugify, type Card } from "@/lib/card";
+import { emptyCard, type Card } from "@/lib/card";
 import { CardEditor } from "@/components/dashboard/CardEditor";
 import { ArrowLeft, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import { useTranslation } from "@/lib/i18n";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
+import { slugValidationMessage, validateSlug } from "@/lib/slug";
 
 export const Route = createFileRoute("/builder")({
   ssr: false,
@@ -52,11 +53,12 @@ function BuilderPage() {
       toast.error(t("phoneNumber") + " is required");
       return;
     }
-    const slug = slugify(draft.slug || draft.full_name);
-    if (!slug) {
-      toast.error(t("cardLink") + " is required");
+    const slugResult = validateSlug(draft.slug || draft.full_name);
+    if (!slugResult.valid) {
+      toast.error(slugValidationMessage(slugResult));
       return;
     }
+    const slug = slugResult.slug;
 
     // Save pending guest draft to localStorage & sessionStorage
     const payload = JSON.stringify({ card: { ...draft, slug }, updatedAt: Date.now() });

@@ -5,11 +5,16 @@
   "sideEffects": false,
   "type": "module",
   "scripts": {
-    "dev": "next dev",
+    "dev": "vite dev",
     "dev:vite": "vite dev",
-    "build": "next build",
+    "dev:legacy": "next dev",
+    "build": "vite build",
     "build:vite": "vite build",
-    "start": "next start",
+    "build:legacy": "next build",
+    "typecheck:v2": "tsc -p tsconfig.v2.json",
+    "lint:v2": "eslint \"src/**/*.{ts,tsx}\"",
+    "test:v2": "vitest run",
+    "start": "vite preview",
     "lint": "next lint"
   },
   "dependencies": {
@@ -90,7 +95,8 @@
     "prettier": "^3.7.3",
     "typescript": "^5.8.3",
     "typescript-eslint": "^8.56.1",
-    "vite": "^8.1.5"
+    "vite": "^8.1.5",
+    "vitest": "^4.1.5"
   },
   "optionalDependencies": {
     "@next/swc-linux-x64-gnu": "16.3.0",

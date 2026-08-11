@@ -1,9 +1,14 @@
 import React, { useState } from "react";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { Mail, Lock, User, ArrowRight } from "lucide-react";
-import { supabase } from "@/lib/supabase/client";
+import { supabase } from "@/lib/supabase";
+import { z } from "zod";
 
 export const Route = createFileRoute("/auth")({
+  validateSearch: z.object({
+    mode: z.enum(["signin", "signup"]).optional(),
+    claim_draft: z.boolean().optional(),
+  }),
   head: () => ({
     meta: [
       { title: "Sign in — JustTap NFC Digital Business Cards" },
@@ -18,7 +23,8 @@ export const Route = createFileRoute("/auth")({
 
 function AuthPage() {
   const navigate = useNavigate();
-  const [isSignUp, setIsSignUp] = useState(false);
+  const search = Route.useSearch();
+  const [isSignUp, setIsSignUp] = useState(search.mode === "signup");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [fullName, setFullName] = useState("");
@@ -59,9 +65,12 @@ function AuthPage() {
         setMessage({ type: "success", text: "Sign in successful! Redirecting..." });
         setTimeout(() => navigate({ to: "/dashboard" }), 800);
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error("Auth error:", err);
-      setMessage({ type: "error", text: err.message || "Authentication failed" });
+      setMessage({
+        type: "error",
+        text: err instanceof Error && err.message ? err.message : "Authentication failed",
+      });
     } finally {
       setLoading(false);
     }
@@ -105,9 +114,7 @@ function AuthPage() {
         <form onSubmit={handleSubmit} className="space-y-4">
           {isSignUp && (
             <div>
-              <label className="block text-xs font-semibold text-slate-300 mb-1">
-                Full Name
-              </label>
+              <label className="block text-xs font-semibold text-slate-300 mb-1">Full Name</label>
               <div className="relative">
                 <User className="w-4 h-4 text-slate-400 absolute left-3 top-3.5" />
                 <input
@@ -123,9 +130,7 @@ function AuthPage() {
           )}
 
           <div>
-            <label className="block text-xs font-semibold text-slate-300 mb-1">
-              Email Address
-            </label>
+            <label className="block text-xs font-semibold text-slate-300 mb-1">Email Address</label>
             <div className="relative">
               <Mail className="w-4 h-4 text-slate-400 absolute left-3 top-3.5" />
               <input
@@ -140,9 +145,7 @@ function AuthPage() {
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-slate-300 mb-1">
-              Password
-            </label>
+            <label className="block text-xs font-semibold text-slate-300 mb-1">Password</label>
             <div className="relative">
               <Lock className="w-4 h-4 text-slate-400 absolute left-3 top-3.5" />
               <input

@@ -15,11 +15,8 @@ export default defineConfig({
   nitro: {
     preset: "cloudflare-pages",
     cloudflare: {
-      wrangler: {
-        assets: {
-          binding: "STATIC_ASSETS",
-        },
-      },
+      nodeCompat: true,
+      deployConfig: true,
     },
   },
 });

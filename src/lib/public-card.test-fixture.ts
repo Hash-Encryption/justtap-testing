@@ -1,0 +1,72 @@
+import type { Card, ProFeatures } from "./card";
+
+export type PublicCardTestRow = Pick<
+  Card,
+  | "id"
+  | "slug"
+  | "full_name"
+  | "phone"
+  | "email"
+  | "title"
+  | "company"
+  | "bio"
+  | "avatar_url"
+  | "logo_url"
+  | "show_logo_badge"
+  | "header_pattern"
+  | "accent_color"
+  | "bg_color"
+  | "whatsapp_phone"
+  | "whatsapp_message"
+  | "enable_arabic"
+  | "full_name_ar"
+  | "title_ar"
+  | "bio_ar"
+  | "social_links"
+> & {
+  plan_tier: Card["plan_tier"];
+  pro_features: ProFeatures;
+  is_active: boolean;
+};
+
+export function makePublicCardRow(overrides: Partial<PublicCardTestRow> = {}): PublicCardTestRow {
+  return {
+    id: "11111111-1111-4111-8111-111111111111",
+    slug: "known-card",
+    full_name: "Known Card",
+    phone: "+966500000000",
+    email: "public@example.com",
+    title: "Founder",
+    company: "JustTap",
+    bio: "A public profile",
+    avatar_url: null,
+    logo_url: null,
+    show_logo_badge: true,
+    header_pattern: "wave",
+    accent_color: "#8b5cf6",
+    bg_color: "#ffffff",
+    whatsapp_phone: "+966500000000",
+    whatsapp_message: "Hello",
+    enable_arabic: false,
+    full_name_ar: null,
+    title_ar: null,
+    bio_ar: null,
+    social_links: { website: "https://example.com" },
+    plan_tier: "pro",
+    pro_features: {
+      video_url: "https://example.com/video",
+      pdf_url: "https://example.com/file.pdf",
+      pdf_label: "Profile",
+      booking_url: "https://example.com/book",
+      custom_cta_label: "Contact",
+      custom_cta_url: "https://example.com/contact",
+      remove_branding: true,
+      notify_email: "private@example.com",
+      webhook_url: "https://private.example.com/hook",
+      enable_email_alerts: true,
+      enable_lead_webhook: true,
+    },
+    is_active: true,
+    ...overrides,
+  };
+}

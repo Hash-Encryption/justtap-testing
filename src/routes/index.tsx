@@ -1,13 +1,6 @@
 import React from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import {
-  Smartphone,
-  Zap,
-  QrCode,
-  Globe2,
-  ArrowRight,
-  Sparkles,
-} from "lucide-react";
+import { Smartphone, Zap, QrCode, Globe2, ArrowRight, Sparkles } from "lucide-react";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -76,7 +69,8 @@ function Landing() {
           </h1>
 
           <p className="text-sm sm:text-lg text-slate-300 max-w-2xl mx-auto leading-relaxed">
-            Optimized for physical NFC business cards and digital sharing. Stream dynamic vCards, Apple Wallet passes, collect visitor leads, and track analytics seamlessly.
+            Optimized for physical NFC business cards and digital sharing. Stream dynamic vCards,
+            Apple Wallet passes, collect visitor leads, and track analytics seamlessly.
           </p>
 
           {/* CTA BUTTONS */}
@@ -103,8 +97,12 @@ function Landing() {
       {/* FEATURE CARDS GRID */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 py-16 space-y-12">
         <div className="text-center space-y-2">
-          <h2 className="text-2xl sm:text-3xl font-extrabold text-white">Everything You Need in One Tap</h2>
-          <p className="text-xs sm:text-sm text-slate-400">Built for physical NFC cards, QR codes, and digital networking</p>
+          <h2 className="text-2xl sm:text-3xl font-extrabold text-white">
+            Everything You Need in One Tap
+          </h2>
+          <p className="text-xs sm:text-sm text-slate-400">
+            Built for physical NFC cards, QR codes, and digital networking
+          </p>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -115,7 +113,9 @@ function Landing() {
             </div>
             <h3 className="text-lg font-bold text-white">Dynamic vCard & Apple Wallet</h3>
             <p className="text-xs text-slate-400 leading-relaxed">
-              Instant contact downloading via dynamic <code className="text-violet-300">.vcf</code> generation and signed Apple Wallet <code className="text-violet-300">.pkpass</code> passes.
+              Instant contact downloading via dynamic <code className="text-violet-300">.vcf</code>{" "}
+              generation and signed Apple Wallet <code className="text-violet-300">.pkpass</code>{" "}
+              passes.
             </p>
           </div>
 
@@ -126,7 +126,8 @@ function Landing() {
             </div>
             <h3 className="text-lg font-bold text-white">Bilingual Arabic & English</h3>
             <p className="text-xs text-slate-400 leading-relaxed">
-              Native RTL layout support and custom Arabic translations for full name, job title, and bio fields.
+              Native RTL layout support and custom Arabic translations for full name, job title, and
+              bio fields.
             </p>
           </div>
 
@@ -137,7 +138,8 @@ function Landing() {
             </div>
             <h3 className="text-lg font-bold text-white">Offline QR & Lockscreen Wallpaper</h3>
             <p className="text-xs text-slate-400 leading-relaxed">
-              Generate offline scannable QR codes and custom 1080x1920px smartphone lockscreen wallpapers.
+              Generate offline scannable QR codes and custom 1080x1920px smartphone lockscreen
+              wallpapers.
             </p>
           </div>
         </div>
@@ -148,9 +150,15 @@ function Landing() {
         <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
           <span>&copy; {new Date().getFullYear()} JustTap. All rights reserved.</span>
           <div className="flex items-center space-x-4">
-            <Link to="/builder" className="hover:text-slate-300">Guest Sandbox</Link>
-            <Link to="/dashboard" className="hover:text-slate-300">Client Portal</Link>
-            <Link to="/admin" className="hover:text-slate-300">Admin Portal</Link>
+            <Link to="/builder" className="hover:text-slate-300">
+              Guest Sandbox
+            </Link>
+            <Link to="/dashboard" className="hover:text-slate-300">
+              Client Portal
+            </Link>
+            <Link to="/admin" className="hover:text-slate-300">
+              Admin Portal
+            </Link>
           </div>
         </div>
       </footer>

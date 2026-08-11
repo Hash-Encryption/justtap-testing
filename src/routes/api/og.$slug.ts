@@ -1,39 +1,26 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { createClient } from "@supabase/supabase-js";
-import { SUPABASE_ANON_KEY, SUPABASE_URL } from "@/lib/supabase";
-import { readableOn, type Card } from "@/lib/card";
-import { sanitizeText } from "@/lib/sanitization";
+import { readableOn } from "@/lib/card";
+import { validateSlug } from "@/lib/slug";
+import { resolvePublicCardFromSupabase } from "@/lib/public-card.server";
 
 export const Route = createFileRoute("/api/og/$slug")({
   server: {
     handlers: {
-      GET: async ({ params, request }) => {
-        const rawSlug = params.slug || "";
-        const cleanSlug = sanitizeText(rawSlug, 48).toLowerCase();
+      GET: async ({ params }) => {
+        const slugResult = validateSlug(params.slug || "");
 
-        if (!cleanSlug || !/^[a-z0-9-]+$/.test(cleanSlug)) {
+        if (!slugResult.valid) {
           return new Response("Invalid slug", { status: 400 });
         }
 
-        const apiKey =
-          (typeof process !== "undefined" && process.env?.["SUPABASE_SERVICE_ROLE_KEY"]) ||
-          SUPABASE_ANON_KEY;
-
-        const client = createClient(SUPABASE_URL, apiKey, {
-          auth: { persistSession: false, autoRefreshToken: false },
-        });
-
-        const { data } = await client.from("cards").select("*").eq("slug", cleanSlug).maybeSingle();
-
-        const card = (data as Card | null) ?? {
-          full_name: "Digital Business Card",
-          title: "Scan & Connect via NFC",
-          company: "JustTap",
-          accent_color: "#8b5cf6",
-          bg_color: "#111827",
-          avatar_url: null,
-          logo_url: null,
-        };
+        const result = await resolvePublicCardFromSupabase(slugResult.slug);
+        if (result.status === "service_error") {
+          return new Response("Card service unavailable", { status: 503 });
+        }
+        if (result.status !== "found") {
+          return new Response("Card not found", { status: 404 });
+        }
+        const card = result.card;
 
         const name = escapeXml(card.full_name || "Digital Card");
         const title = escapeXml(card.title || "");

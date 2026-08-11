@@ -17,11 +17,13 @@ import {
   Sparkles,
   Twitter,
   Video,
+  Wallet,
 } from "lucide-react";
 import { toast } from "sonner";
 import { HeaderCut } from "./HeaderCut";
 import { supabase } from "@/lib/supabase";
 import { formatWhatsAppNumber, getEmbedVideoUrl, readableOn, type Card } from "@/lib/card";
+import type { PublicCard } from "@/lib/public-card";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { LeadSubmissionSchema } from "@/lib/sanitization";
 import {
@@ -33,7 +35,7 @@ import {
 } from "@/components/ui/drawer";
 
 type Props = {
-  card: Card;
+  card: Card | PublicCard;
   /** Preview mode disables analytics + outbound actions (dashboard editor). */
   preview?: boolean;
 };
@@ -86,6 +88,14 @@ export function CardView({ card, preview = false }: Props) {
   const title = (ar && card.title_ar) || card.title;
   const bio = (ar && card.bio_ar) || card.bio;
   const social = card.social_links ?? {};
+  const isPublicCard = "public_features_enabled" in card;
+  const publicFeatures = isPublicCard ? card.public_features : card.pro_features;
+  const publicFeaturesEnabled = isPublicCard
+    ? card.public_features_enabled
+    : card.plan_tier === "pro" || card.plan_tier === "enterprise" || preview;
+  const showBranding = isPublicCard
+    ? card.show_branding
+    : !card.pro_features?.remove_branding || card.plan_tier === "free";
 
   useEffect(() => {
     if (preview || !card.id) return;
@@ -310,9 +320,8 @@ export function CardView({ card, preview = false }: Props) {
 
         {/* PRO SPECIAL FEATURES SECTION */}
         {(() => {
-          const pro = card.pro_features;
-          const isProActive =
-            card.plan_tier === "pro" || card.plan_tier === "enterprise" || preview;
+          const pro = publicFeatures;
+          const isProActive = publicFeaturesEnabled;
           if (!pro || !isProActive) return null;
 
           const embedUrl = getEmbedVideoUrl(pro.video_url);
@@ -389,7 +398,7 @@ export function CardView({ card, preview = false }: Props) {
         })()}
 
         {/* FOOTER WATERMARK */}
-        {(!card.pro_features?.remove_branding || card.plan_tier === "free") && (
+        {showBranding && (
           <div className="mt-8 text-center text-[11px] font-medium opacity-50">
             Powered by <strong style={{ color: accent }}>JustTap</strong>
           </div>

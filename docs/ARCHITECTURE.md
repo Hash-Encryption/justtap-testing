@@ -4,7 +4,7 @@
 
 This document is the authoritative high-level architecture for the controlled JustTap V2 rebuild. It distinguishes the repository as it exists today from the architecture the project is moving toward. A target described here is not evidence that it has already been implemented.
 
-As of Phase 00, two applications coexist in this repository:
+As of Phase 01, two application trees coexist in this repository, but only TanStack participates in the default production build:
 
 - `src/` contains the newer TanStack Start application and is the only target for V2 development.
 - `app/`, `components/`, and `lib/` contain a legacy Next.js application that is frozen pending migration inventory and controlled removal.
@@ -16,12 +16,12 @@ Do not add features to the legacy Next.js application. Do not delete it wholesal
 | Area                   | Current state                                                                                               |
 | ---------------------- | ----------------------------------------------------------------------------------------------------------- |
 | Application frameworks | TanStack Start under `src/` and Next.js under `app/` both exist.                                            |
-| Default npm scripts    | `dev` and `build` run Next.js; `dev:vite` and `build:vite` run the TanStack application.                    |
-| TypeScript             | Root `tsconfig.json` is Next-oriented and excludes `src/**/*`.                                              |
+| Default npm scripts    | `dev`, `build`, and `start` target TanStack/Vite; explicit `*:legacy` scripts retain frozen Next inspection. |
+| TypeScript             | `tsconfig.v2.json` type-checks TanStack source; root `tsconfig.json` remains legacy-oriented.                |
 | Lovable template       | `.lovable/project.json` identifies a TanStack Start template.                                               |
-| Public cards           | TanStack has `/c/$slug`; Next has `app/c/[slug]` plus static-generation and browser slug fallback logic.    |
-| Data access            | Browser and server code access Supabase directly in several places, frequently with broad card selects.     |
-| Deployment             | Vite/Nitro targets Cloudflare Pages, but `wrangler.json` still points to the legacy static `out` directory. |
+| Public cards           | TanStack `/c/$slug` is the only public-card route and resolves current Supabase state dynamically.          |
+| Data access            | Public slug reads use one server-only resolver; other subsystems still contain direct Supabase access.       |
+| Deployment             | Vite/Nitro emits a Cloudflare Pages worker under `dist`; `wrangler.json` targets that artifact.              |
 | Database evolution     | A single mutable `supabase/schema.sql` contains tables, grants, policies, triggers, and storage rules.      |
 | NFC                    | No permanent immutable NFC tag resolver exists.                                                             |
 
@@ -60,6 +60,10 @@ The response model must distinguish:
 - no matching public record: 404
 - known but inactive card: controlled inactive response
 - database or service failure: 5xx response with internal logging
+
+Phase 01 intentionally returns the same public 404 for missing and inactive cards to avoid exposing disabled-card existence. The server resolver preserves the internal distinction.
+
+The public browser model contains only `id`, `slug`, display name, phone, public email, title, company, bio, avatar/logo URLs, logo and header presentation, colors, WhatsApp display data, Arabic display fields, social links, public Pro content, and derived feature/branding flags. `user_id`, timestamps, raw activation state, raw plan tier, notification destinations, and webhook configuration are not serialized to the public route. Because public Pro settings currently share one JSON column, Phase 01 reads that JSON on the server and maps only its display keys; schema-level separation remains Phase 02 work.
 
 ### Future NFC resolution
 
@@ -122,11 +126,11 @@ Supabase is the persistent source of truth. Target access boundaries are explici
 - service-role access: server-only and limited to operations that require it
 - billing entitlement: written by trusted server/database logic only
 
-Database changes will move to ordered, versioned migrations. Phase 00 does not change the live database or current RLS policies.
+Database changes will move to ordered, versioned migrations. Phase 01 does not change the live database or current RLS policies.
 
 ### Cloudflare
 
-The target deployment is the TanStack Start server output produced by Vite/Nitro for Cloudflare. Static assets remain edge-served, but customer cards are dynamic routes. The legacy Next static export directory and `/c/* -> /c.html` rewrite are not part of the target. Production configuration will be reconciled and verified in later phases; no Phase 00 deployment is authorized.
+The deployment artifact is the TanStack Start server output produced by Vite/Nitro in `dist`, including `dist/_worker.js` and a generated `_routes.json` that sends arbitrary non-asset paths to the worker. Static assets remain edge-served, while customer cards are dynamic routes. The legacy Next static export directory and `/c/* -> /c.html` rewrite are not part of the target. No Phase 01 deployment is authorized; production environment and live Cloudflare verification remain Phase 17 work.
 
 ## Permanent invariants
 

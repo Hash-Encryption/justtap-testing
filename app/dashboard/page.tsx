@@ -1,8 +1,8 @@
-'use client';
+"use client";
 
-import React, { useEffect, useState } from 'react';
-import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import React, { useEffect, useState } from "react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   CreditCard,
   Edit3,
@@ -14,21 +14,23 @@ import {
   Sparkles,
   PlusCircle,
   ShieldAlert,
-} from 'lucide-react';
-import { supabase } from '@/lib/supabase/client';
-import { Card } from '@/lib/types';
-import { CardEditor } from '@/components/dashboard/CardEditor';
-import { ProFeaturesTab } from '@/components/dashboard/ProFeaturesTab';
-import { AnalyticsTab } from '@/components/dashboard/AnalyticsTab';
-import { LeadsTab } from '@/components/dashboard/LeadsTab';
-import { QrWalletHub } from '@/components/dashboard/QrWalletHub';
+} from "lucide-react";
+import { supabase } from "@/lib/supabase/client";
+import { Card } from "@/lib/types";
+import { CardEditor } from "@/components/dashboard/CardEditor";
+import { ProFeaturesTab } from "@/components/dashboard/ProFeaturesTab";
+import { AnalyticsTab } from "@/components/dashboard/AnalyticsTab";
+import { LeadsTab } from "@/components/dashboard/LeadsTab";
+import { QrWalletHub } from "@/components/dashboard/QrWalletHub";
 
 export default function DashboardPage() {
   const router = Router();
   const [loading, setLoading] = useState(true);
   const [user, setUser] = useState<any>(null);
   const [card, setCard] = useState<Card | null>(null);
-  const [activeTab, setActiveTab] = useState<'editor' | 'pro' | 'analytics' | 'leads' | 'qr'>('editor');
+  const [activeTab, setActiveTab] = useState<"editor" | "pro" | "analytics" | "leads" | "qr">(
+    "editor",
+  );
   const [creationMode, setCreationMode] = useState(false);
 
   useEffect(() => {
@@ -40,7 +42,7 @@ export default function DashboardPage() {
 
       if (!currentUser) {
         // Not authenticated, redirect to login
-        router.push('/auth');
+        router.push("/auth");
         return;
       }
 
@@ -48,9 +50,9 @@ export default function DashboardPage() {
 
       // Query card for user
       const { data: cards, error } = await supabase
-        .from('cards')
-        .select('*')
-        .eq('user_id', currentUser.id);
+        .from("cards")
+        .select("*")
+        .eq("user_id", currentUser.id);
 
       if (!error && cards && cards.length > 0) {
         setCard(cards[0] as Card);
@@ -69,7 +71,7 @@ export default function DashboardPage() {
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
-    router.push('/auth');
+    router.push("/auth");
   };
 
   const handleCardSaved = (updatedCard: Card) => {
@@ -137,14 +139,17 @@ export default function DashboardPage() {
               <div className="w-14 h-14 bg-violet-500/10 text-violet-400 rounded-2xl flex items-center justify-center mx-auto">
                 <PlusCircle className="w-8 h-8" />
               </div>
-              <h2 className="text-2xl font-extrabold text-white">Create Your Digital Business Card</h2>
+              <h2 className="text-2xl font-extrabold text-white">
+                Create Your Digital Business Card
+              </h2>
               <p className="text-xs text-slate-400 max-w-md mx-auto">
-                Fill in your contact details below to activate your JustTap profile card and enable NFC taps & QR sharing.
+                Fill in your contact details below to activate your JustTap profile card and enable
+                NFC taps & QR sharing.
               </p>
             </div>
 
             <CardEditor
-              card={{ full_name: user?.user_metadata?.full_name || '', email: user?.email }}
+              card={{ full_name: user?.user_metadata?.full_name || "", email: user?.email }}
               onSaveSuccess={handleCardSaved}
             />
           </div>
@@ -155,9 +160,13 @@ export default function DashboardPage() {
               <div className="flex items-center space-x-4">
                 <div className="w-14 h-14 rounded-full bg-slate-800 border-2 border-violet-500/40 flex items-center justify-center overflow-hidden shrink-0 text-violet-400 font-bold text-lg">
                   {card?.avatar_url ? (
-                    <img src={card.avatar_url} alt={card.full_name} className="w-full h-full object-cover" />
+                    <img
+                      src={card.avatar_url}
+                      alt={card.full_name}
+                      className="w-full h-full object-cover"
+                    />
                   ) : (
-                    card?.full_name?.substring(0, 2).toUpperCase() || 'JT'
+                    card?.full_name?.substring(0, 2).toUpperCase() || "JT"
                   )}
                 </div>
                 <div>
@@ -165,16 +174,16 @@ export default function DashboardPage() {
                     <h2 className="text-xl font-bold text-white">{card?.full_name}</h2>
                     <span
                       className={`text-[10px] px-2 py-0.5 rounded-full font-bold uppercase ${
-                        card?.plan === 'pro'
-                          ? 'bg-amber-400/10 text-amber-400 border border-amber-400/30'
-                          : 'bg-slate-800 text-slate-400 border border-slate-700'
+                        card?.plan === "pro"
+                          ? "bg-amber-400/10 text-amber-400 border border-amber-400/30"
+                          : "bg-slate-800 text-slate-400 border border-slate-700"
                       }`}
                     >
-                      {card?.plan === 'pro' ? 'PRO PLAN' : 'FREE PLAN'}
+                      {card?.plan === "pro" ? "PRO PLAN" : "FREE PLAN"}
                     </span>
                   </div>
                   <p className="text-xs text-slate-400">
-                    Slug: <code className="text-violet-400">/c/{card?.slug}</code> • Created:{' '}
+                    Slug: <code className="text-violet-400">/c/{card?.slug}</code> • Created:{" "}
                     {new Date(card?.created_at || Date.now()).toLocaleDateString()}
                   </p>
                 </div>
@@ -195,11 +204,11 @@ export default function DashboardPage() {
             {/* DASHBOARD TABS */}
             <div className="border-b border-slate-800 flex items-center space-x-1 overflow-x-auto pb-1">
               <button
-                onClick={() => setActiveTab('editor')}
+                onClick={() => setActiveTab("editor")}
                 className={`py-3 px-5 text-xs font-bold rounded-2xl flex items-center space-x-2 transition-all whitespace-nowrap ${
-                  activeTab === 'editor'
-                    ? 'bg-slate-800 text-white border border-slate-700 shadow-md'
-                    : 'text-slate-400 hover:text-slate-200'
+                  activeTab === "editor"
+                    ? "bg-slate-800 text-white border border-slate-700 shadow-md"
+                    : "text-slate-400 hover:text-slate-200"
                 }`}
               >
                 <Edit3 className="w-4 h-4 text-violet-400" />
@@ -207,11 +216,11 @@ export default function DashboardPage() {
               </button>
 
               <button
-                onClick={() => setActiveTab('pro')}
+                onClick={() => setActiveTab("pro")}
                 className={`py-3 px-5 text-xs font-bold rounded-2xl flex items-center space-x-2 transition-all whitespace-nowrap ${
-                  activeTab === 'pro'
-                    ? 'bg-amber-500/10 text-amber-400 border border-amber-500/30 shadow-md'
-                    : 'text-slate-400 hover:text-slate-200'
+                  activeTab === "pro"
+                    ? "bg-amber-500/10 text-amber-400 border border-amber-500/30 shadow-md"
+                    : "text-slate-400 hover:text-slate-200"
                 }`}
               >
                 <Sparkles className="w-4 h-4 text-amber-400" />
@@ -219,11 +228,11 @@ export default function DashboardPage() {
               </button>
 
               <button
-                onClick={() => setActiveTab('analytics')}
+                onClick={() => setActiveTab("analytics")}
                 className={`py-3 px-5 text-xs font-bold rounded-2xl flex items-center space-x-2 transition-all whitespace-nowrap ${
-                  activeTab === 'analytics'
-                    ? 'bg-slate-800 text-white border border-slate-700 shadow-md'
-                    : 'text-slate-400 hover:text-slate-200'
+                  activeTab === "analytics"
+                    ? "bg-slate-800 text-white border border-slate-700 shadow-md"
+                    : "text-slate-400 hover:text-slate-200"
                 }`}
               >
                 <BarChart3 className="w-4 h-4 text-violet-400" />
@@ -231,11 +240,11 @@ export default function DashboardPage() {
               </button>
 
               <button
-                onClick={() => setActiveTab('leads')}
+                onClick={() => setActiveTab("leads")}
                 className={`py-3 px-5 text-xs font-bold rounded-2xl flex items-center space-x-2 transition-all whitespace-nowrap ${
-                  activeTab === 'leads'
-                    ? 'bg-slate-800 text-white border border-slate-700 shadow-md'
-                    : 'text-slate-400 hover:text-slate-200'
+                  activeTab === "leads"
+                    ? "bg-slate-800 text-white border border-slate-700 shadow-md"
+                    : "text-slate-400 hover:text-slate-200"
                 }`}
               >
                 <Users className="w-4 h-4 text-violet-400" />
@@ -243,11 +252,11 @@ export default function DashboardPage() {
               </button>
 
               <button
-                onClick={() => setActiveTab('qr')}
+                onClick={() => setActiveTab("qr")}
                 className={`py-3 px-5 text-xs font-bold rounded-2xl flex items-center space-x-2 transition-all whitespace-nowrap ${
-                  activeTab === 'qr'
-                    ? 'bg-slate-800 text-white border border-slate-700 shadow-md'
-                    : 'text-slate-400 hover:text-slate-200'
+                  activeTab === "qr"
+                    ? "bg-slate-800 text-white border border-slate-700 shadow-md"
+                    : "text-slate-400 hover:text-slate-200"
                 }`}
               >
                 <QrCode className="w-4 h-4 text-violet-400" />
@@ -257,29 +266,25 @@ export default function DashboardPage() {
 
             {/* TAB CONTENT VIEWS */}
             <div className="pt-2">
-              {activeTab === 'editor' && card && (
-                <CardEditor card={card} onSaveSuccess={setCard} />
-              )}
+              {activeTab === "editor" && card && <CardEditor card={card} onSaveSuccess={setCard} />}
 
-              {activeTab === 'pro' && card && (
+              {activeTab === "pro" && card && (
                 <ProFeaturesTab
                   card={card}
                   onChange={(updatedCard) => setCard(updatedCard)}
-                  userId={user?.id || ''}
+                  userId={user?.id || ""}
                 />
               )}
 
-              {activeTab === 'analytics' && card && <AnalyticsTab cardId={card.id} />}
+              {activeTab === "analytics" && card && <AnalyticsTab cardId={card.id} />}
 
-              {activeTab === 'leads' && card && <LeadsTab cardId={card.id} />}
+              {activeTab === "leads" && card && <LeadsTab cardId={card.id} />}
 
-              {activeTab === 'qr' && card && (
+              {activeTab === "qr" && card && (
                 <QrWalletHub
                   card={card}
                   onUpgradeRequest={() => {
-                    // Update local card plan simulation for user
-                    setCard({ ...card, plan: 'pro' });
-                    setActiveTab('pro');
+                    setActiveTab("pro");
                   }}
                 />
               )}

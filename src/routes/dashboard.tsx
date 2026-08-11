@@ -23,6 +23,7 @@ import { QrTab } from "@/components/dashboard/QrTab";
 
 import { useTranslation } from "@/lib/i18n";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
+import { slugValidationMessage, validateSlug } from "@/lib/slug";
 
 class TabErrorBoundary extends Component<
   { children: ReactNode },
@@ -162,7 +163,15 @@ function Dashboard() {
 
       // If user has a guest draft and no published card yet, auto-publish guest draft
       if (guestPayload && !existing) {
-        const slugToUse = guestPayload.slug;
+        const slugResult = validateSlug(guestPayload.slug || guestPayload.full_name);
+        if (!slugResult.valid) {
+          toast.error(slugValidationMessage(slugResult));
+          setDraft(guestPayload);
+          setEditing(true);
+          setFetching(false);
+          return;
+        }
+        const slugToUse = slugResult.slug;
         const avatar_url = await uploadDataUrlIfNeeded(guestPayload.avatar_url, user.id, "avatar");
         const logo_url = await uploadDataUrlIfNeeded(guestPayload.logo_url, user.id, "logo");
 
@@ -188,23 +197,14 @@ function Dashboard() {
           title_ar: guestPayload.title_ar || null,
           bio_ar: guestPayload.bio_ar || null,
           social_links: guestPayload.social_links ?? {},
-          plan_tier: guestPayload.plan_tier || "free",
           pro_features: guestPayload.pro_features ?? {},
         };
 
-        let { data: created, error } = await supabase
+        const { data: created, error } = await supabase
           .from("cards")
           .insert(payload)
           .select()
           .single();
-
-        // If nickname is taken, append random suffix so guest card claiming doesn't fail
-        if (error && error.code === "23505") {
-          payload.slug = `${slugToUse}-${Math.floor(1000 + Math.random() * 9000)}`;
-          const retry = await supabase.from("cards").insert(payload).select().single();
-          created = retry.data;
-          error = retry.error;
-        }
 
         if (!error && created) {
           try {
@@ -220,6 +220,22 @@ function Dashboard() {
           setEditing(false);
           setFetching(false);
           toast.success("Your digital card has been published and linked to your profile!");
+          return;
+        }
+
+        if (error) {
+          console.error("[dashboard] Guest card publish failed", {
+            code: error.code,
+            message: error.message,
+          });
+          toast.error(
+            error.code === "23505"
+              ? "This URL is already taken. Choose another URL before publishing."
+              : "We couldn't publish your card. Please try again.",
+          );
+          setDraft(guestPayload);
+          setEditing(true);
+          setFetching(false);
           return;
         }
       }
@@ -366,6 +382,7 @@ function Dashboard() {
               setDraft={setDraft}
               userId={user?.id ?? "guest"}
               isNew={!card}
+              savedSlug={card?.slug}
               onSaved={(saved) => {
                 setCard(saved);
                 setDraft(saved);
@@ -377,11 +394,7 @@ function Dashboard() {
         {tab === "pro" && (
           <TabErrorBoundary>
             <ProFeaturesTab
-              card={
-                isAdmin
-                  ? { ...(draft || card || emptyCard), plan_tier: "pro" }
-                  : (draft || card || emptyCard)
-              }
+              card={draft || card || emptyCard}
               userId={user?.id ?? "guest"}
               onChange={(updated) => {
                 setDraft(updated);

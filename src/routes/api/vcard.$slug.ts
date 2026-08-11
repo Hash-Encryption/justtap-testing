@@ -1,19 +1,20 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { createClient } from "@supabase/supabase-js";
 import { SUPABASE_ANON_KEY, SUPABASE_URL } from "@/lib/supabase";
-import { buildVCard, type Card } from "@/lib/card";
+import { buildVCard } from "@/lib/card";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { sanitizeText } from "@/lib/sanitization";
+import { validateSlug } from "@/lib/slug";
+import { resolvePublicCardFromSupabase } from "@/lib/public-card.server";
 
 export const Route = createFileRoute("/api/vcard/$slug")({
   server: {
     handlers: {
       GET: async ({ params, request }) => {
         // 1. Sanitize and validate parameters
-        const rawSlug = params.slug || "";
-        const cleanSlug = sanitizeText(rawSlug, 48).toLowerCase();
+        const slugResult = validateSlug(params.slug || "");
 
-        if (!cleanSlug || !/^[a-z0-9-]+$/.test(cleanSlug)) {
+        if (!slugResult.valid) {
           return new Response("Invalid request parameter", {
             status: 400,
             headers: {
@@ -22,6 +23,7 @@ export const Route = createFileRoute("/api/vcard/$slug")({
             },
           });
         }
+        const cleanSlug = slugResult.slug;
 
         // 2. Rate limiting check (max 10 downloads per minute per client)
         const clientIp =
@@ -43,7 +45,24 @@ export const Route = createFileRoute("/api/vcard/$slug")({
           });
         }
 
-        // 3. Query Supabase securely
+        // 3. Resolve the same active public projection used by /c/:slug
+        const result = await resolvePublicCardFromSupabase(cleanSlug);
+        if (result.status === "service_error") {
+          return new Response("Card service unavailable", {
+            status: 503,
+            headers: { "Content-Type": "text/plain", "X-Content-Type-Options": "nosniff" },
+          });
+        }
+        if (result.status !== "found") {
+          return new Response("Card not found", {
+            status: 404,
+            headers: { "Content-Type": "text/plain", "X-Content-Type-Options": "nosniff" },
+          });
+        }
+
+        const card = result.card;
+
+        // 4. Log analytics without changing public-card resolution semantics
         const apiKey =
           (typeof process !== "undefined" && process.env?.["SUPABASE_SERVICE_ROLE_KEY"]) ||
           SUPABASE_ANON_KEY;
@@ -52,25 +71,6 @@ export const Route = createFileRoute("/api/vcard/$slug")({
           auth: { persistSession: false, autoRefreshToken: false },
         });
 
-        const { data, error } = await client
-          .from("cards")
-          .select("*")
-          .eq("slug", cleanSlug)
-          .maybeSingle();
-
-        if (error || !data) {
-          return new Response("Card not found", {
-            status: 404,
-            headers: {
-              "Content-Type": "text/plain",
-              "X-Content-Type-Options": "nosniff",
-            },
-          });
-        }
-
-        const card = data as Card;
-
-        // 4. Log analytics safely
         await client.from("card_analytics").insert({
           card_id: card.id,
           event_type: "vcard_download",

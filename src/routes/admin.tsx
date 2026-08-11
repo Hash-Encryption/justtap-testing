@@ -22,6 +22,7 @@ import { toast } from "sonner";
 import { supabase } from "@/lib/supabase";
 import { slugify, type Card, type PlanTier } from "@/lib/card";
 import { useAuth, useIsAdmin } from "@/hooks/useAuth";
+import { slugValidationMessage, validateSlug } from "@/lib/slug";
 
 export const Route = createFileRoute("/admin")({
   ssr: false,
@@ -216,16 +217,23 @@ function AdminPage() {
       return;
     }
 
+    const slugResult = validateSlug(cardSlug || cardName);
+    if (!slugResult.valid) {
+      toast.error(slugValidationMessage(slugResult));
+      return;
+    }
+
     const { error } = await supabase.from("cards").insert({
       user_id: cardUserId.trim() || null,
-      slug: slugify(cardSlug || cardName),
+      slug: slugResult.slug,
       full_name: cardName.trim(),
       phone: cardPhone.trim() || "-",
       plan_tier: cardPlanTier,
     });
 
     if (error) {
-      toast.error(error.message);
+      console.error("[admin] Card creation failed", { code: error.code, message: error.message });
+      toast.error(error.code === "23505" ? "This URL is already taken." : "Card creation failed.");
       return;
     }
 
@@ -238,8 +246,7 @@ function AdminPage() {
   }
 
   async function toggleClientPro(profile: ProfileRow) {
-    const isCurrentlyPro =
-      profile.plan_tier === "pro" || profile.plan_tier === "enterprise";
+    const isCurrentlyPro = profile.plan_tier === "pro" || profile.plan_tier === "enterprise";
     const newTier: PlanTier = isCurrentlyPro ? "free" : "pro";
 
     // Update profile table
@@ -257,7 +264,9 @@ function AdminPage() {
         .eq("user_id", profile.user_id);
       if (error) {
         if (error.message.includes("column")) {
-          toast.error("Please run SQL script in Supabase: ALTER TABLE cards ADD COLUMN IF NOT EXISTS plan_tier text DEFAULT 'free';");
+          toast.error(
+            "Please run SQL script in Supabase: ALTER TABLE cards ADD COLUMN IF NOT EXISTS plan_tier text DEFAULT 'free';",
+          );
         } else {
           toast.error(`Failed updating cards: ${error.message}`);
         }
@@ -274,8 +283,7 @@ function AdminPage() {
   }
 
   async function toggleCardPro(cardRow: CardRow) {
-    const isCurrentlyPro =
-      cardRow.plan_tier === "pro" || cardRow.plan_tier === "enterprise";
+    const isCurrentlyPro = cardRow.plan_tier === "pro" || cardRow.plan_tier === "enterprise";
     const newTier: PlanTier = isCurrentlyPro ? "free" : "pro";
 
     const { error } = await supabase
@@ -285,7 +293,9 @@ function AdminPage() {
 
     if (error) {
       if (error.message.includes("column")) {
-        toast.error("Please run SQL script in Supabase: ALTER TABLE cards ADD COLUMN IF NOT EXISTS plan_tier text DEFAULT 'free';");
+        toast.error(
+          "Please run SQL script in Supabase: ALTER TABLE cards ADD COLUMN IF NOT EXISTS plan_tier text DEFAULT 'free';",
+        );
       } else {
         toast.error(error.message);
       }

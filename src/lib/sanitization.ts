@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { normalizeSlug, validateSlug } from "./slug";
 
 /**
  * Strips HTML tags, script tags, event attributes (onload, onerror), control characters,
@@ -10,8 +11,8 @@ export function sanitizeText(input: string | null | undefined, maxLength = 1000)
   let cleaned = String(input);
 
   // 1. Remove control characters and zero-width spaces
-  // eslint-disable-next-line no-control-regex
-  cleaned = cleaned.replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u7F\u200B-\u200D\uFEFF]/g, "");
+  const controlCharacters = /[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F\u200B-\u200D\uFEFF]/g; // eslint-disable-line no-control-regex
+  cleaned = cleaned.replace(controlCharacters, "");
 
   // 2. Strip HTML tags completely
   cleaned = cleaned.replace(/<\/?[^>]+(>|$)/g, "");
@@ -99,9 +100,10 @@ export type LeadSubmission = z.infer<typeof LeadSubmissionSchema>;
 export const CardValidationSchema = z.object({
   slug: z
     .string()
-    .min(2, "Slug must be at least 2 characters")
-    .max(48, "Slug must be 48 characters or less")
-    .regex(/^[a-z0-9-]+$/, "Slug can only contain lowercase letters, numbers, and hyphens"),
+    .transform(normalizeSlug)
+    .refine((slug) => validateSlug(slug).valid, {
+      message: "Slug must be 2-48 characters using lowercase letters, numbers, and single hyphens",
+    }),
   full_name: z
     .string()
     .min(1, "Full name is required")

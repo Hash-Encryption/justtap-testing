@@ -6,7 +6,7 @@ JustTap is a digital business card SaaS designed for physical NFC cards. Custome
 
 The repository is undergoing a controlled production-grade V2 migration. TanStack Start under `src/` is the target application. A legacy Next.js implementation remains under `app/`, root `components/`, and root `lib/` only so unique behavior can be inventoried and migrated safely; it is frozen for new feature work.
 
-Phase 00 establishes repository memory, security baselines, and architectural decisions. It does not complete the V2 feature rewrite. Review [the current status](./docs/STATUS.md) before making changes.
+Phase 01 implements the dynamic public-card and slug core. It is awaiting architecture review and remains intentionally uncommitted under the phase checkpoint rule. Review [the current status](./docs/STATUS.md) before making changes.
 
 ## Target stack
 
@@ -15,7 +15,7 @@ Phase 00 establishes repository memory, security baselines, and architectural de
 - Supabase Auth, PostgreSQL, RLS, and Storage
 - Cloudflare with Vite/Nitro
 
-The target has one router, one data-access architecture, and one public-card implementation. Public cards will resolve dynamically at `/c/:slug`; future physical NFC tags will use immutable `/t/:token` URLs.
+The target has one router, one data-access architecture, and one public-card implementation. Public cards resolve dynamically at `/c/:slug`; future physical NFC tags will use immutable `/t/:token` URLs.
 
 ## Local development
 
@@ -36,16 +36,24 @@ Copy `.env.example` to `.env.local` and provide environment-specific values. Nev
 Run the TanStack V2 application:
 
 ```sh
-npm run dev:vite
+npm run dev
 ```
 
 Build the TanStack V2 application:
 
 ```sh
-npm run build:vite
+npm run build
 ```
 
-The unqualified `npm run dev` and `npm run build` commands still invoke the frozen legacy Next.js application during the migration. Do not use the legacy build as evidence that V2 works. Script and configuration consolidation is planned work.
+The explicit `dev:vite` and `build:vite` aliases remain available. Frozen legacy verification, when deliberately required, uses `dev:legacy` or `build:legacy`; it is not production evidence for V2.
+
+Validation commands:
+
+```sh
+npm run typecheck:v2
+npm run lint:v2
+npm run test:v2
+```
 
 ## Environment variables
 

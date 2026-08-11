@@ -11,7 +11,12 @@ Every phase must:
 3. update `docs/STATUS.md` and any affected decision or inventory entry;
 4. use versioned database migrations when schema or RLS changes are required;
 5. run validation proportional to the changed behavior;
-6. avoid push or deployment unless the user explicitly authorizes it.
+6. produce a completion report and stop for architecture review;
+7. remain uncommitted until the user explicitly approves the phase;
+8. receive one clean phase checkpoint commit after approval;
+9. avoid push or deployment unless the user explicitly authorizes it.
+
+No phase may begin while the previous phase is uncommitted, and work from different phases must never be combined in one commit.
 
 ## Phases
 

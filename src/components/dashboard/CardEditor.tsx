@@ -7,6 +7,8 @@ import { CardView } from "@/components/card/CardView";
 import { PhoneFrame } from "./PhoneFrame";
 import { Dropzone } from "./Dropzone";
 import { sanitizePhone, sanitizeText, sanitizeUrl } from "@/lib/sanitization";
+import { slugValidationMessage, validateSlug } from "@/lib/slug";
+import { saveCardRecord } from "@/lib/card-save";
 
 import { useTranslation } from "@/lib/i18n";
 
@@ -43,10 +45,11 @@ type Props = {
   setDraft: (c: Card) => void;
   userId: string;
   isNew: boolean;
+  savedSlug?: string;
   onSaved: (c: Card) => void;
 };
 
-export function CardEditor({ draft, setDraft, userId, isNew, onSaved }: Props) {
+export function CardEditor({ draft, setDraft, userId, isNew, savedSlug, onSaved }: Props) {
   const { t } = useTranslation();
   const [saving, setSaving] = useState(false);
   const [showArabic, setShowArabic] = useState(draft.enable_arabic);
@@ -124,11 +127,12 @@ export function CardEditor({ draft, setDraft, userId, isNew, onSaved }: Props) {
       toast.error("Phone number is required");
       return;
     }
-    const slug = slugify(draft.slug || draft.full_name);
-    if (!slug) {
-      toast.error("A valid nickname is required");
+    const slugResult = validateSlug(draft.slug || draft.full_name);
+    if (!slugResult.valid) {
+      toast.error(slugValidationMessage(slugResult));
       return;
     }
+    const slug = slugResult.slug;
 
     if (userId === "guest") {
       try {
@@ -175,28 +179,48 @@ export function CardEditor({ draft, setDraft, userId, isNew, onSaved }: Props) {
       title_ar: draft.title_ar ? sanitizeText(draft.title_ar, 100) : null,
       bio_ar: draft.bio_ar ? sanitizeText(draft.bio_ar, 1000) : null,
       social_links: sanitizedSocialLinks,
-      plan_tier: draft.plan_tier || "free",
       pro_features: draft.pro_features ?? {},
     };
 
-    let { data, error } = await query;
-
-    if (error && (error.message.includes("plan_tier") || error.message.includes("pro_features"))) {
-      const fallbackPayload = { ...payload };
-      delete (fallbackPayload as Record<string, unknown>).plan_tier;
-      delete (fallbackPayload as Record<string, unknown>).pro_features;
-      const retryQuery = isNew
-        ? supabase.from("cards").insert(fallbackPayload).select().single()
-        : supabase.from("cards").update(fallbackPayload).eq("id", draft.id).select().single();
-      const retry = await retryQuery;
-      data = retry.data;
-      error = retry.error;
+    if (!isNew && !draft.id) {
+      setSaving(false);
+      toast.error("This card cannot be updated because its identifier is missing.");
+      return;
     }
 
+    const result = await saveCardRecord<Card>(
+      { isNew, cardId: draft.id, userId, payload },
+      {
+        async insert(cardPayload) {
+          const { data, error } = await supabase
+            .from("cards")
+            .insert(cardPayload)
+            .select()
+            .single();
+          return { data: data as Card | null, error };
+        },
+        async update(cardId, ownerId, cardPayload) {
+          const { data, error } = await supabase
+            .from("cards")
+            .update(cardPayload)
+            .eq("id", cardId)
+            .eq("user_id", ownerId)
+            .select()
+            .single();
+          return { data: data as Card | null, error };
+        },
+      },
+      (error) => console.error("[card-editor] Save failed", error),
+    );
+
     setSaving(false);
-    if (error) {
+    if (result.status !== "saved") {
       toast.error(
-        error.code === "23505" ? "That nickname is already taken — try another." : error.message,
+        result.status === "duplicate_slug"
+          ? "This URL is already taken."
+          : result.status === "invalid_slug"
+            ? "The card URL is invalid."
+            : "We couldn't save your card. Please try again.",
       );
       return;
     }
@@ -208,7 +232,7 @@ export function CardEditor({ draft, setDraft, userId, isNew, onSaved }: Props) {
       // Ignore
     }
     toast.success(isNew ? "Card published!" : "Changes saved");
-    onSaved(data as Card);
+    onSaved(result.card);
   }
 
   return (
@@ -250,9 +274,9 @@ export function CardEditor({ draft, setDraft, userId, isNew, onSaved }: Props) {
             {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
             {isNew ? "Publish card" : "Save changes"}
           </button>
-          {!isNew && (
+          {!isNew && savedSlug && (
             <a
-              href={`/c/${draft.slug}`}
+              href={`/c/${savedSlug}`}
               target="_blank"
               rel="noreferrer"
               className="flex items-center gap-2 rounded-full border border-border px-4 py-2.5 text-sm"

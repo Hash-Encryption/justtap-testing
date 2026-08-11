@@ -11,17 +11,10 @@ import {
   Sparkles,
   Upload,
   Video,
-  Zap,
 } from "lucide-react";
 import { toast } from "sonner";
 import { STORAGE_BUCKET, supabase } from "@/lib/supabase";
-import {
-  defaultProFeatures,
-  getEmbedVideoUrl,
-  type Card,
-  type PlanTier,
-  type ProFeatures,
-} from "@/lib/card";
+import { defaultProFeatures, getEmbedVideoUrl, type Card, type ProFeatures } from "@/lib/card";
 import { sanitizeText, sanitizeUrl } from "@/lib/sanitization";
 import {
   Dialog,
@@ -44,7 +37,7 @@ export function ProFeaturesTab({ card, onChange, userId }: Props) {
   const [testingEmail, setTestingEmail] = useState(false);
   const [saving, setSaving] = useState(false);
 
-  const planTier: PlanTier = card?.plan_tier || "free";
+  const planTier = card?.plan_tier || "free";
   const isPro = planTier === "pro" || planTier === "enterprise";
   const pro: ProFeatures = {
     ...defaultProFeatures,
@@ -61,7 +54,7 @@ export function ProFeaturesTab({ card, onChange, userId }: Props) {
         : {}),
       [key]: value,
     };
-    onChange({ ...(card || {}), pro_features: updatedPro });
+    onChange({ ...card, pro_features: updatedPro });
   };
 
   async function saveProFeatures() {
@@ -71,38 +64,20 @@ export function ProFeaturesTab({ card, onChange, userId }: Props) {
     }
 
     setSaving(true);
-    let { data, error } = await supabase
+    const { data, error } = await supabase
       .from("cards")
       .update({
         pro_features: card.pro_features || defaultProFeatures,
-        plan_tier: card.plan_tier || "free",
       })
       .eq("id", card.id)
       .select()
       .single();
 
-    // Fail-safe retry if plan_tier column is missing from Supabase schema
-    if (error && error.message.includes("plan_tier")) {
-      const retry = await supabase
-        .from("cards")
-        .update({
-          pro_features: card.pro_features || defaultProFeatures,
-        })
-        .eq("id", card.id)
-        .select()
-        .single();
-      data = retry.data;
-      error = retry.error;
-    }
-
     setSaving(false);
 
     if (error) {
-      toast.error(
-        error.message.includes("column")
-          ? "Please run the SQL snippet in Supabase SQL Editor to add plan_tier & pro_features columns."
-          : `Failed to save special features: ${error.message}`,
-      );
+      console.error("[pro-features] Save failed", { code: error.code, message: error.message });
+      toast.error("Failed to save special features. Please try again.");
       return;
     }
 
@@ -126,7 +101,7 @@ export function ProFeaturesTab({ card, onChange, userId }: Props) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           card_id: card.id,
-          sender_name: "Sarah Smith (Demo Lead)",
+          sender_name: "Sarah Smith (Test Lead)",
           sender_phone: "+1 555-0199",
           note: "Hi! Great meeting you at the conference. Let's schedule a consultation.",
           is_test: true,
@@ -159,7 +134,7 @@ export function ProFeaturesTab({ card, onChange, userId }: Props) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           card_id: card.id,
-          sender_name: "Test Visitor (Zapier Demo)",
+          sender_name: "Test Visitor (Zapier Test)",
           sender_phone: "+1 555-0199",
           note: "This is a test lead payload sent from JustTap Pro Features tab.",
           is_test: true,
@@ -180,16 +155,6 @@ export function ProFeaturesTab({ card, onChange, userId }: Props) {
       setTestingWebhook(false);
     }
   }
-
-  const toggleDemoPro = () => {
-    const newTier: PlanTier = isPro ? "free" : "pro";
-    onChange({ ...card, plan_tier: newTier });
-    toast.success(
-      newTier === "pro"
-        ? "✨ Pro Tier activated in Demo mode! All special features are now live on your card."
-        : "Switched back to Free Tier mode.",
-    );
-  };
 
   async function handlePdfUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -246,18 +211,11 @@ export function ProFeaturesTab({ card, onChange, userId }: Props) {
           </div>
 
           <div className="flex shrink-0 items-center gap-3">
-            <button
-              type="button"
-              onClick={toggleDemoPro}
-              className={`flex items-center gap-2 rounded-full px-4 py-2 text-xs font-semibold transition ${
-                isPro
-                  ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30"
-                  : "bg-secondary text-foreground hover:bg-secondary/80"
-              }`}
-            >
-              <Zap className="h-3.5 w-3.5 text-amber-400" />
-              {isPro ? "Pro Status: Active" : "Toggle Pro Demo Mode"}
-            </button>
+            {isPro && (
+              <span className="rounded-full border border-emerald-500/30 bg-emerald-500/20 px-4 py-2 text-xs font-semibold text-emerald-400">
+                Pro Status: Active
+              </span>
+            )}
 
             {!isPro && (
               <button
@@ -337,7 +295,8 @@ export function ProFeaturesTab({ card, onChange, userId }: Props) {
                 </div>
               ) : (
                 <p className="text-[11px] font-medium text-amber-400">
-                  ⚠️ Unsupported video URL format. Please paste a valid YouTube, Loom, Vimeo, or Google Drive link.
+                  ⚠️ Unsupported video URL format. Please paste a valid YouTube, Loom, Vimeo, or
+                  Google Drive link.
                 </p>
               )}
             </div>
@@ -714,13 +673,10 @@ export function ProFeaturesTab({ card, onChange, userId }: Props) {
           <div className="flex flex-col gap-2">
             <button
               type="button"
-              onClick={() => {
-                toggleDemoPro();
-                setUpgradeOpen(false);
-              }}
+              onClick={() => setUpgradeOpen(false)}
               className="h-12 w-full rounded-2xl bg-primary text-sm font-bold text-primary-foreground hover:opacity-90 transition-opacity"
             >
-              Activate Pro ($9.99/mo) — Instant Unlock
+              Close
             </button>
             <button
               type="button"

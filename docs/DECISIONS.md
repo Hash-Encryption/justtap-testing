@@ -81,3 +81,19 @@ These accepted decisions are permanent repository memory until replaced by a lat
 - Decision: Credentials and API secrets come from runtime server environment bindings. Public client configuration uses environment variables without service-role or third-party secrets.
 - Why: Repository literals and public-prefixed variables can leak credentials through source history or browser bundles.
 - Consequence: Missing required secrets fail closed; exposed historical credentials must be rotated outside the repository.
+
+## ADR-011: Inactive public cards use the public not-found response
+
+- Status: Accepted
+- Date: 2026-08-11
+- Decision: The public route returns the same 404 presentation for missing, invalid, and inactive slugs, while the server resolver keeps these outcomes distinct.
+- Why: Public visitors do not need confirmation that a disabled customer record exists.
+- Consequence: `is_active` must be explicitly true to render; database or network failures remain 5xx and are logged server-side.
+
+## ADR-012: Card slugs use one conservative ASCII policy
+
+- Status: Accepted
+- Date: 2026-08-11
+- Decision: Card slugs normalize trim, case, whitespace, and repeated hyphens, then validate as 2-48 characters in lowercase `[a-z0-9-]` segments without leading or trailing hyphens.
+- Why: Creation, update, resolution, vCard, and OpenGraph paths need one deterministic identity rule.
+- Consequence: Unsupported characters are rejected rather than silently deleted. No reserved words are required in Phase 01 because cards live under the isolated `/c/` namespace. The existing database unique constraint remains the authoritative duplicate invariant.

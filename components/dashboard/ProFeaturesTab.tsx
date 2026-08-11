@@ -1,6 +1,6 @@
-'use client';
+"use client";
 
-import React, { useState } from 'react';
+import React, { useState } from "react";
 import {
   Bell,
   Calendar,
@@ -13,25 +13,18 @@ import {
   Sparkles,
   Upload,
   Video,
-  Zap,
-} from 'lucide-react';
-import { toast } from 'sonner';
-import { supabase, STORAGE_BUCKET } from '@/lib/supabase/client';
-import {
-  defaultProFeatures,
-  getEmbedVideoUrl,
-  Card,
-  PlanTier,
-  ProFeatures,
-} from '@/lib/card';
-import { sanitizeText, sanitizeUrl } from '@/lib/sanitization';
+} from "lucide-react";
+import { toast } from "sonner";
+import { supabase, STORAGE_BUCKET } from "@/lib/supabase/client";
+import { defaultProFeatures, getEmbedVideoUrl, Card, ProFeatures } from "@/lib/card";
+import { sanitizeText, sanitizeUrl } from "@/lib/sanitization";
 import {
   Dialog,
   DialogContent,
   DialogDescription,
   DialogHeader,
   DialogTitle,
-} from '@/src/components/ui/dialog';
+} from "@/src/components/ui/dialog";
 
 type Props = {
   card: Card;
@@ -46,11 +39,11 @@ export function ProFeaturesTab({ card, onChange, userId }: Props) {
   const [testingEmail, setTestingEmail] = useState(false);
   const [saving, setSaving] = useState(false);
 
-  const planTier: PlanTier = card?.plan_tier || (card?.plan as PlanTier) || 'free';
-  const isPro = planTier === 'pro' || planTier === 'enterprise' || card?.plan === 'pro';
+  const planTier = card?.plan_tier || card?.plan || "free";
+  const isPro = planTier === "pro" || planTier === "enterprise" || card?.plan === "pro";
   const pro: ProFeatures = {
     ...defaultProFeatures,
-    ...(typeof card?.pro_features === 'object' && card?.pro_features !== null
+    ...(typeof card?.pro_features === "object" && card?.pro_features !== null
       ? card.pro_features
       : {}),
   };
@@ -58,7 +51,7 @@ export function ProFeaturesTab({ card, onChange, userId }: Props) {
   const updatePro = <K extends keyof ProFeatures>(key: K, value: ProFeatures[K]) => {
     const updatedPro = {
       ...defaultProFeatures,
-      ...(typeof card?.pro_features === 'object' && card?.pro_features !== null
+      ...(typeof card?.pro_features === "object" && card?.pro_features !== null
         ? card.pro_features
         : {}),
       [key]: value,
@@ -68,65 +61,50 @@ export function ProFeaturesTab({ card, onChange, userId }: Props) {
 
   async function saveProFeatures() {
     if (!card.id) {
-      toast.error('Please publish your card first before saving special features.');
+      toast.error("Please publish your card first before saving special features.");
       return;
     }
 
     setSaving(true);
-    let { data, error } = await supabase
-      .from('cards')
+    const { data, error } = await supabase
+      .from("cards")
       .update({
         pro_features: card.pro_features || defaultProFeatures,
-        plan_tier: card.plan_tier || 'pro',
-        plan: 'pro',
       })
-      .eq('id', card.id)
+      .eq("id", card.id)
       .select()
       .single();
-
-    if (error && error.message.includes('plan_tier')) {
-      const retry = await supabase
-        .from('cards')
-        .update({
-          pro_features: card.pro_features || defaultProFeatures,
-          plan: 'pro',
-        })
-        .eq('id', card.id)
-        .select()
-        .single();
-      data = retry.data;
-      error = retry.error;
-    }
 
     setSaving(false);
 
     if (error) {
-      toast.error(`Failed to save special features: ${error.message}`);
+      console.error("[pro-features] Save failed", { code: error.code, message: error.message });
+      toast.error("Failed to save special features. Please try again.");
       return;
     }
 
     if (data) {
       onChange(data as Card);
-      toast.success('✨ Special features saved & published live to your digital card!');
+      toast.success("✨ Special features saved & published live to your digital card!");
     }
   }
 
   async function sendTestEmailAlert() {
     const emailToUse = pro.notify_email || card.email;
     if (!emailToUse) {
-      toast.error('Please enter a Notification Email address first.');
+      toast.error("Please enter a Notification Email address first.");
       return;
     }
 
     setTestingEmail(true);
     try {
-      const res = await fetch('/api/lead-email', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+      const res = await fetch("/api/lead-email", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           card_id: card.id,
-          sender_name: 'Sarah Smith (Demo Lead)',
-          sender_phone: '+1 555-0199',
+          sender_name: "Sarah Smith (Test Lead)",
+          sender_phone: "+1 555-0199",
           note: "Hi! Great meeting you at the conference. Let's schedule a consultation.",
           is_test: true,
         }),
@@ -136,10 +114,10 @@ export function ProFeaturesTab({ card, onChange, userId }: Props) {
       if (res.ok) {
         toast.success(`Test lead email dispatched to ${data.recipient || emailToUse}!`);
       } else {
-        toast.error(data.error || 'Failed to send test email');
+        toast.error(data.error || "Failed to send test email");
       }
     } catch {
-      toast.error('Failed to send test lead email notification.');
+      toast.error("Failed to send test lead email notification.");
     } finally {
       setTestingEmail(false);
     }
@@ -147,20 +125,20 @@ export function ProFeaturesTab({ card, onChange, userId }: Props) {
 
   async function sendTestWebhook() {
     if (!pro.webhook_url && !pro.notify_email) {
-      toast.error('Please enter a Webhook URL or Notification Email first.');
+      toast.error("Please enter a Webhook URL or Notification Email first.");
       return;
     }
 
     setTestingWebhook(true);
     try {
-      const res = await fetch('/api/lead-webhook', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+      const res = await fetch("/api/lead-webhook", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           card_id: card.id,
-          sender_name: 'Test Visitor (Zapier Demo)',
-          sender_phone: '+1 555-0199',
-          note: 'This is a test lead payload sent from JustTap Pro Features tab.',
+          sender_name: "Test Visitor (Zapier Test)",
+          sender_phone: "+1 555-0199",
+          note: "This is a test lead payload sent from JustTap Pro Features tab.",
           is_test: true,
         }),
       });
@@ -169,59 +147,49 @@ export function ProFeaturesTab({ card, onChange, userId }: Props) {
       if (res.ok) {
         toast.success(
           `Test payload dispatched! Status: ${
-            data.webhook_status === 'delivered' ? 'Delivered to Webhook ✓' : 'Configured'
-          }`
+            data.webhook_status === "delivered" ? "Delivered to Webhook ✓" : "Configured"
+          }`,
         );
       } else {
-        toast.error(`Webhook test error: ${data.error || 'Failed to deliver'}`);
+        toast.error(`Webhook test error: ${data.error || "Failed to deliver"}`);
       }
     } catch {
-      toast.error('Failed to trigger test webhook.');
+      toast.error("Failed to trigger test webhook.");
     } finally {
       setTestingWebhook(false);
     }
   }
 
-  const toggleDemoPro = () => {
-    const newTier: PlanTier = isPro ? 'free' : 'pro';
-    onChange({ ...card, plan_tier: newTier, plan: newTier });
-    toast.success(
-      newTier === 'pro'
-        ? '✨ Pro Tier activated in Demo mode! All special features are now live on your card.'
-        : 'Switched back to Free Tier mode.'
-    );
-  };
-
   async function handlePdfUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    if (file.type !== 'application/pdf') {
-      toast.error('Please upload a valid PDF document');
+    if (file.type !== "application/pdf") {
+      toast.error("Please upload a valid PDF document");
       return;
     }
     if (file.size > 10 * 1024 * 1024) {
-      toast.error('PDF file size must be less than 10MB');
+      toast.error("PDF file size must be less than 10MB");
       return;
     }
 
     setUploadingPdf(true);
     try {
       const fileId = `${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
-      const path = `${userId || 'guest'}/docs/pdf_${fileId}.pdf`;
+      const path = `${userId || "guest"}/docs/pdf_${fileId}.pdf`;
       const { error } = await supabase.storage
         .from(STORAGE_BUCKET)
-        .upload(path, file, { contentType: 'application/pdf', upsert: true });
+        .upload(path, file, { contentType: "application/pdf", upsert: true });
 
       if (error) {
         toast.error(`Upload failed: ${error.message}`);
       } else {
         const { data } = supabase.storage.from(STORAGE_BUCKET).getPublicUrl(path);
-        updatePro('pdf_url', data.publicUrl);
-        toast.success('PDF document uploaded successfully!');
+        updatePro("pdf_url", data.publicUrl);
+        toast.success("PDF document uploaded successfully!");
       }
     } catch {
-      toast.error('Failed to upload PDF document');
+      toast.error("Failed to upload PDF document");
     } finally {
       setUploadingPdf(false);
     }
@@ -247,18 +215,11 @@ export function ProFeaturesTab({ card, onChange, userId }: Props) {
           </div>
 
           <div className="flex shrink-0 items-center gap-3">
-            <button
-              type="button"
-              onClick={toggleDemoPro}
-              className={`flex items-center gap-2 rounded-full px-4 py-2 text-xs font-semibold transition ${
-                isPro
-                  ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
-                  : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
-              }`}
-            >
-              <Zap className="h-3.5 w-3.5 text-amber-400" />
-              {isPro ? 'Pro Status: Active' : 'Toggle Pro Demo Mode'}
-            </button>
+            {isPro && (
+              <span className="rounded-full border border-emerald-500/30 bg-emerald-500/20 px-4 py-2 text-xs font-semibold text-emerald-400">
+                Pro Status: Active
+              </span>
+            )}
 
             {!isPro && (
               <button
@@ -276,8 +237,9 @@ export function ProFeaturesTab({ card, onChange, userId }: Props) {
           <div className="mt-4 flex items-center gap-2 rounded-2xl bg-amber-500/10 p-3 text-xs text-amber-400 border border-amber-500/20">
             <Lock className="h-4 w-4 shrink-0" />
             <span>
-              You are currently on the <strong>Free Plan</strong>. Customize these special
-              features below and preview them, then upgrade to Pro ($9.99/mo) to make them live for public visitors.
+              You are currently on the <strong>Free Plan</strong>. Customize these special features
+              below and preview them, then upgrade to Pro ($9.99/mo) to make them live for public
+              visitors.
             </span>
           </div>
         )}
@@ -309,8 +271,8 @@ export function ProFeaturesTab({ card, onChange, userId }: Props) {
         <div className="mt-4 space-y-3">
           <input
             type="url"
-            value={pro.video_url || ''}
-            onChange={(e) => updatePro('video_url', sanitizeUrl(e.target.value) || e.target.value)}
+            value={pro.video_url || ""}
+            onChange={(e) => updatePro("video_url", sanitizeUrl(e.target.value) || e.target.value)}
             placeholder="https://www.youtube.com/watch?v=... or YouTube Shorts / Loom / Vimeo link"
             className="h-11 w-full rounded-xl border border-slate-800 bg-slate-950 px-4 text-xs text-white outline-none focus:border-violet-500"
           />
@@ -337,7 +299,8 @@ export function ProFeaturesTab({ card, onChange, userId }: Props) {
                 </div>
               ) : (
                 <p className="text-[11px] font-medium text-amber-400">
-                  ⚠️ Unsupported video URL format. Please paste a valid YouTube, Loom, Vimeo, or Google Drive link.
+                  ⚠️ Unsupported video URL format. Please paste a valid YouTube, Loom, Vimeo, or
+                  Google Drive link.
                 </p>
               )}
             </div>
@@ -375,8 +338,8 @@ export function ProFeaturesTab({ card, onChange, userId }: Props) {
             </label>
             <input
               type="text"
-              value={pro.pdf_label || ''}
-              onChange={(e) => updatePro('pdf_label', sanitizeText(e.target.value, 60))}
+              value={pro.pdf_label || ""}
+              onChange={(e) => updatePro("pdf_label", sanitizeText(e.target.value, 60))}
               placeholder="e.g. Download Product Catalog (PDF)"
               className="h-11 w-full rounded-xl border border-slate-800 bg-slate-950 px-4 text-xs text-white outline-none focus:border-violet-500"
             />
@@ -389,16 +352,16 @@ export function ProFeaturesTab({ card, onChange, userId }: Props) {
             <div className="flex gap-2">
               <input
                 type="url"
-                value={pro.pdf_url || ''}
+                value={pro.pdf_url || ""}
                 onChange={(e) =>
-                  updatePro('pdf_url', sanitizeUrl(e.target.value) || e.target.value)
+                  updatePro("pdf_url", sanitizeUrl(e.target.value) || e.target.value)
                 }
                 placeholder="https://.../brochure.pdf"
                 className="h-11 flex-1 rounded-xl border border-slate-800 bg-slate-950 px-3 text-xs text-white outline-none focus:border-violet-500"
               />
               <label className="flex h-11 shrink-0 cursor-pointer items-center gap-1.5 rounded-xl border border-slate-700 bg-slate-800 px-3 text-xs font-medium text-slate-200 hover:bg-slate-700">
                 <Upload className="h-3.5 w-3.5" />
-                {uploadingPdf ? '…' : 'Upload'}
+                {uploadingPdf ? "…" : "Upload"}
                 <input
                   type="file"
                   accept="application/pdf"
@@ -437,9 +400,9 @@ export function ProFeaturesTab({ card, onChange, userId }: Props) {
         <div className="mt-4 space-y-3">
           <input
             type="url"
-            value={pro.booking_url || ''}
+            value={pro.booking_url || ""}
             onChange={(e) =>
-              updatePro('booking_url', sanitizeUrl(e.target.value) || e.target.value)
+              updatePro("booking_url", sanitizeUrl(e.target.value) || e.target.value)
             }
             placeholder="https://calendly.com/your-name/30min"
             className="h-11 w-full rounded-xl border border-slate-800 bg-slate-950 px-4 text-xs text-white outline-none focus:border-violet-500"
@@ -456,7 +419,9 @@ export function ProFeaturesTab({ card, onChange, userId }: Props) {
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h3 className="font-semibold text-sm text-white">Custom Call-To-Action (CTA) Button</h3>
+                <h3 className="font-semibold text-sm text-white">
+                  Custom Call-To-Action (CTA) Button
+                </h3>
                 {!isPro && (
                   <span className="rounded-full bg-violet-500/20 px-2 py-0.5 text-[10px] font-bold uppercase text-violet-400 border border-violet-500/30">
                     PRO
@@ -464,7 +429,8 @@ export function ProFeaturesTab({ card, onChange, userId }: Props) {
                 )}
               </div>
               <p className="text-xs text-slate-400">
-                Add a high-priority action button (e.g. &quot;Pay via Stripe&quot;, &quot;View Portfolio&quot;).
+                Add a high-priority action button (e.g. &quot;Pay via Stripe&quot;, &quot;View
+                Portfolio&quot;).
               </p>
             </div>
           </div>
@@ -472,13 +438,11 @@ export function ProFeaturesTab({ card, onChange, userId }: Props) {
 
         <div className="mt-4 grid gap-3 md:grid-cols-2">
           <div>
-            <label className="mb-1 block text-xs font-medium text-slate-400">
-              Button Title
-            </label>
+            <label className="mb-1 block text-xs font-medium text-slate-400">Button Title</label>
             <input
               type="text"
-              value={pro.custom_cta_label || ''}
-              onChange={(e) => updatePro('custom_cta_label', sanitizeText(e.target.value, 40))}
+              value={pro.custom_cta_label || ""}
+              onChange={(e) => updatePro("custom_cta_label", sanitizeText(e.target.value, 40))}
               placeholder="e.g. Book Consultation"
               className="h-11 w-full rounded-xl border border-slate-800 bg-slate-950 px-4 text-xs text-white outline-none focus:border-violet-500"
             />
@@ -490,9 +454,9 @@ export function ProFeaturesTab({ card, onChange, userId }: Props) {
             </label>
             <input
               type="url"
-              value={pro.custom_cta_url || ''}
+              value={pro.custom_cta_url || ""}
               onChange={(e) =>
-                updatePro('custom_cta_url', sanitizeUrl(e.target.value) || e.target.value)
+                updatePro("custom_cta_url", sanitizeUrl(e.target.value) || e.target.value)
               }
               placeholder="https://..."
               className="h-11 w-full rounded-xl border border-slate-800 bg-slate-950 px-4 text-xs text-white outline-none focus:border-violet-500"
@@ -524,11 +488,13 @@ export function ProFeaturesTab({ card, onChange, userId }: Props) {
           </div>
 
           <div className="flex items-center gap-2">
-            <label className="text-xs font-medium cursor-pointer text-slate-300">Email Alerts</label>
+            <label className="text-xs font-medium cursor-pointer text-slate-300">
+              Email Alerts
+            </label>
             <input
               type="checkbox"
               checked={pro.enable_email_alerts !== false}
-              onChange={(e) => updatePro('enable_email_alerts', e.target.checked)}
+              onChange={(e) => updatePro("enable_email_alerts", e.target.checked)}
               className="h-4 w-4 rounded border-slate-700 bg-slate-900 text-violet-600 focus:ring-violet-500"
             />
           </div>
@@ -543,8 +509,8 @@ export function ProFeaturesTab({ card, onChange, userId }: Props) {
               <div className="flex gap-2">
                 <input
                   type="email"
-                  value={pro.notify_email || card.email || ''}
-                  onChange={(e) => updatePro('notify_email', sanitizeText(e.target.value, 100))}
+                  value={pro.notify_email || card.email || ""}
+                  onChange={(e) => updatePro("notify_email", sanitizeText(e.target.value, 100))}
                   placeholder="e.g. owner@company.com"
                   className="h-11 flex-1 rounded-xl border border-slate-800 bg-slate-950 px-4 text-xs text-white outline-none focus:border-violet-500"
                 />
@@ -555,7 +521,7 @@ export function ProFeaturesTab({ card, onChange, userId }: Props) {
                   className="flex shrink-0 items-center gap-1.5 rounded-xl bg-violet-600 px-4 py-2 text-xs font-bold text-white hover:bg-violet-500 disabled:opacity-50"
                 >
                   <Send className="h-3.5 w-3.5" />
-                  {testingEmail ? 'Sending...' : 'Send Test Email Alert'}
+                  {testingEmail ? "Sending..." : "Send Test Email Alert"}
                 </button>
               </div>
             </div>
@@ -568,7 +534,7 @@ export function ProFeaturesTab({ card, onChange, userId }: Props) {
         <div className="flex items-center gap-2 text-xs">
           <Sparkles className="h-4 w-4 text-amber-400" />
           <span className="font-medium text-slate-300">
-            {isPro ? 'Pro features active on your account' : 'Customize special features & publish'}
+            {isPro ? "Pro features active on your account" : "Customize special features & publish"}
           </span>
         </div>
         <button
@@ -577,7 +543,7 @@ export function ProFeaturesTab({ card, onChange, userId }: Props) {
           disabled={saving}
           className="flex items-center gap-2 rounded-xl bg-violet-600 px-5 py-2.5 text-xs font-bold text-white hover:bg-violet-500 transition-opacity disabled:opacity-50 shadow-lg shadow-violet-600/30"
         >
-          {saving ? 'Saving...' : 'Save & Publish Special Features'}
+          {saving ? "Saving..." : "Save & Publish Special Features"}
         </button>
       </div>
 
@@ -619,13 +585,10 @@ export function ProFeaturesTab({ card, onChange, userId }: Props) {
           <div className="flex flex-col gap-2">
             <button
               type="button"
-              onClick={() => {
-                toggleDemoPro();
-                setUpgradeOpen(false);
-              }}
+              onClick={() => setUpgradeOpen(false)}
               className="h-12 w-full rounded-2xl bg-violet-600 text-sm font-bold text-white hover:bg-violet-500 transition-opacity shadow-lg shadow-violet-600/30"
             >
-              Activate Pro ($9.99/mo) — Instant Unlock
+              Close
             </button>
             <button
               type="button"
