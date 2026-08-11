@@ -18,6 +18,7 @@ import {
 import { supabase } from '@/lib/supabase/client';
 import { Card } from '@/lib/types';
 import { CardEditor } from '@/components/dashboard/CardEditor';
+import { ProFeaturesTab } from '@/components/dashboard/ProFeaturesTab';
 import { AnalyticsTab } from '@/components/dashboard/AnalyticsTab';
 import { LeadsTab } from '@/components/dashboard/LeadsTab';
 import { QrWalletHub } from '@/components/dashboard/QrWalletHub';
@@ -27,7 +28,7 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
   const [user, setUser] = useState<any>(null);
   const [card, setCard] = useState<Card | null>(null);
-  const [activeTab, setActiveTab] = useState<'editor' | 'analytics' | 'leads' | 'qr'>('editor');
+  const [activeTab, setActiveTab] = useState<'editor' | 'pro' | 'analytics' | 'leads' | 'qr'>('editor');
   const [creationMode, setCreationMode] = useState(false);
 
   useEffect(() => {
@@ -206,6 +207,18 @@ export default function DashboardPage() {
               </button>
 
               <button
+                onClick={() => setActiveTab('pro')}
+                className={`py-3 px-5 text-xs font-bold rounded-2xl flex items-center space-x-2 transition-all whitespace-nowrap ${
+                  activeTab === 'pro'
+                    ? 'bg-amber-500/10 text-amber-400 border border-amber-500/30 shadow-md'
+                    : 'text-slate-400 hover:text-slate-200'
+                }`}
+              >
+                <Sparkles className="w-4 h-4 text-amber-400" />
+                <span>Special Pro Features ⭐</span>
+              </button>
+
+              <button
                 onClick={() => setActiveTab('analytics')}
                 className={`py-3 px-5 text-xs font-bold rounded-2xl flex items-center space-x-2 transition-all whitespace-nowrap ${
                   activeTab === 'analytics'
@@ -248,6 +261,14 @@ export default function DashboardPage() {
                 <CardEditor card={card} onSaveSuccess={setCard} />
               )}
 
+              {activeTab === 'pro' && card && (
+                <ProFeaturesTab
+                  card={card}
+                  onChange={(updatedCard) => setCard(updatedCard)}
+                  userId={user?.id || ''}
+                />
+              )}
+
               {activeTab === 'analytics' && card && <AnalyticsTab cardId={card.id} />}
 
               {activeTab === 'leads' && card && <LeadsTab cardId={card.id} />}
@@ -258,6 +279,7 @@ export default function DashboardPage() {
                   onUpgradeRequest={() => {
                     // Update local card plan simulation for user
                     setCard({ ...card, plan: 'pro' });
+                    setActiveTab('pro');
                   }}
                 />
               )}

@@ -1,0 +1,642 @@
+'use client';
+
+import React, { useState } from 'react';
+import {
+  Bell,
+  Calendar,
+  CheckCircle2,
+  FileText,
+  Lock,
+  Mail,
+  MousePointerClick,
+  Send,
+  Sparkles,
+  Upload,
+  Video,
+  Zap,
+} from 'lucide-react';
+import { toast } from 'sonner';
+import { supabase, STORAGE_BUCKET } from '@/lib/supabase/client';
+import {
+  defaultProFeatures,
+  getEmbedVideoUrl,
+  Card,
+  PlanTier,
+  ProFeatures,
+} from '@/lib/card';
+import { sanitizeText, sanitizeUrl } from '@/lib/sanitization';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@/src/components/ui/dialog';
+
+type Props = {
+  card: Card;
+  onChange: (updated: Card) => void;
+  userId: string;
+};
+
+export function ProFeaturesTab({ card, onChange, userId }: Props) {
+  const [uploadingPdf, setUploadingPdf] = useState(false);
+  const [upgradeOpen, setUpgradeOpen] = useState(false);
+  const [testingWebhook, setTestingWebhook] = useState(false);
+  const [testingEmail, setTestingEmail] = useState(false);
+  const [saving, setSaving] = useState(false);
+
+  const planTier: PlanTier = card?.plan_tier || (card?.plan as PlanTier) || 'free';
+  const isPro = planTier === 'pro' || planTier === 'enterprise' || card?.plan === 'pro';
+  const pro: ProFeatures = {
+    ...defaultProFeatures,
+    ...(typeof card?.pro_features === 'object' && card?.pro_features !== null
+      ? card.pro_features
+      : {}),
+  };
+
+  const updatePro = <K extends keyof ProFeatures>(key: K, value: ProFeatures[K]) => {
+    const updatedPro = {
+      ...defaultProFeatures,
+      ...(typeof card?.pro_features === 'object' && card?.pro_features !== null
+        ? card.pro_features
+        : {}),
+      [key]: value,
+    };
+    onChange({ ...(card || {}), pro_features: updatedPro });
+  };
+
+  async function saveProFeatures() {
+    if (!card.id) {
+      toast.error('Please publish your card first before saving special features.');
+      return;
+    }
+
+    setSaving(true);
+    let { data, error } = await supabase
+      .from('cards')
+      .update({
+        pro_features: card.pro_features || defaultProFeatures,
+        plan_tier: card.plan_tier || 'pro',
+        plan: 'pro',
+      })
+      .eq('id', card.id)
+      .select()
+      .single();
+
+    if (error && error.message.includes('plan_tier')) {
+      const retry = await supabase
+        .from('cards')
+        .update({
+          pro_features: card.pro_features || defaultProFeatures,
+          plan: 'pro',
+        })
+        .eq('id', card.id)
+        .select()
+        .single();
+      data = retry.data;
+      error = retry.error;
+    }
+
+    setSaving(false);
+
+    if (error) {
+      toast.error(`Failed to save special features: ${error.message}`);
+      return;
+    }
+
+    if (data) {
+      onChange(data as Card);
+      toast.success('✨ Special features saved & published live to your digital card!');
+    }
+  }
+
+  async function sendTestEmailAlert() {
+    const emailToUse = pro.notify_email || card.email;
+    if (!emailToUse) {
+      toast.error('Please enter a Notification Email address first.');
+      return;
+    }
+
+    setTestingEmail(true);
+    try {
+      const res = await fetch('/api/lead-email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          card_id: card.id,
+          sender_name: 'Sarah Smith (Demo Lead)',
+          sender_phone: '+1 555-0199',
+          note: "Hi! Great meeting you at the conference. Let's schedule a consultation.",
+          is_test: true,
+        }),
+      });
+
+      const data = await res.json();
+      if (res.ok) {
+        toast.success(`Test lead email dispatched to ${data.recipient || emailToUse}!`);
+      } else {
+        toast.error(data.error || 'Failed to send test email');
+      }
+    } catch {
+      toast.error('Failed to send test lead email notification.');
+    } finally {
+      setTestingEmail(false);
+    }
+  }
+
+  async function sendTestWebhook() {
+    if (!pro.webhook_url && !pro.notify_email) {
+      toast.error('Please enter a Webhook URL or Notification Email first.');
+      return;
+    }
+
+    setTestingWebhook(true);
+    try {
+      const res = await fetch('/api/lead-webhook', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          card_id: card.id,
+          sender_name: 'Test Visitor (Zapier Demo)',
+          sender_phone: '+1 555-0199',
+          note: 'This is a test lead payload sent from JustTap Pro Features tab.',
+          is_test: true,
+        }),
+      });
+
+      const data = await res.json();
+      if (res.ok) {
+        toast.success(
+          `Test payload dispatched! Status: ${
+            data.webhook_status === 'delivered' ? 'Delivered to Webhook ✓' : 'Configured'
+          }`
+        );
+      } else {
+        toast.error(`Webhook test error: ${data.error || 'Failed to deliver'}`);
+      }
+    } catch {
+      toast.error('Failed to trigger test webhook.');
+    } finally {
+      setTestingWebhook(false);
+    }
+  }
+
+  const toggleDemoPro = () => {
+    const newTier: PlanTier = isPro ? 'free' : 'pro';
+    onChange({ ...card, plan_tier: newTier, plan: newTier });
+    toast.success(
+      newTier === 'pro'
+        ? '✨ Pro Tier activated in Demo mode! All special features are now live on your card.'
+        : 'Switched back to Free Tier mode.'
+    );
+  };
+
+  async function handlePdfUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.type !== 'application/pdf') {
+      toast.error('Please upload a valid PDF document');
+      return;
+    }
+    if (file.size > 10 * 1024 * 1024) {
+      toast.error('PDF file size must be less than 10MB');
+      return;
+    }
+
+    setUploadingPdf(true);
+    try {
+      const fileId = `${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
+      const path = `${userId || 'guest'}/docs/pdf_${fileId}.pdf`;
+      const { error } = await supabase.storage
+        .from(STORAGE_BUCKET)
+        .upload(path, file, { contentType: 'application/pdf', upsert: true });
+
+      if (error) {
+        toast.error(`Upload failed: ${error.message}`);
+      } else {
+        const { data } = supabase.storage.from(STORAGE_BUCKET).getPublicUrl(path);
+        updatePro('pdf_url', data.publicUrl);
+        toast.success('PDF document uploaded successfully!');
+      }
+    } catch {
+      toast.error('Failed to upload PDF document');
+    } finally {
+      setUploadingPdf(false);
+    }
+  }
+
+  return (
+    <div className="space-y-6 text-slate-100">
+      {/* HEADER BANNER */}
+      <div className="relative overflow-hidden rounded-3xl border border-violet-500/30 bg-gradient-to-r from-violet-900/30 via-indigo-900/20 to-slate-900 p-6">
+        <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+          <div>
+            <div className="inline-flex items-center gap-1.5 rounded-full bg-violet-500/20 px-3 py-1 text-xs font-semibold text-violet-300 border border-violet-500/30">
+              <Sparkles className="h-3.5 w-3.5 text-amber-400" />
+              Special Features & Pro Blocks
+            </div>
+            <h2 className="mt-2 text-xl font-bold text-white">
+              Elevate Your Profile with Interactive Blocks
+            </h2>
+            <p className="mt-1 text-xs text-slate-400">
+              Add video intros, PDF menus/brochures, live Calendly booking, custom CTAs & Apple
+              Wallet passes.
+            </p>
+          </div>
+
+          <div className="flex shrink-0 items-center gap-3">
+            <button
+              type="button"
+              onClick={toggleDemoPro}
+              className={`flex items-center gap-2 rounded-full px-4 py-2 text-xs font-semibold transition ${
+                isPro
+                  ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
+                  : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
+              }`}
+            >
+              <Zap className="h-3.5 w-3.5 text-amber-400" />
+              {isPro ? 'Pro Status: Active' : 'Toggle Pro Demo Mode'}
+            </button>
+
+            {!isPro && (
+              <button
+                type="button"
+                onClick={() => setUpgradeOpen(true)}
+                className="flex items-center gap-1.5 rounded-full bg-violet-600 px-4 py-2 text-xs font-bold text-white transition hover:bg-violet-500 shadow-lg shadow-violet-600/30"
+              >
+                <Sparkles className="h-3.5 w-3.5" /> Upgrade to Pro
+              </button>
+            )}
+          </div>
+        </div>
+
+        {!isPro && (
+          <div className="mt-4 flex items-center gap-2 rounded-2xl bg-amber-500/10 p-3 text-xs text-amber-400 border border-amber-500/20">
+            <Lock className="h-4 w-4 shrink-0" />
+            <span>
+              You are currently on the <strong>Free Plan</strong>. Customize these special
+              features below and preview them, then upgrade to Pro ($9.99/mo) to make them live for public visitors.
+            </span>
+          </div>
+        )}
+      </div>
+
+      {/* FEATURE 1: VIDEO INTRO EMBED */}
+      <div className="bg-slate-900/60 rounded-3xl border border-slate-800 p-5">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="grid h-10 w-10 place-items-center rounded-2xl bg-purple-500/10 text-purple-400 border border-purple-500/20">
+              <Video className="h-5 w-5" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h3 className="font-semibold text-sm text-white">Video Intro Embed</h3>
+                {!isPro && (
+                  <span className="rounded-full bg-violet-500/20 px-2 py-0.5 text-[10px] font-bold uppercase text-violet-400 border border-violet-500/30">
+                    PRO
+                  </span>
+                )}
+              </div>
+              <p className="text-xs text-slate-400">
+                Embed a YouTube, Loom, or Vimeo video directly onto your digital card.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div className="mt-4 space-y-3">
+          <input
+            type="url"
+            value={pro.video_url || ''}
+            onChange={(e) => updatePro('video_url', sanitizeUrl(e.target.value) || e.target.value)}
+            placeholder="https://www.youtube.com/watch?v=... or YouTube Shorts / Loom / Vimeo link"
+            className="h-11 w-full rounded-xl border border-slate-800 bg-slate-950 px-4 text-xs text-white outline-none focus:border-violet-500"
+          />
+          <p className="text-[11px] text-slate-400">
+            Supports YouTube Shorts, YouTube Watch, Loom, Vimeo, and Google Drive video URLs.
+          </p>
+
+          {pro.video_url && (
+            <div className="mt-2 space-y-2">
+              {getEmbedVideoUrl(pro.video_url) ? (
+                <div className="space-y-1.5">
+                  <p className="text-[11px] font-semibold text-emerald-400">
+                    ✓ Valid Video Link Detected — Live Preview Below:
+                  </p>
+                  <div className="overflow-hidden rounded-2xl border border-slate-800 aspect-video w-full max-w-md shadow-md bg-black">
+                    <iframe
+                      src={getEmbedVideoUrl(pro.video_url)!}
+                      title="Video Intro Preview"
+                      className="w-full h-full"
+                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                      allowFullScreen
+                    />
+                  </div>
+                </div>
+              ) : (
+                <p className="text-[11px] font-medium text-amber-400">
+                  ⚠️ Unsupported video URL format. Please paste a valid YouTube, Loom, Vimeo, or Google Drive link.
+                </p>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* FEATURE 2: DOCUMENT & PDF ATTACHMENT */}
+      <div className="bg-slate-900/60 rounded-3xl border border-slate-800 p-5">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="grid h-10 w-10 place-items-center rounded-2xl bg-blue-500/10 text-blue-400 border border-blue-500/20">
+              <FileText className="h-5 w-5" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h3 className="font-semibold text-sm text-white">PDF & Document Attachment</h3>
+                {!isPro && (
+                  <span className="rounded-full bg-violet-500/20 px-2 py-0.5 text-[10px] font-bold uppercase text-violet-400 border border-violet-500/30">
+                    PRO
+                  </span>
+                )}
+              </div>
+              <p className="text-xs text-slate-400">
+                Attach a downloadable food menu, company brochure, catalog, or CV.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div className="mt-4 grid gap-3 md:grid-cols-2">
+          <div>
+            <label className="mb-1 block text-xs font-medium text-slate-400">
+              Button Display Label
+            </label>
+            <input
+              type="text"
+              value={pro.pdf_label || ''}
+              onChange={(e) => updatePro('pdf_label', sanitizeText(e.target.value, 60))}
+              placeholder="e.g. Download Product Catalog (PDF)"
+              className="h-11 w-full rounded-xl border border-slate-800 bg-slate-950 px-4 text-xs text-white outline-none focus:border-violet-500"
+            />
+          </div>
+
+          <div>
+            <label className="mb-1 block text-xs font-medium text-slate-400">
+              Upload PDF or Paste PDF URL
+            </label>
+            <div className="flex gap-2">
+              <input
+                type="url"
+                value={pro.pdf_url || ''}
+                onChange={(e) =>
+                  updatePro('pdf_url', sanitizeUrl(e.target.value) || e.target.value)
+                }
+                placeholder="https://.../brochure.pdf"
+                className="h-11 flex-1 rounded-xl border border-slate-800 bg-slate-950 px-3 text-xs text-white outline-none focus:border-violet-500"
+              />
+              <label className="flex h-11 shrink-0 cursor-pointer items-center gap-1.5 rounded-xl border border-slate-700 bg-slate-800 px-3 text-xs font-medium text-slate-200 hover:bg-slate-700">
+                <Upload className="h-3.5 w-3.5" />
+                {uploadingPdf ? '…' : 'Upload'}
+                <input
+                  type="file"
+                  accept="application/pdf"
+                  onChange={handlePdfUpload}
+                  className="hidden"
+                />
+              </label>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* FEATURE 3: CALENDLY & APPOINTMENT BOOKING */}
+      <div className="bg-slate-900/60 rounded-3xl border border-slate-800 p-5">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="grid h-10 w-10 place-items-center rounded-2xl bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+              <Calendar className="h-5 w-5" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h3 className="font-semibold text-sm text-white">Live Appointment Booking</h3>
+                {!isPro && (
+                  <span className="rounded-full bg-violet-500/20 px-2 py-0.5 text-[10px] font-bold uppercase text-violet-400 border border-violet-500/30">
+                    PRO
+                  </span>
+                )}
+              </div>
+              <p className="text-xs text-slate-400">
+                Link your Calendly, SavvyCal, or TidyCal URL so visitors can book meetings.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div className="mt-4 space-y-3">
+          <input
+            type="url"
+            value={pro.booking_url || ''}
+            onChange={(e) =>
+              updatePro('booking_url', sanitizeUrl(e.target.value) || e.target.value)
+            }
+            placeholder="https://calendly.com/your-name/30min"
+            className="h-11 w-full rounded-xl border border-slate-800 bg-slate-950 px-4 text-xs text-white outline-none focus:border-violet-500"
+          />
+        </div>
+      </div>
+
+      {/* FEATURE 4: CUSTOM CTA ACTION BUTTON */}
+      <div className="bg-slate-900/60 rounded-3xl border border-slate-800 p-5">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="grid h-10 w-10 place-items-center rounded-2xl bg-amber-500/10 text-amber-400 border border-amber-500/20">
+              <MousePointerClick className="h-5 w-5" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h3 className="font-semibold text-sm text-white">Custom Call-To-Action (CTA) Button</h3>
+                {!isPro && (
+                  <span className="rounded-full bg-violet-500/20 px-2 py-0.5 text-[10px] font-bold uppercase text-violet-400 border border-violet-500/30">
+                    PRO
+                  </span>
+                )}
+              </div>
+              <p className="text-xs text-slate-400">
+                Add a high-priority action button (e.g. &quot;Pay via Stripe&quot;, &quot;View Portfolio&quot;).
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div className="mt-4 grid gap-3 md:grid-cols-2">
+          <div>
+            <label className="mb-1 block text-xs font-medium text-slate-400">
+              Button Title
+            </label>
+            <input
+              type="text"
+              value={pro.custom_cta_label || ''}
+              onChange={(e) => updatePro('custom_cta_label', sanitizeText(e.target.value, 40))}
+              placeholder="e.g. Book Consultation"
+              className="h-11 w-full rounded-xl border border-slate-800 bg-slate-950 px-4 text-xs text-white outline-none focus:border-violet-500"
+            />
+          </div>
+
+          <div>
+            <label className="mb-1 block text-xs font-medium text-slate-400">
+              Destination Link
+            </label>
+            <input
+              type="url"
+              value={pro.custom_cta_url || ''}
+              onChange={(e) =>
+                updatePro('custom_cta_url', sanitizeUrl(e.target.value) || e.target.value)
+              }
+              placeholder="https://..."
+              className="h-11 w-full rounded-xl border border-slate-800 bg-slate-950 px-4 text-xs text-white outline-none focus:border-violet-500"
+            />
+          </div>
+        </div>
+      </div>
+
+      {/* FEATURE 5: INSTANT EMAIL LEAD ALERTS */}
+      <div className="bg-slate-900/60 rounded-3xl border border-violet-500/30 bg-violet-950/20 p-5">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="grid h-10 w-10 place-items-center rounded-2xl bg-violet-500/20 text-violet-400 border border-violet-500/30">
+              <Mail className="h-5 w-5" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h3 className="font-semibold text-sm text-white">Instant Email Lead Alerts</h3>
+                {!isPro && (
+                  <span className="rounded-full bg-violet-500/20 px-2 py-0.5 text-[10px] font-bold uppercase text-violet-400 border border-violet-500/30">
+                    PRO
+                  </span>
+                )}
+              </div>
+              <p className="text-xs text-slate-400">
+                Receive an automatic email notification when a visitor submits their contact info.
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <label className="text-xs font-medium cursor-pointer text-slate-300">Email Alerts</label>
+            <input
+              type="checkbox"
+              checked={pro.enable_email_alerts !== false}
+              onChange={(e) => updatePro('enable_email_alerts', e.target.checked)}
+              className="h-4 w-4 rounded border-slate-700 bg-slate-900 text-violet-600 focus:ring-violet-500"
+            />
+          </div>
+        </div>
+
+        {pro.enable_email_alerts !== false && (
+          <div className="mt-4 space-y-4 pt-3 border-t border-slate-800">
+            <div>
+              <label className="mb-1 block text-xs font-medium text-slate-400">
+                Destination Email Address for Lead Notifications
+              </label>
+              <div className="flex gap-2">
+                <input
+                  type="email"
+                  value={pro.notify_email || card.email || ''}
+                  onChange={(e) => updatePro('notify_email', sanitizeText(e.target.value, 100))}
+                  placeholder="e.g. owner@company.com"
+                  className="h-11 flex-1 rounded-xl border border-slate-800 bg-slate-950 px-4 text-xs text-white outline-none focus:border-violet-500"
+                />
+                <button
+                  type="button"
+                  onClick={sendTestEmailAlert}
+                  disabled={testingEmail}
+                  className="flex shrink-0 items-center gap-1.5 rounded-xl bg-violet-600 px-4 py-2 text-xs font-bold text-white hover:bg-violet-500 disabled:opacity-50"
+                >
+                  <Send className="h-3.5 w-3.5" />
+                  {testingEmail ? 'Sending...' : 'Send Test Email Alert'}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* SAVE BUTTON BAR */}
+      <div className="sticky bottom-6 z-20 flex items-center justify-between rounded-2xl border border-violet-500/40 bg-slate-900/95 p-4 shadow-xl backdrop-blur-xl">
+        <div className="flex items-center gap-2 text-xs">
+          <Sparkles className="h-4 w-4 text-amber-400" />
+          <span className="font-medium text-slate-300">
+            {isPro ? 'Pro features active on your account' : 'Customize special features & publish'}
+          </span>
+        </div>
+        <button
+          type="button"
+          onClick={() => void saveProFeatures()}
+          disabled={saving}
+          className="flex items-center gap-2 rounded-xl bg-violet-600 px-5 py-2.5 text-xs font-bold text-white hover:bg-violet-500 transition-opacity disabled:opacity-50 shadow-lg shadow-violet-600/30"
+        >
+          {saving ? 'Saving...' : 'Save & Publish Special Features'}
+        </button>
+      </div>
+
+      {/* UPGRADE DIALOG MODAL */}
+      <Dialog open={upgradeOpen} onOpenChange={setUpgradeOpen}>
+        <DialogContent className="max-w-md rounded-3xl p-6 text-center bg-slate-900 border border-slate-800 text-slate-100">
+          <DialogHeader>
+            <div className="mx-auto grid h-14 w-14 place-items-center rounded-2xl bg-gradient-to-tr from-violet-600 to-indigo-500 text-white shadow-lg mb-2">
+              <Sparkles className="h-7 w-7" />
+            </div>
+            <DialogTitle className="text-xl font-bold text-white">
+              Upgrade to JustTap Pro
+            </DialogTitle>
+            <DialogDescription className="text-xs text-slate-400">
+              Unlock video embeds, PDF downloads, Calendly appointment booking, Apple Wallet passes,
+              and custom branding for your physical NFC business cards.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="my-4 space-y-2 rounded-2xl bg-slate-950/80 p-4 text-left text-xs border border-slate-800">
+            <div className="flex items-center gap-2 font-medium">
+              <CheckCircle2 className="h-4 w-4 text-emerald-400 shrink-0" />
+              Embedded YouTube, Loom, & Vimeo Video Intros
+            </div>
+            <div className="flex items-center gap-2 font-medium">
+              <CheckCircle2 className="h-4 w-4 text-emerald-400 shrink-0" />
+              PDF Document Uploader & Download Buttons
+            </div>
+            <div className="flex items-center gap-2 font-medium">
+              <CheckCircle2 className="h-4 w-4 text-emerald-400 shrink-0" />
+              Calendly & TidyCal Meeting Booking Embeds
+            </div>
+            <div className="flex items-center gap-2 font-medium">
+              <CheckCircle2 className="h-4 w-4 text-emerald-400 shrink-0" />
+              Remove &quot;Powered by JustTap&quot; Branding
+            </div>
+          </div>
+
+          <div className="flex flex-col gap-2">
+            <button
+              type="button"
+              onClick={() => {
+                toggleDemoPro();
+                setUpgradeOpen(false);
+              }}
+              className="h-12 w-full rounded-2xl bg-violet-600 text-sm font-bold text-white hover:bg-violet-500 transition-opacity shadow-lg shadow-violet-600/30"
+            >
+              Activate Pro ($9.99/mo) — Instant Unlock
+            </button>
+            <button
+              type="button"
+              onClick={() => setUpgradeOpen(false)}
+              className="h-10 w-full rounded-2xl text-xs font-medium text-slate-400 hover:text-white"
+            >
+              Maybe Later
+            </button>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}
