@@ -1,15 +1,40 @@
-import { useEffect, useState, useRef } from "react";
-import { ArrowUp, Check, ExternalLink, Loader2, Save } from "lucide-react";
+import { useEffect, useState, useRef, useMemo } from "react";
+import {
+  ArrowLeft,
+  ArrowUp,
+  Check,
+  Crown,
+  ExternalLink,
+  Loader2,
+  Lock,
+  PowerOff,
+  RefreshCw,
+  Save,
+  Sparkles,
+} from "lucide-react";
 import { toast } from "sonner";
 import { STORAGE_BUCKET, supabase } from "@/lib/supabase";
-import { COLOR_PRESETS, PATTERNS, slugify, type Card, type HeaderPattern } from "@/lib/card";
-import { CardView } from "@/components/card/CardView";
+import {
+  DESIGN_PRESET_PALETTES,
+  FINISHES,
+  FONT_OPTIONS,
+  isValidHexColor,
+  PATTERNS,
+  RADIUS_OPTIONS,
+  slugify,
+  type BorderRadius,
+  type Card,
+  type DesignMode,
+  type FontFamily,
+  type HeaderPattern,
+  type SurfaceFinish,
+} from "@/lib/card";
+import { CardPreview } from "@/components/card/CardPreview";
 import { PhoneFrame } from "./PhoneFrame";
 import { Dropzone } from "./Dropzone";
 import { sanitizePhone, sanitizeText, sanitizeUrl } from "@/lib/sanitization";
 import { slugValidationMessage, validateSlug } from "@/lib/slug";
 import { saveCardRecord } from "@/lib/card-save";
-
 import { useTranslation } from "@/lib/i18n";
 
 async function uploadDataUrlIfNeeded(
@@ -46,22 +71,55 @@ type Props = {
   userId: string;
   isNew: boolean;
   savedSlug?: string;
+  publishedCard?: Card | null;
   onSaved: (c: Card) => void;
+  onBackToDashboard?: () => void;
 };
 
-export function CardEditor({ draft, setDraft, userId, isNew, savedSlug, onSaved }: Props) {
+export function CardEditor({
+  draft,
+  setDraft,
+  userId,
+  isNew,
+  savedSlug,
+  publishedCard,
+  onSaved,
+  onBackToDashboard,
+}: Props) {
   const { t } = useTranslation();
   const [saving, setSaving] = useState(false);
+  const [deactivating, setDeactivating] = useState(false);
+  const [showDeactivateModal, setShowDeactivateModal] = useState(false);
   const [showArabic, setShowArabic] = useState(draft.enable_arabic);
   const [draftRestored, setDraftRestored] = useState(false);
   const [lastAutoSaved, setLastAutoSaved] = useState<string | null>(null);
+
+  // Dual-mode memory state preservation
+  const [customDraftState, setCustomDraftState] = useState<Partial<Card>>({
+    header_pattern: draft.header_pattern || "wave",
+    bg_color: draft.bg_color || "#08080A",
+    surface_color: draft.surface_color || "#121216",
+    accent_color: draft.accent_color || "#6B21A8",
+    champagne_accent: draft.champagne_accent || "#E6D5AC",
+    text_color: draft.text_color || "#FAFAFA",
+    surface_finish: draft.surface_finish || "matte",
+    border_radius: draft.border_radius || "minimal",
+    font_family: draft.font_family || "Outfit",
+  });
+
+  const isPro = draft.plan_tier === "pro" || draft.plan_tier === "enterprise";
+
+  const isDirty = useMemo(() => {
+    if (!publishedCard) return true;
+    return JSON.stringify(draft) !== JSON.stringify(publishedCard);
+  }, [draft, publishedCard]);
 
   const draftKey =
     userId === "guest" ? "justtap_guest_pending_card" : `justtap_card_draft_${userId}`;
   const THREE_DAYS_MS = 3 * 24 * 60 * 60 * 1000;
   const restoredKeyRef = useRef<string | null>(null);
 
-  // Restore active draft or purge if inactive for > 3 days (Runs ONCE per draftKey)
+  // Restore draft once
   useEffect(() => {
     if (restoredKeyRef.current === draftKey) return;
     restoredKeyRef.current = draftKey;
@@ -74,7 +132,6 @@ export function CardEditor({ draft, setDraft, userId, isNew, savedSlug, onSaved 
         const updatedAt =
           "updatedAt" in parsed && typeof parsed.updatedAt === "number" ? parsed.updatedAt : null;
 
-        // Purge draft if inactive for more than 3 days
         if (updatedAt && Date.now() - updatedAt > THREE_DAYS_MS) {
           localStorage.removeItem(draftKey);
           sessionStorage.removeItem(draftKey);
@@ -82,7 +139,6 @@ export function CardEditor({ draft, setDraft, userId, isNew, savedSlug, onSaved 
           cardData &&
           (cardData.full_name || cardData.phone || cardData.title || cardData.bio)
         ) {
-          // Only trigger state update and toast if the current draft prop is empty
           const isCurrentDraftEmpty =
             !draft.full_name && !draft.phone && !draft.title && !draft.bio;
           if (isCurrentDraftEmpty) {
@@ -94,11 +150,11 @@ export function CardEditor({ draft, setDraft, userId, isNew, savedSlug, onSaved 
         }
       }
     } catch {
-      // Ignore JSON parse errors
+      /* ignore */
     }
   }, [draftKey]);
 
-  // Real-time auto-save draft with timestamp
+  // Real-time draft sync to localStorage
   useEffect(() => {
     if (!draft.full_name && !draft.phone && !draft.title && !draft.bio) return;
 
@@ -109,7 +165,7 @@ export function CardEditor({ draft, setDraft, userId, isNew, savedSlug, onSaved 
       const now = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
       setLastAutoSaved(now);
     } catch {
-      // Ignore storage errors
+      /* ignore */
     }
   }, [draft, draftKey]);
 
@@ -118,7 +174,111 @@ export function CardEditor({ draft, setDraft, userId, isNew, savedSlug, onSaved 
   const setSocial = (key: string, value: string) =>
     setDraft({ ...draft, social_links: { ...(draft.social_links ?? {}), [key]: value } });
 
-  async function save(): Promise<void> {
+  // Mode switcher handler with working draft state preservation
+  const handleModeSwitch = (mode: DesignMode) => {
+    if (mode === "custom" && !isPro) {
+      toast.error("Custom Creator is a PRO feature. Upgrade to unlock full custom design!");
+      return;
+    }
+
+    if (mode === "classic_v2") {
+      // Save current custom settings into customDraftState memory before switching to Classic
+      setCustomDraftState({
+        header_pattern: draft.header_pattern,
+        bg_color: draft.bg_color,
+        surface_color: draft.surface_color,
+        accent_color: draft.accent_color,
+        champagne_accent: draft.champagne_accent,
+        text_color: draft.text_color,
+        surface_finish: draft.surface_finish,
+        border_radius: draft.border_radius,
+        font_family: draft.font_family,
+      });
+
+      // Reset card preview props to Classic V2 standard
+      setDraft({
+        ...draft,
+        design_mode: "classic_v2",
+        header_pattern: "wave",
+        bg_color: "#08080A",
+        surface_color: "#121216",
+        accent_color: "#6B21A8",
+        champagne_accent: "#E6D5AC",
+        text_color: "#FAFAFA",
+        surface_finish: "matte",
+        border_radius: "minimal",
+        font_family: "Outfit",
+      });
+    } else {
+      // Switch to Custom Creator, restoring saved custom working state
+      setDraft({
+        ...draft,
+        design_mode: "custom",
+        header_pattern: customDraftState.header_pattern || "wave",
+        bg_color: customDraftState.bg_color || "#08080A",
+        surface_color: customDraftState.surface_color || "#121216",
+        accent_color: customDraftState.accent_color || "#6B21A8",
+        champagne_accent: customDraftState.champagne_accent || "#E6D5AC",
+        text_color: customDraftState.text_color || "#FAFAFA",
+        surface_finish: customDraftState.surface_finish || "matte",
+        border_radius: customDraftState.border_radius || "minimal",
+        font_family: customDraftState.font_family || "Outfit",
+      });
+    }
+  };
+
+  const applyPreset = (presetId: string) => {
+    if (!isPro) {
+      toast.error("Preset Palettes require a Pro subscription");
+      return;
+    }
+    const preset = DESIGN_PRESET_PALETTES.find((p) => p.id === presetId);
+    if (!preset) return;
+
+    setDraft({
+      ...draft,
+      design_mode: "custom",
+      bg_color: preset.bg_color,
+      surface_color: preset.surface_color,
+      accent_color: preset.accent_color,
+      champagne_accent: preset.champagne_accent,
+      text_color: preset.text_color,
+    });
+  };
+
+  // Safe Deactivate / Unpublish Public Card function
+  const handleToggleDeactivate = async () => {
+    if (!draft.id || isNew) return;
+    setDeactivating(true);
+
+    const newActiveState = !(draft.is_active ?? true);
+    const { data, error } = await supabase
+      .from("cards")
+      .update({ is_active: newActiveState })
+      .eq("id", draft.id)
+      .eq("user_id", userId)
+      .select()
+      .single();
+
+    setDeactivating(false);
+    setShowDeactivateModal(false);
+
+    if (error || !data) {
+      toast.error("Failed to update card public status.");
+      return;
+    }
+
+    const updated = data as Card;
+    setDraft(updated);
+    onSaved(updated);
+    toast.success(
+      newActiveState
+        ? "Public card activated!"
+        : "Public card disabled. Permanent /t/:token links remain protected.",
+    );
+  };
+
+  async function publishChanges(): Promise<void> {
     if (!draft.full_name.trim()) {
       toast.error("Full name is required");
       return;
@@ -127,6 +287,23 @@ export function CardEditor({ draft, setDraft, userId, isNew, savedSlug, onSaved 
       toast.error("Phone number is required");
       return;
     }
+
+    // Validate 5 color controls against 6-digit hex format
+    const colorsToValidate = [
+      { name: "Background", val: draft.bg_color || "#08080A" },
+      { name: "Surface", val: draft.surface_color || "#121216" },
+      { name: "Primary Accent", val: draft.accent_color || "#6B21A8" },
+      { name: "Champagne Accent", val: draft.champagne_accent || "#E6D5AC" },
+      { name: "Text Color", val: draft.text_color || "#FAFAFA" },
+    ];
+
+    for (const c of colorsToValidate) {
+      if (!isValidHexColor(c.val)) {
+        toast.error(`Invalid ${c.name} color format. Please use 6-digit hex (e.g. #6B21A8)`);
+        return;
+      }
+    }
+
     const slugResult = validateSlug(draft.slug || draft.full_name);
     if (!slugResult.valid) {
       toast.error(slugValidationMessage(slugResult));
@@ -140,7 +317,7 @@ export function CardEditor({ draft, setDraft, userId, isNew, savedSlug, onSaved 
         localStorage.setItem("justtap_guest_pending_card", payloadStr);
         sessionStorage.setItem("justtap_guest_pending_card", payloadStr);
       } catch {
-        /* ignore storage errors */
+        /* ignore */
       }
       onSaved({ ...draft, slug });
       return;
@@ -169,9 +346,16 @@ export function CardEditor({ draft, setDraft, userId, isNew, savedSlug, onSaved 
       avatar_url: avatar_url ? sanitizeUrl(avatar_url) : null,
       logo_url: logo_url ? sanitizeUrl(logo_url) : null,
       show_logo_badge: draft.show_logo_badge,
-      header_pattern: draft.header_pattern,
-      accent_color: draft.accent_color,
-      bg_color: draft.bg_color,
+      design_mode: draft.design_mode || "classic_v2",
+      header_pattern: draft.header_pattern || "wave",
+      accent_color: draft.accent_color || "#6B21A8",
+      bg_color: draft.bg_color || "#08080A",
+      surface_color: draft.surface_color || "#121216",
+      champagne_accent: draft.champagne_accent || "#E6D5AC",
+      text_color: draft.text_color || "#FAFAFA",
+      surface_finish: draft.surface_finish || "matte",
+      border_radius: draft.border_radius || "minimal",
+      font_family: draft.font_family || "Outfit",
       whatsapp_phone: draft.whatsapp_phone ? sanitizePhone(draft.whatsapp_phone) : null,
       whatsapp_message: draft.whatsapp_message ? sanitizeText(draft.whatsapp_message, 250) : null,
       enable_arabic: draft.enable_arabic,
@@ -224,22 +408,77 @@ export function CardEditor({ draft, setDraft, userId, isNew, savedSlug, onSaved 
       );
       return;
     }
-    // Remove local draft upon successful database save
+
     try {
       localStorage.removeItem(draftKey);
       sessionStorage.removeItem(draftKey);
     } catch {
-      // Ignore
+      /* ignore */
     }
-    toast.success(isNew ? "Card published!" : "Changes saved");
+
+    toast.success(isNew ? "Card published live!" : "Published changes live!");
     onSaved(result.card);
   }
 
   return (
-    <div className="relative pb-16">
+    <div className="relative pb-24 space-y-6">
+      {/* TOP EDITOR BAR */}
+      <div className="justtap-glass rounded-2xl p-4 flex flex-col sm:flex-row items-center justify-between gap-4 border border-slate-800">
+        <div className="flex items-center space-x-3 w-full sm:w-auto justify-between sm:justify-start">
+          {onBackToDashboard && (
+            <button
+              type="button"
+              onClick={onBackToDashboard}
+              className="flex items-center space-x-1.5 text-xs text-slate-400 hover:text-white px-3 py-1.5 rounded-xl border border-slate-800 bg-slate-900/60 transition-colors"
+            >
+              <ArrowLeft className="w-3.5 h-3.5" />
+              <span>Back to Cards</span>
+            </button>
+          )}
+
+          {/* Sync Status Badge */}
+          <div className="flex items-center space-x-2">
+            <span
+              className={`h-2.5 w-2.5 rounded-full ${
+                isDirty ? "bg-amber-400 animate-pulse" : "bg-emerald-400"
+              }`}
+            />
+            <span className="text-xs font-semibold text-slate-300">
+              {isDirty ? "Unsaved Changes" : "Live & Synced"}
+            </span>
+          </div>
+        </div>
+
+        {/* Action controls */}
+        <div className="flex items-center space-x-2.5 w-full sm:w-auto justify-end">
+          {!isNew && draft.id && (
+            <button
+              type="button"
+              onClick={() => setShowDeactivateModal(true)}
+              className="px-3.5 py-2 rounded-xl border border-red-500/30 bg-red-500/10 text-red-300 hover:bg-red-500/20 text-xs font-semibold flex items-center space-x-1.5 transition-all"
+            >
+              <PowerOff className="w-3.5 h-3.5" />
+              <span>
+                {(draft.is_active ?? true) ? "Disable Public Profile" : "Enable Public Profile"}
+              </span>
+            </button>
+          )}
+
+          <button
+            type="button"
+            onClick={() => void publishChanges()}
+            disabled={saving}
+            className="px-5 py-2.5 rounded-xl bg-purple-700 hover:bg-purple-600 text-white font-bold text-xs shadow-lg shadow-purple-700/30 flex items-center space-x-2 transition-all disabled:opacity-60"
+          >
+            {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+            <span>Publish Changes</span>
+          </button>
+        </div>
+      </div>
+
       {draftRestored && (
-        <div className="mb-4 flex items-center justify-between rounded-xl bg-primary/10 px-4 py-2.5 text-xs font-medium text-primary">
-          <span>Loaded your auto-saved draft from browser storage.</span>
+        <div className="flex items-center justify-between rounded-xl bg-purple-950/40 border border-purple-800/40 px-4 py-2.5 text-xs text-purple-200">
+          <span>Loaded your working draft from browser storage.</span>
           <button
             type="button"
             onClick={() => {
@@ -247,11 +486,10 @@ export function CardEditor({ draft, setDraft, userId, isNew, savedSlug, onSaved 
                 localStorage.removeItem(draftKey);
                 sessionStorage.removeItem(draftKey);
               } catch {
-                /* ignore storage errors */
+                /* ignore */
               }
               setDraftRestored(false);
             }}
-            aria-label="Dismiss draft notification"
             className="underline opacity-80 hover:opacity-100"
           >
             Clear draft
@@ -259,274 +497,430 @@ export function CardEditor({ draft, setDraft, userId, isNew, savedSlug, onSaved 
         </div>
       )}
 
-      {/* LIVE PREVIEW */}
-      <div id="live-preview" className="scroll-mt-24">
-        <PhoneFrame>
-          <CardView card={draft} preview />
-        </PhoneFrame>
-        <div className="mt-4 flex flex-wrap items-center justify-center gap-2">
-          <button
-            type="button"
-            onClick={() => void save()}
-            disabled={saving}
-            className="flex items-center gap-2 rounded-full bg-primary px-5 py-2.5 text-sm font-semibold text-primary-foreground disabled:opacity-60"
-          >
-            {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-            {isNew ? "Publish card" : "Save changes"}
-          </button>
-          {!isNew && savedSlug && (
-            <a
-              href={`/c/${savedSlug}`}
-              target="_blank"
-              rel="noreferrer"
-              className="flex items-center gap-2 rounded-full border border-border px-4 py-2.5 text-sm"
+      {/* WORKBENCH LAYOUT: Desktop Split / Mobile Stack */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+        {/* LEFT COLUMN: Sticky Realistic Phone Preview */}
+        <div className="lg:col-span-5 lg:sticky lg:top-24 space-y-4">
+          <div id="live-preview" className="scroll-mt-24">
+            <PhoneFrame>
+              <CardPreview card={draft} />
+            </PhoneFrame>
+          </div>
+
+          {/* MODE SWITCHER: Placed directly below phone preview */}
+          <div className="justtap-glass rounded-2xl p-2 flex items-center justify-between border border-slate-800 max-w-[340px] mx-auto">
+            <button
+              type="button"
+              onClick={() => handleModeSwitch("classic_v2")}
+              className={`flex-1 py-2 px-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center space-x-1.5 ${
+                draft.design_mode !== "custom"
+                  ? "bg-purple-700 text-white shadow-md shadow-purple-700/30"
+                  : "text-slate-400 hover:text-white"
+              }`}
             >
-              <ExternalLink className="h-3.5 w-3.5" /> View live
-            </a>
+              <span>Classic V2</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => handleModeSwitch("custom")}
+              className={`flex-1 py-2 px-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center space-x-1.5 ${
+                draft.design_mode === "custom"
+                  ? "bg-gradient-to-r from-amber-500 to-amber-600 text-slate-950 shadow-md shadow-amber-500/20"
+                  : "text-slate-400 hover:text-white"
+              }`}
+            >
+              <Sparkles className="w-3.5 h-3.5" />
+              <span>Custom Creator</span>
+              {!isPro && <Lock className="w-3 h-3 text-amber-400" />}
+            </button>
+          </div>
+        </div>
+
+        {/* RIGHT COLUMN: Editors & Controls */}
+        <div className="lg:col-span-7 space-y-6">
+          {/* CUSTOM CREATOR ENGINE CONTROLS */}
+          {draft.design_mode === "custom" && (
+            <div className="justtap-glass rounded-3xl p-6 space-y-6 border border-amber-500/20 relative">
+              <div className="flex items-center justify-between border-b border-slate-800 pb-4">
+                <div className="flex items-center space-x-2">
+                  <Sparkles className="w-5 h-5 text-amber-400" />
+                  <h3 className="text-base font-bold text-white font-display">
+                    Custom Creator Engine
+                  </h3>
+                </div>
+                <span className="text-[10px] font-extrabold px-2.5 py-1 rounded-full bg-amber-400/10 text-amber-300 border border-amber-400/20">
+                  PRO ONLY
+                </span>
+              </div>
+
+              {/* 1. PRESET PALETTES */}
+              <div className="space-y-3">
+                <span className="text-xs font-semibold text-slate-300 block">Preset Palettes</span>
+                <div className="grid grid-cols-2 gap-2.5">
+                  {DESIGN_PRESET_PALETTES.map((preset) => (
+                    <button
+                      key={preset.id}
+                      type="button"
+                      onClick={() => applyPreset(preset.id)}
+                      className="p-3 rounded-xl bg-slate-900/80 border border-slate-800 hover:border-amber-500/40 text-left transition-all space-y-1.5"
+                    >
+                      <span className="text-xs font-bold text-white block">{preset.name}</span>
+                      <div className="flex items-center space-x-1.5">
+                        <span
+                          className="w-4 h-4 rounded-full border border-white/20"
+                          style={{ backgroundColor: preset.bg_color }}
+                        />
+                        <span
+                          className="w-4 h-4 rounded-full border border-white/20"
+                          style={{ backgroundColor: preset.surface_color }}
+                        />
+                        <span
+                          className="w-4 h-4 rounded-full border border-white/20"
+                          style={{ backgroundColor: preset.accent_color }}
+                        />
+                        <span
+                          className="w-4 h-4 rounded-full border border-white/20"
+                          style={{ backgroundColor: preset.champagne_accent }}
+                        />
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* 2. HEADER DIVIDER PATTERNS */}
+              <div className="space-y-3">
+                <span className="text-xs font-semibold text-slate-300 block">
+                  Header Divider Pattern
+                </span>
+                <div className="flex flex-wrap gap-2">
+                  {PATTERNS.map((p) => (
+                    <button
+                      key={p.value}
+                      type="button"
+                      onClick={() => set("header_pattern", p.value as HeaderPattern)}
+                      className={`px-3.5 py-2 rounded-xl text-xs font-bold border transition-all ${
+                        draft.header_pattern === p.value
+                          ? "border-amber-400 bg-amber-400/10 text-amber-300"
+                          : "border-slate-800 bg-slate-900/60 text-slate-400 hover:text-white"
+                      }`}
+                    >
+                      {p.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* 3. SURFACE FINISHES */}
+              <div className="space-y-3">
+                <span className="text-xs font-semibold text-slate-300 block">Surface Finish</span>
+                <div className="grid grid-cols-2 gap-2">
+                  {FINISHES.map((f) => (
+                    <button
+                      key={f.value}
+                      type="button"
+                      onClick={() => set("surface_finish", f.value as SurfaceFinish)}
+                      className={`px-3 py-2.5 rounded-xl text-xs font-bold border transition-all ${
+                        draft.surface_finish === f.value
+                          ? "border-amber-400 bg-amber-400/10 text-amber-300"
+                          : "border-slate-800 bg-slate-900/60 text-slate-400 hover:text-white"
+                      }`}
+                    >
+                      {f.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* 4. FIVE CUSTOM COLOR CONTROLS */}
+              <div className="space-y-3">
+                <span className="text-xs font-semibold text-slate-300 block">
+                  Five Color Controls
+                </span>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                  <ColorPickerField
+                    label="1. Background"
+                    value={draft.bg_color || "#08080A"}
+                    onChange={(v) => set("bg_color", v)}
+                  />
+                  <ColorPickerField
+                    label="2. Surface"
+                    value={draft.surface_color || "#121216"}
+                    onChange={(v) => set("surface_color", v)}
+                  />
+                  <ColorPickerField
+                    label="3. Primary Accent"
+                    value={draft.accent_color || "#6B21A8"}
+                    onChange={(v) => set("accent_color", v)}
+                  />
+                  <ColorPickerField
+                    label="4. Champagne Accent"
+                    value={draft.champagne_accent || "#E6D5AC"}
+                    onChange={(v) => set("champagne_accent", v)}
+                  />
+                  <ColorPickerField
+                    label="5. Text Color"
+                    value={draft.text_color || "#FAFAFA"}
+                    onChange={(v) => set("text_color", v)}
+                  />
+                </div>
+              </div>
+
+              {/* 5. CORNER STYLE & FONT */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <span className="text-xs font-semibold text-slate-300 block">Corner Style</span>
+                  <div className="flex gap-1.5">
+                    {RADIUS_OPTIONS.map((r) => (
+                      <button
+                        key={r.value}
+                        type="button"
+                        onClick={() => set("border_radius", r.value as BorderRadius)}
+                        className={`flex-1 py-2 text-[11px] font-bold rounded-xl border transition-all ${
+                          draft.border_radius === r.value
+                            ? "border-amber-400 bg-amber-400/10 text-amber-300"
+                            : "border-slate-800 bg-slate-900/60 text-slate-400"
+                        }`}
+                      >
+                        {r.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <span className="text-xs font-semibold text-slate-300 block">Card Font</span>
+                  <div className="flex gap-1.5">
+                    {FONT_OPTIONS.map((font) => (
+                      <button
+                        key={font.value}
+                        type="button"
+                        onClick={() => set("font_family", font.value as FontFamily)}
+                        className={`flex-1 py-2 text-[10px] font-bold rounded-xl border truncate transition-all ${
+                          draft.font_family === font.value
+                            ? "border-amber-400 bg-amber-400/10 text-amber-300"
+                            : "border-slate-800 bg-slate-900/60 text-slate-400"
+                        }`}
+                      >
+                        {font.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
           )}
+
+          {/* STANDARD CARD EDIT FORM SECTIONS */}
+          <Section title={t("personalInfo")}>
+            <Input
+              label={t("fullName")}
+              value={draft.full_name}
+              onChange={(v) => set("full_name", v)}
+            />
+            <Input
+              label={t("cardLink")}
+              value={draft.slug}
+              onChange={(v) => set("slug", slugify(v))}
+              hint={`/c/${slugify(draft.slug || draft.full_name) || "your-name"}`}
+            />
+            <Input
+              label={t("jobTitle")}
+              value={draft.title ?? ""}
+              onChange={(v) => set("title", v)}
+            />
+            <Input
+              label={t("company")}
+              value={draft.company ?? ""}
+              onChange={(v) => set("company", v)}
+            />
+            <Input
+              label={t("bio")}
+              value={draft.bio ?? ""}
+              onChange={(v) => set("bio", v)}
+              textarea
+            />
+          </Section>
+
+          <Section title={t("photosMedia")}>
+            <Dropzone
+              label={t("profilePhoto")}
+              value={draft.avatar_url}
+              userId={userId}
+              onChange={(url) => set("avatar_url", url)}
+            />
+            <Dropzone
+              label={t("logoBadge")}
+              value={draft.logo_url}
+              userId={userId}
+              round
+              onChange={(url) => set("logo_url", url)}
+            />
+          </Section>
+
+          <Section title={t("contactDetails")}>
+            <Input label={t("phoneNumber")} value={draft.phone} onChange={(v) => set("phone", v)} />
+            <Input
+              label={t("whatsappNumber")}
+              value={draft.whatsapp_phone ?? ""}
+              onChange={(v) => set("whatsapp_phone", v)}
+              hint="Auto-formats local numbers (e.g. 0501234567 -> 966501234567)"
+            />
+            <Input
+              label={t("whatsappMessage")}
+              value={draft.whatsapp_message ?? ""}
+              onChange={(v) => set("whatsapp_message", v)}
+            />
+            <Input
+              label={t("emailAddress")}
+              value={draft.email ?? ""}
+              onChange={(v) => set("email", v)}
+            />
+          </Section>
+
+          <Section title={t("socialLinks")}>
+            <Input
+              label="LinkedIn"
+              value={draft.social_links?.linkedin ?? ""}
+              onChange={(v) => setSocial("linkedin", v)}
+            />
+            <Input
+              label="Instagram"
+              value={draft.social_links?.instagram ?? ""}
+              onChange={(v) => setSocial("instagram", v)}
+            />
+            <Input
+              label="X / Twitter"
+              value={draft.social_links?.twitter ?? ""}
+              onChange={(v) => setSocial("twitter", v)}
+            />
+            <Input
+              label="Website"
+              value={draft.social_links?.website ?? ""}
+              onChange={(v) => setSocial("website", v)}
+            />
+          </Section>
+
+          <Section title={t("bilingualArabic")}>
+            <label className="flex items-center gap-2.5 text-sm text-slate-200">
+              <input
+                type="checkbox"
+                checked={draft.enable_arabic}
+                onChange={(e) => {
+                  set("enable_arabic", e.target.checked);
+                  setShowArabic(e.target.checked);
+                }}
+                className="h-4 w-4 accent-purple-600"
+              />
+              {t("enableArabicSwitch")}
+            </label>
+            {showArabic && (
+              <div className="space-y-4 pt-2" dir="rtl">
+                <Input
+                  label={t("arFullName")}
+                  value={draft.full_name_ar ?? ""}
+                  onChange={(v) => set("full_name_ar", v)}
+                />
+                <Input
+                  label={t("arJobTitle")}
+                  value={draft.title_ar ?? ""}
+                  onChange={(v) => set("title_ar", v)}
+                />
+                <Input
+                  label={t("arBio")}
+                  value={draft.bio_ar ?? ""}
+                  onChange={(v) => set("bio_ar", v)}
+                  textarea
+                />
+              </div>
+            )}
+          </Section>
         </div>
       </div>
 
-      {/* STYLE PANEL */}
-      <Section title={t("quickStyling")}>
-        <Field label={t("accentColor")}>
-          <div className="flex flex-wrap items-center gap-2">
-            {COLOR_PRESETS.map((p) => (
+      {/* CONFIRMATION MODAL FOR DEACTIVATING PUBLIC CARD */}
+      {showDeactivateModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-4">
+          <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 max-w-md w-full shadow-2xl space-y-5">
+            <div className="w-12 h-12 rounded-2xl bg-red-500/10 border border-red-500/20 text-red-400 flex items-center justify-center">
+              <PowerOff className="w-6 h-6" />
+            </div>
+
+            <div className="space-y-2">
+              <h3 className="text-xl font-bold text-white">
+                {(draft.is_active ?? true) ? "Disable Public Profile?" : "Enable Public Profile?"}
+              </h3>
+              <p className="text-xs text-slate-400 leading-relaxed">
+                {(draft.is_active ?? true)
+                  ? "This will turn your public profile (/c/" +
+                    draft.slug +
+                    ") into a 404 inactive page. Note: Your physical permanent token (/t/:token) identity will remain completely safe and protected."
+                  : "This will reactivate your public profile URL (/c/" + draft.slug + ")."}
+              </p>
+            </div>
+
+            <div className="flex justify-end space-x-3 pt-2">
               <button
-                key={p.value}
                 type="button"
-                title={p.name}
-                onClick={() => set("accent_color", p.value)}
-                className="relative h-9 w-9 rounded-full border border-border transition hover:scale-110"
-                style={{ backgroundColor: p.value }}
+                onClick={() => setShowDeactivateModal(false)}
+                className="px-4 py-2 text-xs font-semibold text-slate-400 hover:text-white"
               >
-                {draft.accent_color === p.value && (
-                  <Check className="absolute inset-0 m-auto h-4 w-4 text-white" />
-                )}
+                Cancel
               </button>
-            ))}
-            <label className="flex items-center gap-2 rounded-full border border-border px-2 py-1 text-xs">
-              <input
-                type="color"
-                value={draft.accent_color}
-                onChange={(e) => set("accent_color", e.target.value)}
-                className="h-6 w-6 cursor-pointer rounded-full border-0 bg-transparent p-0"
-              />
-              Custom
-            </label>
-          </div>
-        </Field>
 
-        <Field label={t("cardBackground")}>
-          <div className="flex items-center gap-3">
-            <input
-              type="color"
-              value={draft.bg_color}
-              onChange={(e) => set("bg_color", e.target.value)}
-              className="h-9 w-12 cursor-pointer rounded-lg border border-border bg-transparent"
-            />
-            <input
-              value={draft.bg_color}
-              onChange={(e) => set("bg_color", e.target.value)}
-              className="h-9 w-28 rounded-lg border border-border bg-transparent px-3 text-xs"
-            />
-          </div>
-        </Field>
-
-        <Field label={t("headerPattern")}>
-          <div className="flex gap-2">
-            {PATTERNS.map((p) => (
               <button
-                key={p.value}
                 type="button"
-                onClick={() => set("header_pattern", p.value as HeaderPattern)}
-                className={`rounded-full border px-4 py-1.5 text-xs font-medium transition ${
-                  draft.header_pattern === p.value
-                    ? "border-primary bg-primary/15 text-primary"
-                    : "border-border text-muted-foreground"
-                }`}
+                onClick={() => void handleToggleDeactivate()}
+                disabled={deactivating}
+                className="px-4 py-2 rounded-xl bg-red-600 hover:bg-red-500 text-white font-bold text-xs flex items-center space-x-1.5"
               >
-                {p.label}
+                {deactivating ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : null}
+                <span>Confirm</span>
               </button>
-            ))}
+            </div>
           </div>
-        </Field>
-
-        <label className="flex items-center gap-2.5 text-sm">
-          <input
-            type="checkbox"
-            checked={draft.show_logo_badge}
-            onChange={(e) => set("show_logo_badge", e.target.checked)}
-            className="h-4 w-4 accent-primary"
-          />
-          {t("showLogoBadge")}
-        </label>
-      </Section>
-
-      <Section title={t("personalInfo")}>
-        <Input
-          label={t("fullName")}
-          value={draft.full_name}
-          onChange={(v) => set("full_name", v)}
-        />
-        <Input
-          label={t("cardLink")}
-          value={draft.slug}
-          onChange={(v) => set("slug", slugify(v))}
-          hint={`/c/${slugify(draft.slug || draft.full_name) || "your-name"}`}
-        />
-        <Input label={t("jobTitle")} value={draft.title ?? ""} onChange={(v) => set("title", v)} />
-        <Input
-          label={t("company")}
-          value={draft.company ?? ""}
-          onChange={(v) => set("company", v)}
-        />
-        <Input label={t("bio")} value={draft.bio ?? ""} onChange={(v) => set("bio", v)} textarea />
-      </Section>
-
-      <Section title={t("photosMedia")}>
-        <Dropzone
-          label={t("profilePhoto")}
-          value={draft.avatar_url}
-          userId={userId}
-          onChange={(url) => set("avatar_url", url)}
-        />
-        <Dropzone
-          label={t("logoBadge")}
-          value={draft.logo_url}
-          userId={userId}
-          round
-          onChange={(url) => set("logo_url", url)}
-        />
-      </Section>
-
-      <Section title={t("contactDetails")}>
-        <Input label={t("phoneNumber")} value={draft.phone} onChange={(v) => set("phone", v)} />
-        <Input
-          label={t("whatsappNumber")}
-          value={draft.whatsapp_phone ?? ""}
-          onChange={(v) => set("whatsapp_phone", v)}
-          hint="Auto-formats local numbers (e.g. 0501234567 -> 966501234567)"
-        />
-        <Input
-          label={t("whatsappMessage")}
-          value={draft.whatsapp_message ?? ""}
-          onChange={(v) => set("whatsapp_message", v)}
-        />
-        <Input
-          label={t("emailAddress")}
-          value={draft.email ?? ""}
-          onChange={(v) => set("email", v)}
-        />
-      </Section>
-
-      <Section title={t("socialLinks")}>
-        <Input
-          label="LinkedIn"
-          value={draft.social_links?.linkedin ?? ""}
-          onChange={(v) => setSocial("linkedin", v)}
-        />
-        <Input
-          label="Instagram"
-          value={draft.social_links?.instagram ?? ""}
-          onChange={(v) => setSocial("instagram", v)}
-        />
-        <Input
-          label="X / Twitter"
-          value={draft.social_links?.twitter ?? ""}
-          onChange={(v) => setSocial("twitter", v)}
-        />
-        <Input
-          label="Website"
-          value={draft.social_links?.website ?? ""}
-          onChange={(v) => setSocial("website", v)}
-        />
-      </Section>
-
-      <Section title={t("bilingualArabic")}>
-        <label className="flex items-center gap-2.5 text-sm">
-          <input
-            type="checkbox"
-            checked={draft.enable_arabic}
-            onChange={(e) => {
-              set("enable_arabic", e.target.checked);
-              setShowArabic(e.target.checked);
-            }}
-            className="h-4 w-4 accent-primary"
-          />
-          {t("enableArabicSwitch")}
-        </label>
-        {showArabic && (
-          <div className="space-y-4 pt-2" dir="rtl">
-            <Input
-              label={t("arFullName")}
-              value={draft.full_name_ar ?? ""}
-              onChange={(v) => set("full_name_ar", v)}
-            />
-            <Input
-              label={t("arJobTitle")}
-              value={draft.title_ar ?? ""}
-              onChange={(v) => set("title_ar", v)}
-            />
-            <Input
-              label={t("arBio")}
-              value={draft.bio_ar ?? ""}
-              onChange={(v) => set("bio_ar", v)}
-              textarea
-            />
-          </div>
-        )}
-      </Section>
-
-      {/* STICKY BOTTOM SAVE & PREVIEW BAR */}
-      <div className="fixed bottom-5 left-1/2 z-40 flex -translate-x-1/2 items-center gap-3 rounded-full border border-border/80 bg-background/90 px-4 py-2.5 shadow-2xl backdrop-blur-xl transition-all">
-        {lastAutoSaved && (
-          <span className="hidden sm:flex items-center gap-1.5 text-[11px] text-muted-foreground">
-            <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
-            {t("autoSavedAt")} {lastAutoSaved}
-          </span>
-        )}
-        <button
-          type="button"
-          onClick={() => void save()}
-          disabled={saving}
-          className="flex items-center gap-1.5 rounded-full bg-primary px-4 py-2 text-xs font-semibold text-primary-foreground transition hover:opacity-90 disabled:opacity-60"
-        >
-          {saving ? (
-            <Loader2 className="h-3.5 w-3.5 animate-spin" />
-          ) : (
-            <Save className="h-3.5 w-3.5" />
-          )}
-          {isNew ? t("publishCard") : t("saveChanges")}
-        </button>
-        <button
-          type="button"
-          onClick={() =>
-            document.getElementById("live-preview")?.scrollIntoView({ behavior: "smooth" })
-          }
-          className="flex items-center gap-1 rounded-full border border-border px-3 py-2 text-xs font-medium hover:bg-secondary"
-        >
-          <ArrowUp className="h-3.5 w-3.5" /> {t("previewCard")}
-        </button>
-      </div>
+        </div>
+      )}
     </div>
   );
 }
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <section className="glass mt-5 space-y-4 rounded-2xl p-5">
-      <h3 className="font-display text-sm font-semibold">{title}</h3>
+    <section className="justtap-glass space-y-4 rounded-3xl p-6 border border-slate-800">
+      <h3 className="font-display text-sm font-bold text-white">{title}</h3>
       {children}
     </section>
   );
 }
 
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
+function ColorPickerField({
+  label,
+  value,
+  onChange,
+}: {
+  label: string;
+  value: string;
+  onChange: (v: string) => void;
+}) {
   return (
-    <div>
-      <span className="mb-1.5 block text-xs font-medium text-muted-foreground">{label}</span>
-      {children}
+    <div className="flex items-center justify-between p-2.5 rounded-xl bg-slate-900/60 border border-slate-800">
+      <span className="text-xs font-medium text-slate-300">{label}</span>
+      <div className="flex items-center space-x-2">
+        <input
+          type="color"
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          className="w-7 h-7 rounded-lg border border-slate-700 bg-transparent cursor-pointer"
+        />
+        <input
+          type="text"
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          className="w-20 px-2 py-1 text-[11px] font-mono bg-slate-950 border border-slate-800 rounded-lg text-slate-200"
+        />
+      </div>
     </div>
   );
 }
@@ -546,22 +940,22 @@ function Input({
 }) {
   return (
     <label className="block">
-      <span className="mb-1.5 block text-xs font-medium text-muted-foreground">{label}</span>
+      <span className="mb-1.5 block text-xs font-medium text-slate-300">{label}</span>
       {textarea ? (
         <textarea
           rows={3}
           value={value}
           onChange={(e) => onChange(e.target.value)}
-          className="w-full rounded-xl border border-border bg-transparent px-4 py-3 text-sm outline-none focus:border-ring"
+          className="w-full rounded-xl border border-slate-800 bg-slate-950/80 px-4 py-3 text-sm text-slate-100 outline-none focus:border-purple-500"
         />
       ) : (
         <input
           value={value}
           onChange={(e) => onChange(e.target.value)}
-          className="h-11 w-full rounded-xl border border-border bg-transparent px-4 text-sm outline-none focus:border-ring"
+          className="h-11 w-full rounded-xl border border-slate-800 bg-slate-950/80 px-4 text-sm text-slate-100 outline-none focus:border-purple-500"
         />
       )}
-      {hint && <span className="mt-1 block text-[11px] text-muted-foreground">{hint}</span>}
+      {hint && <span className="mt-1 block text-[11px] text-slate-400">{hint}</span>}
     </label>
   );
 }

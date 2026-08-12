@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { createClient } from "@supabase/supabase-js";
 import { SUPABASE_ANON_KEY, SUPABASE_URL } from "../supabase";
 
-const STAGING_BASE = "https://v2-05-admin-tag-provisioning.justtap-v2-staging.pages.dev";
+const STAGING_BASE = "https://v2-06-dashboard-cardeditor-e.justtap-v2-staging.pages.dev";
 const HTML_HEADERS = { Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8" };
 
 describe("Live Cloudflare Staging Acceptance Suite", () => {

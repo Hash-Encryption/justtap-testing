@@ -31,31 +31,40 @@ export function AnalyticsTab({ cardId }: { cardId: string }) {
   }, [cardId]);
 
   if (loading) {
-    return <Loader2 className="mx-auto mt-10 h-5 w-5 animate-spin text-primary" />;
+    return <Loader2 className="mx-auto mt-10 h-6 w-6 animate-spin text-purple-500" />;
   }
 
   return (
-    <div className="space-y-4">
-      <div className="grid gap-3 sm:grid-cols-2">
-        <Metric icon={<Eye className="h-4 w-4" />} label="Total scans / views" value={views} />
+    <div className="space-y-6">
+      <div className="grid gap-4 sm:grid-cols-2">
         <Metric
-          icon={<Download className="h-4 w-4" />}
-          label="Contact downloads"
+          icon={<Eye className="w-5 h-5 text-purple-400" />}
+          label="Total Scans & Views"
+          value={views}
+        />
+        <Metric
+          icon={<Download className="w-5 h-5 text-emerald-400" />}
+          label="Contact Downloads (vCard)"
           value={downloads}
         />
       </div>
-      <div className="glass rounded-2xl p-5">
-        <h3 className="font-display text-sm font-semibold">Recent activity</h3>
+      <div className="justtap-glass rounded-3xl p-6 border border-slate-800">
+        <h3 className="font-display text-base font-bold text-white">Recent Activity Log</h3>
         {recent.length === 0 ? (
-          <p className="mt-2 text-sm text-muted-foreground">No activity yet.</p>
+          <p className="mt-3 text-xs text-slate-400">No activity recorded yet for this card.</p>
         ) : (
-          <ul className="mt-3 space-y-2 text-sm">
+          <ul className="mt-4 space-y-2.5 text-xs">
             {recent.map((r, i) => (
-              <li key={i} className="flex justify-between border-b border-border/60 pb-2">
-                <span className="text-muted-foreground">
-                  {r.event_type === "page_view" ? "Card viewed" : "Contact saved"}
+              <li
+                key={i}
+                className="flex justify-between items-center border-b border-slate-800/80 pb-2.5"
+              >
+                <span className="text-slate-200 font-medium">
+                  {r.event_type === "page_view"
+                    ? "👀 Card Profile Viewed"
+                    : "💾 vCard Contact Downloaded"}
                 </span>
-                <span className="text-xs text-muted-foreground">
+                <span className="text-[11px] text-slate-400 font-mono">
                   {new Date(r.created_at).toLocaleString()}
                 </span>
               </li>
@@ -69,10 +78,10 @@ export function AnalyticsTab({ cardId }: { cardId: string }) {
 
 function Metric({ icon, label, value }: { icon: React.ReactNode; label: string; value: number }) {
   return (
-    <div className="glass rounded-2xl p-5">
-      <div className="flex items-center gap-2 text-primary">{icon}</div>
-      <p className="mt-3 font-display text-4xl font-bold">{value}</p>
-      <p className="mt-1 text-xs text-muted-foreground">{label}</p>
+    <div className="justtap-glass rounded-3xl p-6 border border-slate-800">
+      <div className="flex items-center space-x-2">{icon}</div>
+      <p className="mt-3 font-display text-4xl font-extrabold text-white tracking-tight">{value}</p>
+      <p className="mt-1 text-xs font-semibold text-slate-400">{label}</p>
     </div>
   );
 }

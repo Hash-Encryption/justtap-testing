@@ -14,7 +14,9 @@ export function HeaderCut({
   bgColor: string;
   accentColor: string;
 }) {
-  const shapes: Record<HeaderPattern, { accent: string; base: string }> = {
+  if (pattern === "none") return null;
+
+  const shapes: Record<Exclude<HeaderPattern, "none">, { accent: string; base: string }> = {
     wave: {
       accent: "M0,52 C90,110 230,-10 375,44 L375,120 L0,120 Z",
       base: "M0,66 C90,124 230,4 375,58 L375,120 L0,120 Z",
@@ -27,8 +29,13 @@ export function HeaderCut({
       accent: "M0,120 C0,52 84,18 187,18 C290,18 375,52 375,120 Z",
       base: "M0,120 C0,66 84,32 187,32 C290,32 375,66 375,120 Z",
     },
+    geometric: {
+      accent: "M0,120 L187,30 L375,120 Z",
+      base: "M0,120 L187,48 L375,120 Z",
+    },
   };
-  const s = shapes[pattern] ?? shapes.wave;
+
+  const s = shapes[pattern as Exclude<HeaderPattern, "none">] ?? shapes.wave;
 
   return (
     <svg

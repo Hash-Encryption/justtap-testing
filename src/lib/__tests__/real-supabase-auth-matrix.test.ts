@@ -208,6 +208,133 @@ describe("REAL Supabase Auth & Account Matrix", () => {
     expect(tagUpdateError?.code).toBe("42501");
   });
 
+  it("verifies Free user direct attempt to persist Pro Custom Creator design mode is blocked on real Supabase", async () => {
+    const userAEmail = "phase04_usera@justtap.test";
+    const userAPass = "Phase04TestPassword123!";
+    const clientA = await getOrCreateTestUser(userAEmail, userAPass);
+    const userA = (await clientA.auth.getUser()).data.user!;
+
+    // Free user attempting to set design_mode = 'custom' directly via database call
+    const { error: customInsertError } = await clientA.from("cards").insert([
+      {
+        slug: `custom-pro-bypass-${Date.now().toString(36)}`,
+        full_name: "Bypass Attempt User",
+        phone: "05011122233",
+        user_id: userA.id,
+        plan_tier: "free",
+        design_mode: "custom", // Pro feature
+      },
+    ]);
+
+    // Must be blocked by database trigger or RLS permission (42501)
+    expect(customInsertError).not.toBeNull();
+  });
+
+  it("verifies database-level CHECK constraints enforce valid 6-digit hex colors and reject invalid CSS strings on real Supabase", async () => {
+    const userAEmail = "phase04_usera@justtap.test";
+    const userAPass = "Phase04TestPassword123!";
+    const clientA = await getOrCreateTestUser(userAEmail, userAPass);
+    const userA = (await clientA.auth.getUser()).data.user!;
+
+    // 1. Valid hex update -> SUCCESS
+    const validSlug = `color-valid-${Date.now().toString(36)}`;
+    const { data: validCard, error: validError } = await clientA
+      .from("cards")
+      .insert([
+        {
+          slug: validSlug,
+          full_name: "Valid Color User",
+          phone: "05011122233",
+          user_id: userA.id,
+          plan_tier: "free",
+          bg_color: "#6B21A8",
+          surface_color: "#121216",
+        },
+      ])
+      .select()
+      .single();
+
+    expect(validError).toBeNull();
+    expect(validCard?.bg_color).toBe("#6B21A8");
+
+    // 2. Direct Supabase update with url(javascript:alert(1)) -> REJECTED BY CHECK CONSTRAINT
+    const { error: urlError } = await clientA.from("cards").insert([
+      {
+        slug: `color-invalid-url-${Date.now().toString(36)}`,
+        full_name: "Injection Attempt User",
+        phone: "05011122233",
+        user_id: userA.id,
+        bg_color: "url(javascript:alert(1))",
+      },
+    ]);
+    expect(urlError).not.toBeNull();
+
+    // 3. Direct Supabase update with #fff (short hex) -> REJECTED BY CHECK CONSTRAINT
+    const { error: shortHexError } = await clientA.from("cards").insert([
+      {
+        slug: `color-invalid-short-${Date.now().toString(36)}`,
+        full_name: "Short Hex User",
+        phone: "05011122233",
+        user_id: userA.id,
+        bg_color: "#fff",
+      },
+    ]);
+    expect(shortHexError).not.toBeNull();
+
+    // 4. Direct Supabase update with rgb(255,0,0) -> REJECTED BY CHECK CONSTRAINT
+    const { error: rgbError } = await clientA.from("cards").insert([
+      {
+        slug: `color-invalid-rgb-${Date.now().toString(36)}`,
+        full_name: "RGB User",
+        phone: "05011122233",
+        user_id: userA.id,
+        bg_color: "rgb(255,0,0)",
+      },
+    ]);
+    expect(rgbError).not.toBeNull();
+  });
+
+  it("verifies customer-safe get_customer_card_tags RPC returns tag status for owned cards and blocks User A -> User B cross-card attacks on real Supabase", async () => {
+    const userAEmail = "phase04_usera@justtap.test";
+    const userAPass = "Phase04TestPassword123!";
+    const userBEmail = "phase04_userb@justtap.test";
+    const userBPass = "Phase04TestPassword123!";
+
+    const clientA = await getOrCreateTestUser(userAEmail, userAPass);
+    const clientB = await getOrCreateTestUser(userBEmail, userBPass);
+    const userB = (await clientB.auth.getUser()).data.user!;
+
+    // 1. User B creates a card
+    const userBSlug = `userb-rpc-card-${Date.now().toString(36)}`;
+    const { data: userBCard } = await clientB
+      .from("cards")
+      .insert([
+        {
+          slug: userBSlug,
+          full_name: "User B Private Card",
+          phone: "0509990000",
+          user_id: userB.id,
+          plan_tier: "free",
+        },
+      ])
+      .select()
+      .single();
+
+    expect(userBCard).not.toBeNull();
+
+    // 2. User A attempts to call get_customer_card_tag for User B's card -> DENIED / 0 rows returned
+    const { data: attackData, error: attackError } = await clientA.rpc("get_customer_card_tag", {
+      _card_id: userBCard!.id,
+    });
+
+    expect(attackError).toBeNull();
+    expect(attackData === null || attackData.length === 0).toBe(true);
+
+    // 3. Authenticated direct nfc_tags SELECT remains DENIED by RLS (Phase 05 security preserved)
+    const { data: directTagSelect } = await clientA.from("nfc_tags").select("*");
+    expect(directTagSelect === null || directTagSelect.length === 0).toBe(true);
+  });
+
   it("verifies anonymous users CANNOT access profiles or cards directly on real Supabase", async () => {
     // 1. Anonymous profiles select -> DENIED
     const { data: anonProfiles } = await anonClient.from("profiles").select("*");

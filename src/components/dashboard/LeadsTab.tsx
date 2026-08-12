@@ -58,57 +58,69 @@ export function LeadsTab({ cardId }: { cardId: string }) {
     URL.revokeObjectURL(url);
   }
 
-  if (loading) return <Loader2 className="mx-auto mt-10 h-5 w-5 animate-spin text-primary" />;
+  if (loading) return <Loader2 className="mx-auto mt-10 h-6 w-6 animate-spin text-purple-500" />;
 
   return (
-    <div className="glass rounded-2xl p-5">
+    <div className="justtap-glass rounded-3xl p-6 border border-slate-800 space-y-4">
       <div className="flex items-center justify-between">
-        <h3 className="font-display text-sm font-semibold">Leads ({leads.length})</h3>
+        <div>
+          <h3 className="font-display text-base font-bold text-white">
+            Captured Leads ({leads.length})
+          </h3>
+          <p className="text-xs text-slate-400">
+            Leads captured from &quot;Exchange Info&quot; on your public profile
+          </p>
+        </div>
         <button
           type="button"
           onClick={exportCsv}
           disabled={leads.length === 0}
-          className="flex items-center gap-1.5 rounded-full border border-border px-3 py-1.5 text-xs font-medium disabled:opacity-50"
+          className="flex items-center space-x-1.5 rounded-xl border border-slate-700 bg-slate-900 px-3.5 py-2 text-xs font-bold text-slate-200 hover:text-white hover:bg-slate-800 disabled:opacity-50 transition-colors"
         >
-          <FileDown className="h-3.5 w-3.5" /> Export CSV
+          <FileDown className="w-3.5 h-3.5" /> <span>Export CSV</span>
         </button>
       </div>
 
       {leads.length === 0 ? (
-        <p className="mt-4 text-sm text-muted-foreground">
-          No leads yet. They appear here when a visitor taps “Exchange Info”.
+        <p className="pt-4 text-xs text-slate-400">
+          No leads captured yet for this card. Visitors can tap &quot;Exchange Info&quot; on your
+          card to share their details.
         </p>
       ) : (
-        <div className="mt-4 overflow-x-auto">
-          <table className="w-full text-left text-sm">
-            <thead className="text-xs uppercase text-muted-foreground">
+        <div className="overflow-x-auto pt-2">
+          <table className="w-full text-left text-xs">
+            <thead className="text-[11px] uppercase text-slate-400 border-b border-slate-800">
               <tr>
-                <th className="pb-2 pr-4">Name</th>
-                <th className="pb-2 pr-4">Phone</th>
-                <th className="pb-2 pr-4">Note</th>
-                <th className="pb-2 pr-4">Date</th>
-                <th />
+                <th className="pb-3 pr-4">Name</th>
+                <th className="pb-3 pr-4">Phone</th>
+                <th className="pb-3 pr-4">Note</th>
+                <th className="pb-3 pr-4">Date</th>
+                <th className="pb-3" />
               </tr>
             </thead>
-            <tbody>
+            <tbody className="divide-y divide-slate-800/60">
               {leads.map((l) => (
-                <tr key={l.id} className="border-t border-border/60">
-                  <td className="py-2.5 pr-4 font-medium">{decodeHtmlEntities(l.sender_name)}</td>
-                  <td className="py-2.5 pr-4">{decodeHtmlEntities(l.sender_phone)}</td>
-                  <td className="py-2.5 pr-4 text-muted-foreground">
+                <tr key={l.id} className="hover:bg-slate-900/40">
+                  <td className="py-3 pr-4 font-bold text-white">
+                    {decodeHtmlEntities(l.sender_name)}
+                  </td>
+                  <td className="py-3 pr-4 text-slate-300 font-mono">
+                    {decodeHtmlEntities(l.sender_phone)}
+                  </td>
+                  <td className="py-3 pr-4 text-slate-400 max-w-xs truncate">
                     {l.note ? decodeHtmlEntities(l.note) : "—"}
                   </td>
-                  <td className="py-2.5 pr-4 text-xs text-muted-foreground">
+                  <td className="py-3 pr-4 text-[11px] text-slate-400 font-mono">
                     {new Date(l.created_at).toLocaleDateString()}
                   </td>
-                  <td>
+                  <td className="py-3 text-right">
                     <button
                       type="button"
                       onClick={() => void remove(l.id)}
                       aria-label="Delete lead"
-                      className="rounded-lg p-1.5 text-muted-foreground hover:text-destructive"
+                      className="rounded-lg p-1.5 text-slate-500 hover:text-red-400 transition-colors"
                     >
-                      <Trash2 className="h-4 w-4" />
+                      <Trash2 className="w-4 h-4" />
                     </button>
                   </td>
                 </tr>

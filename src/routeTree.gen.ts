@@ -21,6 +21,7 @@ import { Route as CSlugRouteImport } from './routes/c.$slug'
 import { Route as TTokenRouteImport } from './routes/t.$token'
 import { Route as ApiOgSlugRouteImport } from './routes/api/og.$slug'
 import { Route as ApiVcardSlugRouteImport } from './routes/api/vcard.$slug'
+import { Route as ApiWalletSlugRouteImport } from './routes/api/wallet.$slug'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -82,6 +83,11 @@ const ApiVcardSlugRoute = ApiVcardSlugRouteImport.update({
   path: '/api/vcard/$slug',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiWalletSlugRoute = ApiWalletSlugRouteImport.update({
+  id: '/api/wallet/$slug',
+  path: '/api/wallet/$slug',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -96,6 +102,7 @@ export interface FileRoutesByFullPath {
   '/t/$token': typeof TTokenRoute
   '/api/og/$slug': typeof ApiOgSlugRoute
   '/api/vcard/$slug': typeof ApiVcardSlugRoute
+  '/api/wallet/$slug': typeof ApiWalletSlugRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -110,6 +117,7 @@ export interface FileRoutesByTo {
   '/t/$token': typeof TTokenRoute
   '/api/og/$slug': typeof ApiOgSlugRoute
   '/api/vcard/$slug': typeof ApiVcardSlugRoute
+  '/api/wallet/$slug': typeof ApiWalletSlugRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -125,6 +133,7 @@ export interface FileRoutesById {
   '/t/$token': typeof TTokenRoute
   '/api/og/$slug': typeof ApiOgSlugRoute
   '/api/vcard/$slug': typeof ApiVcardSlugRoute
+  '/api/wallet/$slug': typeof ApiWalletSlugRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -141,6 +150,7 @@ export interface FileRouteTypes {
     | '/t/$token'
     | '/api/og/$slug'
     | '/api/vcard/$slug'
+    | '/api/wallet/$slug'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -155,6 +165,7 @@ export interface FileRouteTypes {
     | '/t/$token'
     | '/api/og/$slug'
     | '/api/vcard/$slug'
+    | '/api/wallet/$slug'
   id:
     | '__root__'
     | '/'
@@ -169,6 +180,7 @@ export interface FileRouteTypes {
     | '/t/$token'
     | '/api/og/$slug'
     | '/api/vcard/$slug'
+    | '/api/wallet/$slug'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -184,6 +196,7 @@ export interface RootRouteChildren {
   TTokenRoute: typeof TTokenRoute
   ApiOgSlugRoute: typeof ApiOgSlugRoute
   ApiVcardSlugRoute: typeof ApiVcardSlugRoute
+  ApiWalletSlugRoute: typeof ApiWalletSlugRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -272,6 +285,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiVcardSlugRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/wallet/$slug': {
+      id: '/api/wallet/$slug'
+      path: '/api/wallet/$slug'
+      fullPath: '/api/wallet/$slug'
+      preLoaderRoute: typeof ApiWalletSlugRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -288,6 +308,7 @@ const rootRouteChildren: RootRouteChildren = {
   TTokenRoute: TTokenRoute,
   ApiOgSlugRoute: ApiOgSlugRoute,
   ApiVcardSlugRoute: ApiVcardSlugRoute,
+  ApiWalletSlugRoute: ApiWalletSlugRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
