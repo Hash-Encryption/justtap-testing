@@ -11,8 +11,10 @@ import {
   LogOut,
   Plus,
   Power,
+  Radio,
   ShieldAlert,
   Sparkles,
+  Tag,
   Trash2,
   UserPlus,
   Users,
@@ -23,6 +25,15 @@ import { supabase } from "@/lib/supabase";
 import { slugify, type Card, type PlanTier } from "@/lib/card";
 import { useAuth, useIsAdmin } from "@/hooks/useAuth";
 import { slugValidationMessage, validateSlug } from "@/lib/slug";
+import {
+  assignNfcTag,
+  getNfcInventory,
+  provisionNfcTag,
+  searchCardsForAssignment,
+  updateTagStatus,
+  type CardAssignmentOption,
+  type NfcInventoryRow,
+} from "@/lib/nfc-admin";
 
 export const Route = createFileRoute("/admin")({
   ssr: false,
@@ -73,10 +84,21 @@ function AdminPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [authLoggingIn, setAuthLoggingIn] = useState(false);
 
-  const [activeTab, setActiveTab] = useState<"clients" | "cards">("clients");
+  const [activeTab, setActiveTab] = useState<"clients" | "cards" | "nfc">("clients");
   const [cardRows, setCardRows] = useState<CardRow[]>([]);
   const [profileRows, setProfileRows] = useState<ProfileRow[]>([]);
+  const [nfcRows, setNfcRows] = useState<NfcInventoryRow[]>([]);
+  const [assignableCards, setAssignableCards] = useState<CardAssignmentOption[]>([]);
   const [fetching, setFetching] = useState(true);
+
+  // NFC Provisioning Form State
+  const [provisionCardId, setProvisionCardId] = useState("");
+  const [provisioning, setProvisioning] = useState(false);
+
+  // Tag Assignment Modal/Inline State
+  const [assigningToken, setAssigningToken] = useState<string | null>(null);
+  const [targetAssignCardId, setTargetAssignCardId] = useState("");
+  const [assigning, setAssigning] = useState(false);
 
   // Client Account Creation Form State (Name, Email, Phone, Plan Tier)
   const [clientName, setClientName] = useState("");
@@ -139,13 +161,21 @@ function AdminPage() {
 
   const load = useCallback(async () => {
     setFetching(true);
-    const [{ data: cards }, { data: events }, { data: leads }, { data: profiles }] =
-      await Promise.all([
-        supabase.from("cards").select("*").order("created_at", { ascending: false }),
-        supabase.from("card_analytics").select("card_id, event_type"),
-        supabase.from("card_leads").select("card_id"),
-        supabase.from("profiles").select("*").order("created_at", { ascending: false }),
-      ]);
+    const [
+      { data: cards },
+      { data: events },
+      { data: leads },
+      { data: profiles },
+      nfcRes,
+      assignableRes,
+    ] = await Promise.all([
+      supabase.from("cards").select("*").order("created_at", { ascending: false }),
+      supabase.from("card_analytics").select("card_id, event_type"),
+      supabase.from("card_leads").select("card_id"),
+      supabase.from("profiles").select("*").order("created_at", { ascending: false }),
+      getNfcInventory(),
+      searchCardsForAssignment(),
+    ]);
 
     const ev = events ?? [];
     const ld = leads ?? [];
@@ -175,12 +205,63 @@ function AdminPage() {
       }),
     );
 
+    setNfcRows(nfcRes.data || []);
+    setAssignableCards(assignableRes.data || []);
     setFetching(false);
   }, []);
 
   useEffect(() => {
     if (isAdmin) void load();
   }, [isAdmin, load]);
+
+  // Handle Privileged Tag Provisioning
+  async function handleProvisionTag(e: React.FormEvent) {
+    e.preventDefault();
+    setProvisioning(true);
+    const res = await provisionNfcTag(provisionCardId || undefined);
+    setProvisioning(false);
+
+    if (res.error) {
+      toast.error(`Provisioning failed: ${res.error}`);
+      return;
+    }
+
+    toast.success(`✨ Provisioned new NFC tag: ${res.data?.token}`);
+    setProvisionCardId("");
+    void load();
+  }
+
+  // Handle Privileged Tag Assignment / Reassignment
+  async function handleAssignTag(token: string) {
+    if (!targetAssignCardId) {
+      toast.error("Please select a target card for assignment");
+      return;
+    }
+    setAssigning(true);
+    const res = await assignNfcTag(token, targetAssignCardId);
+    setAssigning(false);
+
+    if (res.error) {
+      toast.error(`Assignment failed: ${res.error}`);
+      return;
+    }
+
+    toast.success("NFC tag assignment updated!");
+    setAssigningToken(null);
+    setTargetAssignCardId("");
+    void load();
+  }
+
+  // Handle Tag Lifecycle Status Change
+  async function handleUpdateStatus(token: string, newStatus: "active" | "inactive" | "revoked") {
+    const res = await updateTagStatus(token, newStatus);
+    if (res.error) {
+      toast.error(`Status update failed: ${res.error}`);
+      return;
+    }
+    toast.success(`Tag status updated to ${newStatus}`);
+    void load();
+  }
 
   // Handle Client Account Creation
   async function createClientAccount(e: React.FormEvent) {
@@ -498,6 +579,16 @@ function AdminPage() {
           >
             <CreditCard className="h-4 w-4" /> Digital Cards ({cardRows.length})
           </button>
+          <button
+            onClick={() => setActiveTab("nfc")}
+            className={`flex items-center gap-2 pb-3 text-sm font-medium border-b-2 transition-colors ${
+              activeTab === "nfc"
+                ? "border-primary text-primary"
+                : "border-transparent text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            <Tag className="h-4 w-4" /> NFC Inventory ({nfcRows.length})
+          </button>
         </div>
 
         {/* CLIENTS TAB */}
@@ -802,6 +893,205 @@ function AdminPage() {
                         </tr>
                       );
                     })}
+                  </tbody>
+                </table>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* NFC INVENTORY TAB */}
+        {activeTab === "nfc" && (
+          <div className="space-y-6 mt-5">
+            {/* Provision NFC Tag Form */}
+            <form
+              onSubmit={handleProvisionTag}
+              className="glass rounded-2xl p-5 border border-border/60"
+            >
+              <h2 className="text-base font-semibold mb-3 flex items-center gap-2">
+                <Tag className="h-4 w-4 text-primary" /> Provision Physical NFC Tag (Privileged
+                Server Token)
+              </h2>
+              <div className="grid gap-3 sm:grid-cols-3 items-center">
+                <select
+                  value={provisionCardId}
+                  onChange={(e) => setProvisionCardId(e.target.value)}
+                  className="h-10 rounded-xl border border-border bg-background px-3 text-sm font-medium"
+                >
+                  <option value="">-- Unassigned (Inventory Stock) --</option>
+                  {assignableCards.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.full_name} ({c.slug})
+                    </option>
+                  ))}
+                </select>
+
+                <button
+                  type="submit"
+                  disabled={provisioning}
+                  className="flex h-10 items-center justify-center gap-1.5 rounded-xl bg-primary text-sm font-semibold text-primary-foreground hover:opacity-90 transition-opacity disabled:opacity-50"
+                >
+                  {provisioning ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Plus className="h-4 w-4" />
+                  )}
+                  {provisioning ? "Generating Server Token..." : "Provision NFC Tag"}
+                </button>
+              </div>
+              <p className="mt-2 text-xs text-muted-foreground">
+                Tokens are cryptographically generated on the server (32-character CSPRNG) and
+                remain immutable.
+              </p>
+            </form>
+
+            {/* NFC Inventory Table */}
+            <div className="glass overflow-x-auto rounded-2xl p-5 border border-border/60">
+              {fetching ? (
+                <Loader2 className="mx-auto h-5 w-5 animate-spin text-primary" />
+              ) : nfcRows.length === 0 ? (
+                <div className="py-8 text-center text-sm text-muted-foreground">
+                  No NFC tags provisioned yet. Use the form above to provision your first tag.
+                </div>
+              ) : (
+                <table className="w-full text-left text-sm">
+                  <thead className="text-xs uppercase text-muted-foreground">
+                    <tr>
+                      <th className="pb-3 pr-4">Tag Token</th>
+                      <th className="pb-3 pr-4">Assigned Card / Slug</th>
+                      <th className="pb-3 pr-4">Status</th>
+                      <th className="pb-3 pr-4">Created At</th>
+                      <th className="pb-3 pr-4">Assigned At</th>
+                      <th className="pb-3 pr-4 text-right">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {nfcRows.map((t) => (
+                      <tr key={t.tag_id} className="border-t border-border/60">
+                        <td className="py-3 pr-4 font-mono text-xs text-primary font-semibold">
+                          <a
+                            href={`/t/${t.token}`}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="inline-flex items-center gap-1 hover:underline"
+                            title="Test permanent /t/:token route"
+                          >
+                            {t.token.slice(0, 16)}... <ExternalLink className="h-3 w-3" />
+                          </a>
+                        </td>
+                        <td className="py-3 pr-4">
+                          {t.card_id ? (
+                            <div>
+                              <span className="font-medium text-xs block">{t.card_name}</span>
+                              <a
+                                href={`/c/${t.card_slug}`}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="text-xs text-primary hover:underline"
+                              >
+                                /c/{t.card_slug}
+                              </a>
+                            </div>
+                          ) : (
+                            <span className="text-xs text-muted-foreground italic">Unassigned</span>
+                          )}
+                        </td>
+                        <td className="py-3 pr-4">
+                          <span
+                            className={`rounded-full px-2.5 py-0.5 text-[11px] font-semibold ${
+                              t.status === "active"
+                                ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30"
+                                : t.status === "inactive"
+                                  ? "bg-amber-500/15 text-amber-500 border border-amber-500/30"
+                                  : "bg-destructive/15 text-destructive border border-destructive/30"
+                            }`}
+                          >
+                            {t.status.toUpperCase()}
+                          </span>
+                        </td>
+                        <td className="py-3 pr-4 text-xs text-muted-foreground">
+                          {t.created_at ? new Date(t.created_at).toLocaleDateString() : "—"}
+                        </td>
+                        <td className="py-3 pr-4 text-xs text-muted-foreground">
+                          {t.assigned_at ? new Date(t.assigned_at).toLocaleDateString() : "—"}
+                        </td>
+                        <td className="py-3 text-right whitespace-nowrap">
+                          {assigningToken === t.token ? (
+                            <div className="inline-flex items-center gap-2">
+                              <select
+                                value={targetAssignCardId}
+                                onChange={(e) => setTargetAssignCardId(e.target.value)}
+                                className="h-8 rounded-lg border border-border bg-background px-2 text-xs"
+                              >
+                                <option value="">Select Card...</option>
+                                {assignableCards.map((c) => (
+                                  <option key={c.id} value={c.id}>
+                                    {c.full_name} ({c.slug})
+                                  </option>
+                                ))}
+                              </select>
+                              <button
+                                type="button"
+                                disabled={assigning}
+                                onClick={() => void handleAssignTag(t.token)}
+                                className="rounded-lg bg-primary px-2.5 py-1 text-xs font-semibold text-primary-foreground hover:opacity-90 disabled:opacity-50"
+                              >
+                                Save
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => setAssigningToken(null)}
+                                className="rounded-lg border border-border px-2.5 py-1 text-xs"
+                              >
+                                Cancel
+                              </button>
+                            </div>
+                          ) : (
+                            <div className="inline-flex items-center gap-2">
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setAssigningToken(t.token);
+                                  setTargetAssignCardId(t.card_id || "");
+                                }}
+                                className="rounded-lg bg-secondary px-2.5 py-1 text-xs font-medium text-secondary-foreground hover:bg-secondary/80 transition-colors"
+                              >
+                                {t.card_id ? "Reassign" : "Assign"}
+                              </button>
+
+                              {t.status === "active" ? (
+                                <button
+                                  type="button"
+                                  onClick={() => void handleUpdateStatus(t.token, "inactive")}
+                                  className="rounded-lg bg-amber-500/10 text-amber-500 px-2.5 py-1 text-xs font-medium hover:bg-amber-500/20"
+                                >
+                                  Deactivate
+                                </button>
+                              ) : (
+                                <button
+                                  type="button"
+                                  onClick={() => void handleUpdateStatus(t.token, "active")}
+                                  className="rounded-lg bg-emerald-500/10 text-emerald-500 px-2.5 py-1 text-xs font-medium hover:bg-emerald-500/20"
+                                >
+                                  Activate
+                                </button>
+                              )}
+
+                              {t.status !== "revoked" && (
+                                <button
+                                  type="button"
+                                  onClick={() => void handleUpdateStatus(t.token, "revoked")}
+                                  className="rounded-lg bg-destructive/10 text-destructive px-2 py-1 text-xs font-medium hover:bg-destructive/20"
+                                  title="Revoke Tag Permanently"
+                                >
+                                  Revoke
+                                </button>
+                              )}
+                            </div>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
                   </tbody>
                 </table>
               )}

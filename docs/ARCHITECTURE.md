@@ -94,12 +94,12 @@ The editor may control editable presentation and contact data. It must not contr
 
 ```text
 authenticated administrator
-  -> server-verified authorization
-  -> privileged server API
+  -> server/database-verified authorization (public.user_roles)
+  -> privileged SECURITY DEFINER RPC / server API
   -> audited Supabase operation
 ```
 
-The current custom admin credential/token flow is temporary and unresolved. The target must not rely on reversible browser-stored tokens or privileged direct browser updates.
+Admin authority is verified strictly against `public.user_roles` (`role = 'admin'`) and enforced inside privileged database RPC functions (`admin_provision_nfc_tag`, `admin_assign_nfc_tag`, `admin_update_tag_status`, `admin_get_nfc_inventory`, `admin_search_cards_for_assignment`). Permanent physical NFC 32-character tokens are generated cryptographically on the server (`generate_nfc_token()`) and remain immutable. Non-admin users and anonymous callers are denied with error `42501`.
 
 ### Server APIs
 
