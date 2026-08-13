@@ -7,7 +7,7 @@ export function PhoneFrame({ children }: { children: ReactNode }) {
         {/* Dynamic Island / Speaker Notch */}
         <div className="absolute top-4 left-1/2 -translate-x-1/2 z-20 w-28 h-5 bg-black rounded-full border border-slate-800 flex items-center justify-between px-3">
           <div className="w-2.5 h-2.5 rounded-full bg-slate-950 border border-slate-800 flex items-center justify-center">
-            <div className="w-1 h-1 rounded-full bg-blue-900/60" />
+            <div className="w-1 h-1 rounded-full bg-primary/60" />
           </div>
           <div className="w-8 h-1 rounded-full bg-slate-900" />
         </div>

@@ -245,7 +245,7 @@ export function ProFeaturesTab({ card, onChange, userId }: Props) {
       <div className="glass relative rounded-2xl border border-border/60 p-5">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="grid h-10 w-10 place-items-center rounded-xl bg-purple-500/10 text-purple-400">
+            <div className="grid h-10 w-10 place-items-center rounded-xl bg-primary/10 text-[#E6D5AC]">
               <Video className="h-5 w-5" />
             </div>
             <div>
@@ -308,7 +308,7 @@ export function ProFeaturesTab({ card, onChange, userId }: Props) {
       <div className="glass relative rounded-2xl border border-border/60 p-5">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="grid h-10 w-10 place-items-center rounded-xl bg-blue-500/10 text-blue-400">
+            <div className="grid h-10 w-10 place-items-center rounded-xl bg-primary/10 text-[#E6D5AC]">
               <FileText className="h-5 w-5" />
             </div>
             <div>
@@ -374,7 +374,7 @@ export function ProFeaturesTab({ card, onChange, userId }: Props) {
       <div className="glass relative rounded-2xl border border-border/60 p-5">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="grid h-10 w-10 place-items-center rounded-xl bg-emerald-500/10 text-emerald-400">
+            <div className="grid h-10 w-10 place-items-center rounded-xl bg-primary/10 text-[#E6D5AC]">
               <Calendar className="h-5 w-5" />
             </div>
             <div>
@@ -411,7 +411,7 @@ export function ProFeaturesTab({ card, onChange, userId }: Props) {
       <div className="glass relative rounded-2xl border border-border/60 p-5">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="grid h-10 w-10 place-items-center rounded-xl bg-amber-500/10 text-amber-400">
+            <div className="grid h-10 w-10 place-items-center rounded-xl bg-primary/10 text-[#E6D5AC]">
               <MousePointerClick className="h-5 w-5" />
             </div>
             <div>
@@ -596,7 +596,7 @@ export function ProFeaturesTab({ card, onChange, userId }: Props) {
         <div className="glass rounded-2xl border border-border/60 p-5">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="grid h-10 w-10 place-items-center rounded-xl bg-pink-500/10 text-pink-400">
+              <div className="grid h-10 w-10 place-items-center rounded-xl bg-primary/10 text-[#E6D5AC]">
                 <Sparkles className="h-5 w-5" />
               </div>
               <div>

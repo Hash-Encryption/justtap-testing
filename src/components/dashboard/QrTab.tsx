@@ -121,7 +121,7 @@ export function QrTab({ card, onUpgradeRequest }: QrTabProps) {
     const grad = ctx.createLinearGradient(0, 0, 0, 1920);
     grad.addColorStop(0, "#08080A");
     grad.addColorStop(0.5, "#121216");
-    grad.addColorStop(1, "#1e1b4b");
+    grad.addColorStop(1, "#4C1D95");
     ctx.fillStyle = grad;
     ctx.fillRect(0, 0, 1080, 1920);
 
@@ -394,8 +394,8 @@ export function QrTab({ card, onUpgradeRequest }: QrTabProps) {
           onClick={handleGenerateWallpaper}
           className={`w-full py-3 px-4 text-xs font-bold rounded-xl border flex items-center justify-center space-x-2 transition-all ${
             isPro
-              ? "bg-gradient-to-r from-purple-700 to-indigo-700 hover:from-purple-600 hover:to-indigo-600 text-white border-purple-500/40 shadow-lg shadow-purple-900/30"
-              : "bg-slate-950 text-slate-500 border-slate-800"
+              ? "bg-[#6B21A8] hover:bg-[#7E22CE] text-[#FAFAFA] border-[#6B21A8] shadow-lg shadow-[rgba(107,33,168,0.25)]"
+              : "bg-[#08080A] text-[#A1A1AA] border-[#22222A]"
           }`}
         >
           {!isPro ? (

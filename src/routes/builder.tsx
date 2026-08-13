@@ -82,7 +82,7 @@ function BuilderPage() {
         <div className="mx-auto flex max-w-3xl items-center justify-between px-5 py-3.5">
           <Link
             to="/"
-            className="flex items-center gap-2 font-display text-sm font-semibold text-muted-foreground hover:text-foreground"
+            className="flex min-h-11 items-center gap-2 font-display text-sm font-semibold text-muted-foreground hover:text-foreground"
           >
             <ArrowLeft className="h-4 w-4 rtl:rotate-180" /> {t("backToHome")}
           </Link>

@@ -81,22 +81,24 @@ function AuthPage() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col items-center justify-center p-4 font-sans selection:bg-violet-500 selection:text-white">
+    <div className="grid-glow min-h-screen bg-background text-foreground flex flex-col items-center justify-center p-4 font-sans selection:bg-primary selection:text-primary-foreground">
       {/* BRANDING */}
       <Link to="/" className="mb-8 flex items-center space-x-2 group">
-        <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-violet-600 to-indigo-500 flex items-center justify-center font-extrabold text-white text-xl shadow-lg shadow-violet-600/30 group-hover:scale-105 transition-transform">
+        <div className="w-10 h-10 rounded-2xl bg-primary border border-[#E6D5AC]/20 flex items-center justify-center font-extrabold text-primary-foreground text-xl shadow-lg shadow-[rgba(107,33,168,0.25)] group-hover:scale-105 transition-transform">
           J
         </div>
-        <span className="font-extrabold text-2xl text-white tracking-tight">JustTap</span>
+        <span className="font-display font-extrabold text-2xl text-foreground tracking-tight">
+          JustTap
+        </span>
       </Link>
 
       {/* AUTH CARD */}
-      <div className="w-full max-w-md bg-slate-900/80 border border-slate-800 rounded-3xl p-6 sm:p-8 shadow-2xl backdrop-blur-xl space-y-6">
+      <div className="justtap-glass w-full max-w-md rounded-3xl p-6 sm:p-8 space-y-6">
         <div className="text-center space-y-1">
-          <h2 className="text-2xl font-extrabold text-white">
+          <h2 className="font-display text-2xl font-extrabold text-foreground">
             {isSignUp ? "Create JustTap Account" : "Welcome Back"}
           </h2>
-          <p className="text-xs text-slate-400">
+          <p className="text-xs text-muted-foreground">
             {isSignUp
               ? "Start building your physical NFC and digital business card profile"
               : "Sign in to access your card editor, leads, and analytics"}
@@ -118,40 +120,42 @@ function AuthPage() {
         <form onSubmit={handleSubmit} className="space-y-4">
           {isSignUp && (
             <div>
-              <label className="block text-xs font-semibold text-slate-300 mb-1">Full Name</label>
+              <label className="block text-xs font-semibold text-foreground mb-1">Full Name</label>
               <div className="relative">
-                <User className="w-4 h-4 text-slate-400 absolute left-3 top-3.5" />
+                <User className="w-4 h-4 text-muted-foreground absolute left-3 top-3.5" />
                 <input
                   type="text"
                   required
                   value={fullName}
                   onChange={(e) => setFullName(e.target.value)}
                   placeholder="Hashim Alnimari"
-                  className="w-full pl-9 pr-4 py-2.5 bg-slate-800 border border-slate-700 rounded-xl text-sm text-white focus:outline-none focus:ring-2 focus:ring-violet-500"
+                  className="w-full pl-9 pr-4 py-2.5 bg-background border border-border rounded-xl text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
                 />
               </div>
             </div>
           )}
 
           <div>
-            <label className="block text-xs font-semibold text-slate-300 mb-1">Email Address</label>
+            <label className="block text-xs font-semibold text-foreground mb-1">
+              Email Address
+            </label>
             <div className="relative">
-              <Mail className="w-4 h-4 text-slate-400 absolute left-3 top-3.5" />
+              <Mail className="w-4 h-4 text-muted-foreground absolute left-3 top-3.5" />
               <input
                 type="email"
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="you@example.com"
-                className="w-full pl-9 pr-4 py-2.5 bg-slate-800 border border-slate-700 rounded-xl text-sm text-white focus:outline-none focus:ring-2 focus:ring-violet-500"
+                className="w-full pl-9 pr-4 py-2.5 bg-background border border-border rounded-xl text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
               />
             </div>
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-slate-300 mb-1">Password</label>
+            <label className="block text-xs font-semibold text-foreground mb-1">Password</label>
             <div className="relative">
-              <Lock className="w-4 h-4 text-slate-400 absolute left-3 top-3.5" />
+              <Lock className="w-4 h-4 text-muted-foreground absolute left-3 top-3.5" />
               <input
                 type="password"
                 required
@@ -159,7 +163,7 @@ function AuthPage() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="••••••••"
-                className="w-full pl-9 pr-4 py-2.5 bg-slate-800 border border-slate-700 rounded-xl text-sm text-white focus:outline-none focus:ring-2 focus:ring-violet-500"
+                className="w-full pl-9 pr-4 py-2.5 bg-background border border-border rounded-xl text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
               />
             </div>
           </div>
@@ -167,21 +171,21 @@ function AuthPage() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full py-3.5 px-4 bg-violet-600 hover:bg-violet-700 text-white font-bold rounded-2xl shadow-xl shadow-violet-600/30 flex items-center justify-center space-x-2 transition-all disabled:opacity-50 mt-2"
+            className="w-full py-3.5 px-4 bg-primary hover:bg-[#7E22CE] text-primary-foreground font-bold rounded-2xl shadow-xl shadow-[rgba(107,33,168,0.25)] flex items-center justify-center space-x-2 transition-all disabled:opacity-50 mt-2"
           >
             <span>{loading ? "Processing..." : isSignUp ? "Create Free Account" : "Sign In"}</span>
             <ArrowRight className="w-4 h-4" />
           </button>
         </form>
 
-        <div className="pt-2 text-center border-t border-slate-800">
+        <div className="pt-2 text-center border-t border-border">
           <button
             type="button"
             onClick={() => {
               setIsSignUp(!isSignUp);
               setMessage(null);
             }}
-            className="text-xs text-slate-400 hover:text-violet-400 font-medium transition-colors"
+            className="min-h-11 px-3 text-xs text-muted-foreground hover:text-[#E6D5AC] font-medium transition-colors"
           >
             {isSignUp ? "Already have an account? Sign in" : "Don't have an account? Sign up free"}
           </button>
