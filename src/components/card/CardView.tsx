@@ -233,7 +233,7 @@ export function CardView({ card, preview = false }: Props) {
       data-surface-finish={design.surfaceFinish}
       data-border-radius={design.borderRadius}
       data-font-family={design.fontFamily}
-      className="justtap-card justtap-card-enter relative mx-auto flex min-h-full w-full max-w-[430px] flex-col overflow-hidden border shadow-2xl"
+      className="justtap-card justtap-card-enter relative mx-auto flex min-h-full w-full max-w-[430px] touch-pan-y flex-col overflow-x-clip border shadow-2xl"
       style={{
         backgroundColor: bg,
         borderColor: `${champagne}24`,

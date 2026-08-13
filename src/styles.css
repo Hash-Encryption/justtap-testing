@@ -188,7 +188,7 @@
 }
 
 .justtap-card-enter {
-  animation: justtap-card-enter 240ms ease-out both;
+  animation: justtap-card-enter 240ms ease-out;
 }
 
 .justtap-card :is(a, button, input, textarea):focus-visible {

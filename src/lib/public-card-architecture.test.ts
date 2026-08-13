@@ -31,4 +31,20 @@ describe("public card architecture", () => {
     expect(preview).toContain("<CardView card={card} preview />");
     expect(preview).not.toContain("header_pattern");
   });
+
+  it("keeps Pro card entitlement database-backed and synchronized", () => {
+    const migration = readFileSync(
+      new URL(
+        "../../supabase/migrations/20260813010000_fix_pro_entitlement_sync.sql",
+        import.meta.url,
+      ),
+      "utf8",
+    );
+
+    expect(migration).toContain("NOT public.has_role(auth.uid(), 'admin')");
+    expect(migration).toContain("WHERE p.user_id = auth.uid()");
+    expect(migration).toContain("profiles_sync_plan_to_cards");
+    expect(migration).toContain("AND c.plan_tier = 'free'");
+    expect(migration).not.toMatch(/SELECT\s+\*/i);
+  });
 });

@@ -52,6 +52,21 @@ describe("CardView action isolation", () => {
     expect(html).not.toContain("data-video-preview-placeholder");
   });
 
+  it("does not render saved Pro blocks when the database boundary denies entitlement", () => {
+    const html = renderToStaticMarkup(
+      <CardView
+        card={{
+          ...actionCard,
+          plan_tier: "free",
+        }}
+      />,
+    );
+
+    expect(html).not.toContain("<iframe");
+    expect(html).not.toContain("youtube-nocookie.com");
+    expect(html).not.toContain("https://cal.example.com/action-card");
+  });
+
   it("uses the resolver-selected foreground for booking and primary actions", () => {
     const html = renderToStaticMarkup(
       <CardView

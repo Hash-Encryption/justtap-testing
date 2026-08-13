@@ -2,6 +2,7 @@ import { flushSync } from "react-dom";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, describe, expect, it } from "vitest";
 import { CardPreview } from "@/components/card/CardPreview";
+import { CardView } from "@/components/card/CardView";
 import { emptyCard, type Card } from "@/lib/card";
 import "@/styles.css";
 import { PhoneFrame } from "./PhoneFrame";
@@ -99,6 +100,7 @@ afterEach(() => {
   root?.unmount();
   root = undefined;
   document.body.innerHTML = "";
+  window.scrollTo(0, 0);
 });
 
 describe("CardEditor phone preview layout", () => {
@@ -185,5 +187,50 @@ describe("CardEditor phone preview layout", () => {
 
     expect(document.querySelector<HTMLElement>("[data-card-design]")?.dir).toBe("rtl");
     assertContainedLayout();
+  });
+});
+
+describe("public card mobile scrolling", () => {
+  it("scrolls immediately without horizontal overflow and keeps the dock usable in LTR and RTL", async () => {
+    const host = document.createElement("main");
+    host.className = "flex min-h-screen w-full justify-center overflow-x-hidden";
+    document.body.append(host);
+    root = createRoot(host);
+    flushSync(() => root?.render(<CardView card={previewCard} />));
+
+    const card = document.querySelector<HTMLElement>("[data-card-design]");
+    const dock = document.querySelector<HTMLElement>("[data-card-dock]");
+    const animation = card?.getAnimations()[0];
+    expect(card).not.toBeNull();
+    expect(dock).not.toBeNull();
+    if (!card || !dock || !animation) return;
+
+    expect(document.documentElement.scrollHeight).toBeGreaterThan(window.innerHeight);
+    expect(getComputedStyle(card).touchAction).toBe("pan-y");
+    expect(getComputedStyle(card).overflowY).not.toBe("hidden");
+
+    window.scrollBy(0, 200);
+    expect(window.scrollY).toBeGreaterThan(0);
+    expect(document.documentElement.scrollWidth).toBeLessThanOrEqual(
+      document.documentElement.clientWidth,
+    );
+    expect(getComputedStyle(dock.parentElement!).position).toBe("fixed");
+
+    await animation.finished;
+    expect(getComputedStyle(card).transform).toBe("none");
+    expect(document.querySelector("iframe")?.getAttribute("src")).toBe(
+      "https://www.youtube-nocookie.com/embed/kzfvVizScuU",
+    );
+
+    const arabicButton = Array.from(document.querySelectorAll<HTMLButtonElement>("button")).find(
+      (button) => button.textContent?.trim() === "ar",
+    );
+    arabicButton?.click();
+    await nextPaint();
+
+    expect(card.dir).toBe("rtl");
+    expect(document.documentElement.scrollWidth).toBeLessThanOrEqual(
+      document.documentElement.clientWidth,
+    );
   });
 });
