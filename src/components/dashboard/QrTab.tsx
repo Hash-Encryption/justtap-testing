@@ -205,8 +205,13 @@ export function QrTab({ card, onUpgradeRequest }: QrTabProps) {
   };
 
   const handleDownloadWalletPass = async () => {
+    if (!isPro) {
+      setShowUpgradeModal(true);
+      return;
+    }
     try {
-      const res = await fetch(`/api/wallet/${card.slug}`);
+      const tokenQuery = permanentToken ? `?token=${encodeURIComponent(permanentToken)}` : "";
+      const res = await fetch(`/api/wallet/${card.slug}${tokenQuery}`);
       if (res.status === 200) {
         const blob = await res.blob();
         const url = URL.createObjectURL(blob);
@@ -214,15 +219,14 @@ export function QrTab({ card, onUpgradeRequest }: QrTabProps) {
         a.href = url;
         a.download = `${card.slug}.pkpass`;
         a.click();
+        URL.revokeObjectURL(url);
         toast.success("Downloaded Apple Wallet Pass!");
       } else {
         const data = await res.json().catch(() => ({}));
-        toast.error(
-          data.error || "Apple Wallet signing service is not configured in this environment.",
-        );
+        toast.error(data.error || "Apple Wallet pass download failed.");
       }
-    } catch (err) {
-      toast.error("Wallet Pass download request failed.");
+    } catch {
+      toast.error("Apple Wallet provider is temporarily unavailable.");
     }
   };
 
@@ -355,16 +359,23 @@ export function QrTab({ card, onUpgradeRequest }: QrTabProps) {
           {/* Wallet Pass Download button under applicable QR */}
           <button
             type="button"
-            disabled
             onClick={handleDownloadWalletPass}
-            className="w-full py-3 px-4 bg-slate-950/60 text-slate-400 font-semibold text-xs rounded-xl border border-slate-800 flex items-center justify-between shadow-sm cursor-not-allowed opacity-75"
+            className={`w-full py-3 px-4 font-semibold text-xs rounded-xl border flex items-center justify-between shadow-sm transition-colors ${
+              isPro
+                ? "bg-black hover:bg-slate-950 text-white border-slate-700"
+                : "bg-slate-950/60 text-slate-400 border-slate-800"
+            }`}
           >
             <span className="flex items-center space-x-2">
-              <Download className="w-4 h-4 text-slate-500" />
+              {isPro ? (
+                <Download className="w-4 h-4" />
+              ) : (
+                <Lock className="w-4 h-4 text-amber-400" />
+              )}
               <span>Apple Wallet Pass (.pkpass)</span>
             </span>
             <span className="text-[10px] font-extrabold px-2.5 py-0.5 rounded-md bg-amber-500/10 text-amber-300 border border-amber-500/20">
-              Signing Unavailable in Staging
+              {isPro ? "SIGNED" : "PRO"}
             </span>
           </button>
         </div>

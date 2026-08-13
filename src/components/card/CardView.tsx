@@ -704,7 +704,7 @@ export function CardView({ card, preview = false }: Props) {
 
           <div className="space-y-2.5 pt-1">
             <a
-              {...outboundLinkProps(`/api/apple-wallet/${card.slug}`, preview)}
+              {...outboundLinkProps(`/api/wallet/${card.slug}`, preview)}
               download={`${card.slug}.pkpass`}
               className="flex h-12 w-full items-center justify-center gap-2 rounded-2xl text-sm font-bold text-white shadow-md transition active:scale-[0.98]"
               style={{ backgroundColor: "#000000" }}

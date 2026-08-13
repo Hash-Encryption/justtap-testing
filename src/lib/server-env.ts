@@ -29,3 +29,7 @@ export function getResendApiKey() {
 export function getSupabaseServiceRoleKey() {
   return getServerVariable("SUPABASE_SERVICE_ROLE_KEY");
 }
+
+export function getWalletApiKey() {
+  return getServerVariable("WALLET_API_KEY");
+}
