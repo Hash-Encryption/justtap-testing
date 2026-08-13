@@ -22,4 +22,13 @@ describe("public card architecture", () => {
     expect(existsSync(new URL("../../app/c/[slug]/page.tsx", import.meta.url))).toBe(false);
     expect(existsSync(new URL("../../public/_redirects", import.meta.url))).toBe(false);
   });
+
+  it("uses CardView as the single editor and public visual renderer", () => {
+    const preview = readFileSync(
+      new URL("../components/card/CardPreview.tsx", import.meta.url),
+      "utf8",
+    );
+    expect(preview).toContain("<CardView card={card} preview />");
+    expect(preview).not.toContain("header_pattern");
+  });
 });

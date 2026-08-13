@@ -22,10 +22,11 @@ import {
 import { toast } from "sonner";
 import { HeaderCut } from "./HeaderCut";
 import { supabase } from "@/lib/supabase";
-import { formatWhatsAppNumber, getEmbedVideoUrl, readableOn, type Card } from "@/lib/card";
+import { formatWhatsAppNumber, getEmbedVideoUrl, type Card } from "@/lib/card";
 import type { PublicCard } from "@/lib/public-card";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { LeadSubmissionSchema } from "@/lib/sanitization";
+import { cardFont, cardRadius, resolveCardDesign } from "@/lib/card-design";
 import {
   Drawer,
   DrawerContent,
@@ -39,6 +40,11 @@ type Props = {
   /** Preview mode disables analytics + outbound actions (dashboard editor). */
   preview?: boolean;
 };
+
+function outboundLinkProps(href: string | null | undefined, preview: boolean, newTab = false) {
+  if (preview || !href) return { "aria-disabled": true as const, tabIndex: -1 };
+  return newTab ? { href, target: "_blank" as const, rel: "noreferrer noopener" } : { href };
+}
 
 export function CardView({ card, preview = false }: Props) {
   const [lang, setLang] = useState<"en" | "ar">("en");
@@ -79,10 +85,36 @@ export function CardView({ card, preview = false }: Props) {
     setTimeout(() => setCopied(false), 2000);
   }
 
-  const accent = card.accent_color || "#8b5cf6";
-  const bg = card.bg_color || "#ffffff";
-  const onAccent = readableOn(accent);
-  const ink = readableOn(bg);
+  const design = resolveCardDesign(card);
+  const accent = design.accentColor;
+  const bg = design.bgColor;
+  const surface = design.surfaceColor;
+  const champagne = design.champagneAccent;
+  const text = design.textColor;
+  const onAccent = design.onAccentColor;
+  const finishStyle =
+    design.surfaceFinish === "glassmorphism"
+      ? {
+          backgroundColor: `${surface}e6`,
+          backdropFilter: "blur(16px) saturate(150%)",
+          WebkitBackdropFilter: "blur(16px) saturate(150%)",
+          borderColor: `${champagne}26`,
+        }
+      : design.surfaceFinish === "carbon_grain"
+        ? {
+            backgroundColor: surface,
+            backgroundImage: `linear-gradient(45deg, ${text}0a 25%, transparent 25%, transparent 75%, ${text}0a 75%), linear-gradient(45deg, ${text}0a 25%, transparent 25%, transparent 75%, ${text}0a 75%)`,
+            backgroundPosition: "0 0, 4px 4px",
+            backgroundSize: "8px 8px",
+            borderColor: `${champagne}1f`,
+          }
+        : design.surfaceFinish === "matte"
+          ? {
+              backgroundColor: surface,
+              backgroundImage: `radial-gradient(circle at 20% 0%, ${text}0d, transparent 38%)`,
+              borderColor: `${text}14`,
+            }
+          : { backgroundColor: surface, borderColor: surface };
 
   const name = (ar && card.full_name_ar) || card.full_name || "Your Name";
   const title = (ar && card.title_ar) || card.title;
@@ -196,8 +228,19 @@ export function CardView({ card, preview = false }: Props) {
   return (
     <div
       dir={ar ? "rtl" : "ltr"}
-      className="relative mx-auto flex min-h-full w-full max-w-[430px] flex-col"
-      style={{ backgroundColor: bg, color: ink }}
+      data-card-design={design.mode}
+      data-header-pattern={design.headerPattern}
+      data-surface-finish={design.surfaceFinish}
+      data-border-radius={design.borderRadius}
+      data-font-family={design.fontFamily}
+      className="justtap-card justtap-card-enter relative mx-auto flex min-h-full w-full max-w-[430px] flex-col overflow-hidden border shadow-2xl"
+      style={{
+        backgroundColor: bg,
+        borderColor: `${champagne}24`,
+        borderRadius: cardRadius(design.borderRadius),
+        color: text,
+        fontFamily: cardFont(design.fontFamily),
+      }}
     >
       {/* HERO */}
       <div
@@ -225,19 +268,21 @@ export function CardView({ card, preview = false }: Props) {
           type="button"
           onClick={handleShare}
           aria-label="Share card"
-          className="absolute top-4 start-4 flex h-9 w-9 items-center justify-center rounded-full bg-black/35 text-white backdrop-blur-md transition active:scale-95 hover:bg-black/50"
+          className="absolute top-4 start-4 flex h-11 w-11 items-center justify-center rounded-full bg-black/45 text-white backdrop-blur-md transition active:scale-95 hover:bg-black/60"
         >
           <Share2 className="h-4 w-4" />
         </button>
 
         {card.enable_arabic && (
-          <div className="absolute top-4 end-4 flex overflow-hidden rounded-full bg-black/35 p-0.5 backdrop-blur-md">
+          <div className="absolute top-4 end-4 flex gap-1 overflow-hidden rounded-full bg-black/45 p-1 backdrop-blur-md">
             {(["en", "ar"] as const).map((l) => (
               <button
                 key={l}
                 type="button"
                 onClick={() => setLang(l)}
-                className="rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-wide transition"
+                aria-pressed={lang === l}
+                aria-label={l === "ar" ? "عرض البطاقة بالعربية" : "Show card in English"}
+                className="min-h-11 rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-wide transition"
                 style={
                   lang === l ? { backgroundColor: accent, color: onAccent } : { color: "#ffffff" }
                 }
@@ -248,52 +293,58 @@ export function CardView({ card, preview = false }: Props) {
           </div>
         )}
 
-        <HeaderCut pattern={card.header_pattern} bgColor={bg} accentColor={accent} />
+        <HeaderCut pattern={design.headerPattern} bgColor={surface} accentColor={champagne} />
 
         {card.show_logo_badge && card.logo_url && (
           <div
             className="absolute bottom-3 end-6 z-10 flex h-12 w-12 items-center justify-center overflow-hidden rounded-full shadow-lg ring-2"
             style={{
-              backgroundColor: bg,
+              backgroundColor: surface,
               borderColor: accent,
               boxShadow: `0 6px 18px ${accent}55`,
             }}
           >
-            <img src={card.logo_url} alt="Logo" className="h-9 w-9 object-contain" />
+            <img
+              src={card.logo_url}
+              alt={`${card.company || name} logo`}
+              className="h-9 w-9 object-contain"
+            />
           </div>
         )}
       </div>
 
       {/* BODY */}
-      <div className="flex-1 px-6 pb-40 pt-2">
-        <h1 className="text-2xl font-bold leading-tight">{name}</h1>
+      <div className="flex-1 border-t px-5 pb-40 pt-3 sm:px-6" style={finishStyle}>
+        <h1 className="break-words text-2xl font-bold leading-tight sm:text-[1.75rem]">{name}</h1>
         {title && (
-          <p className="mt-1 text-sm font-medium" style={{ color: accent }}>
+          <p className="mt-1 break-words text-sm font-medium" style={{ color: champagne }}>
             {title}
           </p>
         )}
-        {card.company && <p className="text-sm opacity-70">{card.company}</p>}
-        {bio && <p className="mt-4 text-sm leading-relaxed opacity-80">{bio}</p>}
+        {card.company && <p className="break-words text-sm">{card.company}</p>}
+        {bio && (
+          <p className="mt-4 whitespace-pre-line break-words text-sm leading-relaxed">{bio}</p>
+        )}
 
         <div className="mt-6 space-y-2">
           {card.phone && (
             <a
-              href={`tel:${card.phone}`}
+              {...outboundLinkProps(`tel:${card.phone}`, preview)}
               className="flex items-center gap-3 rounded-2xl px-4 py-3 text-sm font-medium transition active:scale-[0.98]"
-              style={{ backgroundColor: `${accent}14` }}
+              style={{ backgroundColor: `${accent}24`, border: `1px solid ${accent}33` }}
             >
-              <Phone className="h-4 w-4" style={{ color: accent }} />
+              <Phone className="h-4 w-4" style={{ color: champagne }} />
               <span dir="ltr">{card.phone}</span>
             </a>
           )}
           {card.email && (
             <a
-              href={`mailto:${card.email}`}
+              {...outboundLinkProps(`mailto:${card.email}`, preview)}
               className="flex items-center gap-3 rounded-2xl px-4 py-3 text-sm font-medium transition active:scale-[0.98]"
-              style={{ backgroundColor: `${accent}14` }}
+              style={{ backgroundColor: `${accent}24`, border: `1px solid ${accent}33` }}
             >
-              <Mail className="h-4 w-4" style={{ color: accent }} />
-              <span dir="ltr" className="truncate">
+              <Mail className="h-4 w-4" style={{ color: champagne }} />
+              <span dir="ltr" className="min-w-0 break-all text-start">
                 {card.email}
               </span>
             </a>
@@ -305,13 +356,11 @@ export function CardView({ card, preview = false }: Props) {
             {socials.map(({ key, href, label, Icon }) => (
               <a
                 key={key}
-                href={href}
-                target="_blank"
-                rel="noreferrer noopener"
+                {...outboundLinkProps(href, preview, true)}
                 className="flex items-center gap-3 rounded-2xl border px-4 py-3 text-sm font-medium transition active:scale-[0.98]"
-                style={{ borderColor: `${accent}33` }}
+                style={{ borderColor: `${champagne}33`, backgroundColor: `${text}08` }}
               >
-                <Icon className="h-4 w-4" style={{ color: accent }} />
+                <Icon className="h-4 w-4" style={{ color: champagne }} />
                 {label}
               </a>
             ))}
@@ -332,26 +381,38 @@ export function CardView({ card, preview = false }: Props) {
               {embedUrl && (
                 <div
                   className="overflow-hidden rounded-2xl border shadow-sm"
-                  style={{ borderColor: `${accent}33` }}
+                  style={{ borderColor: `${champagne}33` }}
                 >
-                  <iframe
-                    src={embedUrl}
-                    title="Video Intro"
-                    className="aspect-video w-full"
-                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                    allowFullScreen
-                  />
+                  {preview ? (
+                    <div
+                      role="img"
+                      aria-label="Video preview placeholder"
+                      data-video-preview-placeholder
+                      className="flex aspect-video w-full flex-col items-center justify-center gap-2"
+                      style={{ backgroundColor: `${accent}14`, color: champagne }}
+                    >
+                      <Video className="h-8 w-8" aria-hidden="true" />
+                      <span className="text-xs font-semibold">Video on published card</span>
+                    </div>
+                  ) : (
+                    <iframe
+                      src={embedUrl}
+                      title="Video Intro"
+                      className="aspect-video w-full"
+                      loading="lazy"
+                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                      allowFullScreen
+                    />
+                  )}
                 </div>
               )}
 
               {/* CALENDLY BOOKING BUTTON */}
               {pro.booking_url && (
                 <a
-                  href={pro.booking_url}
-                  target="_blank"
-                  rel="noreferrer noopener"
-                  className="flex items-center justify-between rounded-2xl px-4 py-3.5 text-sm font-semibold text-white transition active:scale-[0.98] shadow-md"
-                  style={{ backgroundColor: accent }}
+                  {...outboundLinkProps(pro.booking_url, preview, true)}
+                  className="flex items-center justify-between rounded-2xl px-4 py-3.5 text-sm font-semibold transition active:scale-[0.98] shadow-md"
+                  style={{ backgroundColor: accent, color: onAccent }}
                 >
                   <div className="flex items-center gap-2.5">
                     <Calendar className="h-4 w-4" />
@@ -364,30 +425,26 @@ export function CardView({ card, preview = false }: Props) {
               {/* PDF ATTACHMENT */}
               {pro.pdf_url && (
                 <a
-                  href={pro.pdf_url}
-                  target="_blank"
-                  rel="noreferrer noopener"
+                  {...outboundLinkProps(pro.pdf_url, preview, true)}
                   className="flex items-center justify-between rounded-2xl border px-4 py-3.5 text-sm font-medium transition active:scale-[0.98]"
-                  style={{ borderColor: `${accent}33`, backgroundColor: `${accent}0a` }}
+                  style={{ borderColor: `${champagne}33`, backgroundColor: `${accent}14` }}
                 >
                   <div className="flex items-center gap-2.5">
-                    <FileText className="h-4 w-4" style={{ color: accent }} />
+                    <FileText className="h-4 w-4" style={{ color: champagne }} />
                     <span className="truncate">
                       {pro.pdf_label || (ar ? "تحميل ملف PDF" : "Download PDF")}
                     </span>
                   </div>
-                  <Download className="h-4 w-4 opacity-70" style={{ color: accent }} />
+                  <Download className="h-4 w-4" style={{ color: champagne }} />
                 </a>
               )}
 
               {/* CUSTOM CTA ACTION BUTTON */}
               {pro.custom_cta_label && pro.custom_cta_url && (
                 <a
-                  href={pro.custom_cta_url}
-                  target="_blank"
-                  rel="noreferrer noopener"
+                  {...outboundLinkProps(pro.custom_cta_url, preview, true)}
                   className="flex items-center justify-between rounded-2xl border px-4 py-3.5 text-sm font-semibold transition active:scale-[0.98]"
-                  style={{ borderColor: accent, color: accent }}
+                  style={{ borderColor: accent, color: champagne }}
                 >
                   <span>{pro.custom_cta_label}</span>
                   <ExternalLink className="h-4 w-4" />
@@ -399,8 +456,8 @@ export function CardView({ card, preview = false }: Props) {
 
         {/* FOOTER WATERMARK */}
         {showBranding && (
-          <div className="mt-8 text-center text-[11px] font-medium opacity-50">
-            Powered by <strong style={{ color: accent }}>JustTap</strong>
+          <div className="mt-8 text-center text-[11px] font-medium">
+            Powered by <strong style={{ color: champagne }}>JustTap</strong>
           </div>
         )}
       </div>
@@ -409,43 +466,48 @@ export function CardView({ card, preview = false }: Props) {
       <div
         className={
           preview
-            ? "sticky bottom-0 z-20 px-5 pb-5"
+            ? "sticky bottom-0 z-20 px-2 pb-2"
             : "fixed inset-x-0 bottom-0 z-30 mx-auto max-w-[430px] px-5 pb-5"
         }
       >
         <div
-          className="flex items-center justify-between gap-2.5 rounded-full border p-2 backdrop-blur-xl"
+          data-card-dock
+          className={
+            preview
+              ? "grid grid-cols-[2.5rem_minmax(0,1fr)_2.5rem] items-center gap-1 rounded-full border p-1 backdrop-blur-xl"
+              : "flex items-center justify-between gap-2.5 rounded-full border p-2 backdrop-blur-xl"
+          }
           style={{ backgroundColor: `${bg}d9`, borderColor: `${accent}2e` }}
         >
           <button
+            data-card-action="exchange"
             type="button"
             onClick={() => setLeadOpen(true)}
             aria-label="Exchange info"
-            className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full transition active:scale-95"
+            className={`${preview ? "h-10 w-10" : "h-12 w-12"} flex shrink-0 items-center justify-center rounded-full transition active:scale-95`}
             style={{ backgroundColor: accent, color: onAccent }}
           >
             <HeartHandshake className="h-5 w-5" />
           </button>
 
           <button
+            data-card-action="save"
             type="button"
             onClick={saveContact}
-            className="flex h-12 flex-1 items-center justify-center gap-2 rounded-full text-sm font-semibold tracking-wide transition active:scale-[0.98]"
+            className={`${preview ? "h-10 min-w-0 gap-1 px-1 text-[9px]" : "h-12 gap-2 text-[11px] sm:text-sm"} flex flex-1 items-center justify-center rounded-full font-semibold tracking-wide whitespace-nowrap transition active:scale-[0.98]`}
             style={{ backgroundColor: accent, color: onAccent }}
           >
             <Download className="h-4 w-4" />
-            {ar ? "حفظ جهة الاتصال" : "SAVE CONTACT"}
+            <span className={preview ? "truncate" : undefined}>
+              {ar ? "حفظ جهة الاتصال" : "SAVE CONTACT"}
+            </span>
           </button>
 
           <a
-            href={waHref ?? undefined}
-            target="_blank"
-            rel="noreferrer noopener"
+            data-card-action="whatsapp"
+            {...outboundLinkProps(waHref, preview, true)}
             aria-label="WhatsApp"
-            onClick={(e) => {
-              if (!waHref || preview) e.preventDefault();
-            }}
-            className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full text-white transition active:scale-95"
+            className={`${preview ? "h-10 w-10" : "h-12 w-12"} flex shrink-0 items-center justify-center rounded-full text-white transition active:scale-95`}
             style={{ backgroundColor: waHref ? "#25D366" : `${accent}55` }}
           >
             <MessageCircle className="h-5 w-5" />
@@ -464,20 +526,34 @@ export function CardView({ card, preview = false }: Props) {
             </DrawerDescription>
           </DrawerHeader>
           <form onSubmit={submitLead} className="space-y-3 px-4 pb-8" dir={ar ? "rtl" : "ltr"}>
+            <label htmlFor="lead-name" className="sr-only">
+              {ar ? "الاسم" : "Your name"}
+            </label>
             <input
+              id="lead-name"
               name="sender_name"
+              autoComplete="name"
               required
               placeholder={ar ? "الاسم" : "Your name"}
               className="h-12 w-full rounded-xl border border-border bg-transparent px-4 text-sm outline-none focus:border-ring"
             />
+            <label htmlFor="lead-phone" className="sr-only">
+              {ar ? "رقم الهاتف" : "Your phone"}
+            </label>
             <input
+              id="lead-phone"
               name="sender_phone"
+              autoComplete="tel"
               required
               inputMode="tel"
               placeholder={ar ? "رقم الهاتف" : "Your phone"}
               className="h-12 w-full rounded-xl border border-border bg-transparent px-4 text-sm outline-none focus:border-ring"
             />
+            <label htmlFor="lead-note" className="sr-only">
+              {ar ? "ملاحظة قصيرة" : "Short note (optional)"}
+            </label>
             <textarea
+              id="lead-note"
               name="note"
               rows={3}
               placeholder={ar ? "ملاحظة قصيرة" : "Short note (optional)"}
@@ -510,12 +586,12 @@ export function CardView({ card, preview = false }: Props) {
           <div className="space-y-4 pt-2">
             {/* Copy Link Input */}
             <div className="flex items-center gap-2 rounded-2xl border border-border bg-secondary/30 p-2">
-              <span className="flex-1 truncate px-2 text-xs font-mono opacity-80">{cardUrl}</span>
+              <span className="flex-1 truncate px-2 text-xs font-mono">{cardUrl}</span>
               <button
                 type="button"
                 onClick={copyCardLink}
-                className="flex h-9 items-center gap-1.5 rounded-xl px-3 text-xs font-semibold text-white transition active:scale-95"
-                style={{ backgroundColor: accent }}
+                className="flex h-9 items-center gap-1.5 rounded-xl px-3 text-xs font-semibold transition active:scale-95"
+                style={{ backgroundColor: accent, color: onAccent }}
               >
                 {copied ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
                 {copied ? (ar ? "تم النسخ" : "Copied") : ar ? "نسخ" : "Copy"}
@@ -525,9 +601,11 @@ export function CardView({ card, preview = false }: Props) {
             {/* Social Sharing Icons */}
             <div className="grid grid-cols-3 gap-3 pt-1">
               <a
-                href={`https://wa.me/?text=${encodeURIComponent(`Check out my digital business card: ${cardUrl}`)}`}
-                target="_blank"
-                rel="noreferrer noopener"
+                {...outboundLinkProps(
+                  `https://wa.me/?text=${encodeURIComponent(`Check out my digital business card: ${cardUrl}`)}`,
+                  preview,
+                  true,
+                )}
                 className="flex flex-col items-center gap-2 rounded-2xl border border-border p-3 text-xs font-medium transition hover:bg-secondary"
               >
                 <div className="grid h-10 w-10 place-items-center rounded-full bg-emerald-500/10 text-emerald-500">
@@ -537,9 +615,11 @@ export function CardView({ card, preview = false }: Props) {
               </a>
 
               <a
-                href={`https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(cardUrl)}`}
-                target="_blank"
-                rel="noreferrer noopener"
+                {...outboundLinkProps(
+                  `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(cardUrl)}`,
+                  preview,
+                  true,
+                )}
                 className="flex flex-col items-center gap-2 rounded-2xl border border-border p-3 text-xs font-medium transition hover:bg-secondary"
               >
                 <div className="grid h-10 w-10 place-items-center rounded-full bg-blue-500/10 text-blue-400">
@@ -549,9 +629,11 @@ export function CardView({ card, preview = false }: Props) {
               </a>
 
               <a
-                href={`https://twitter.com/intent/tweet?text=${encodeURIComponent(`Here is my digital card: ${cardUrl}`)}`}
-                target="_blank"
-                rel="noreferrer noopener"
+                {...outboundLinkProps(
+                  `https://twitter.com/intent/tweet?text=${encodeURIComponent(`Here is my digital card: ${cardUrl}`)}`,
+                  preview,
+                  true,
+                )}
                 className="flex flex-col items-center gap-2 rounded-2xl border border-border p-3 text-xs font-medium transition hover:bg-secondary"
               >
                 <div className="grid h-10 w-10 place-items-center rounded-full bg-sky-500/10 text-sky-400">
@@ -585,8 +667,8 @@ export function CardView({ card, preview = false }: Props) {
         <DrawerContent className="mx-auto max-w-[430px] p-6 text-center">
           <DrawerHeader className="px-0 pt-0 text-center">
             <div
-              className="mx-auto grid h-14 w-14 place-items-center rounded-2xl text-white shadow-lg mb-2"
-              style={{ backgroundColor: accent }}
+              className="mx-auto grid h-14 w-14 place-items-center rounded-2xl shadow-lg mb-2"
+              style={{ backgroundColor: accent, color: onAccent }}
             >
               <Wallet className="h-7 w-7" />
             </div>
@@ -602,19 +684,19 @@ export function CardView({ card, preview = false }: Props) {
 
           {/* Pass Preview Card */}
           <div
-            className="my-4 rounded-2xl p-5 text-left text-white shadow-xl relative overflow-hidden"
-            style={{ backgroundColor: accent }}
+            className="my-4 rounded-2xl p-5 text-left shadow-xl relative overflow-hidden"
+            style={{ backgroundColor: accent, color: onAccent }}
           >
             <div className="flex items-center justify-between">
-              <span className="text-[10px] font-bold uppercase tracking-widest opacity-80">
+              <span className="text-[10px] font-bold uppercase tracking-widest">
                 JUSTTAP DIGITAL PASS
               </span>
               <Sparkles className="h-4 w-4 text-amber-300" />
             </div>
             <h3 className="mt-3 font-display text-lg font-bold truncate">{name}</h3>
-            <p className="text-xs opacity-90 truncate">{title || card.company || "Digital Pass"}</p>
+            <p className="text-xs truncate">{title || card.company || "Digital Pass"}</p>
             {card.phone && (
-              <p className="mt-2 text-xs font-mono opacity-80" dir="ltr">
+              <p className="mt-2 text-xs font-mono" dir="ltr">
                 {card.phone}
               </p>
             )}
@@ -622,7 +704,7 @@ export function CardView({ card, preview = false }: Props) {
 
           <div className="space-y-2.5 pt-1">
             <a
-              href={`/api/apple-wallet/${card.slug}`}
+              {...outboundLinkProps(`/api/apple-wallet/${card.slug}`, preview)}
               download={`${card.slug}.pkpass`}
               className="flex h-12 w-full items-center justify-center gap-2 rounded-2xl text-sm font-bold text-white shadow-md transition active:scale-[0.98]"
               style={{ backgroundColor: "#000000" }}
@@ -632,9 +714,7 @@ export function CardView({ card, preview = false }: Props) {
             </a>
 
             <a
-              href={`/api/google-wallet/${card.slug}`}
-              target="_blank"
-              rel="noreferrer noopener"
+              {...outboundLinkProps(`/api/google-wallet/${card.slug}`, preview, true)}
               className="flex h-12 w-full items-center justify-center gap-2 rounded-2xl text-sm font-bold text-white shadow-md transition active:scale-[0.98]"
               style={{ backgroundColor: "#4285F4" }}
             >

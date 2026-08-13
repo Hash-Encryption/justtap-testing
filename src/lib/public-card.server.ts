@@ -1,7 +1,9 @@
 import { createServerFn } from "@tanstack/react-start";
+import { getRequest } from "@tanstack/react-start/server";
 import { z } from "zod";
 import { getSupabaseAnonKey, getSupabaseUrl } from "./supabase";
 import { resolvePublicCardBySlug, type PublicCardLookupResult } from "./public-card";
+import { resolvePublicOrigin } from "./public-card-metadata";
 
 export async function resolvePublicCardFromSupabase(slug: string): Promise<PublicCardLookupResult> {
   const url = getSupabaseUrl();
@@ -50,3 +52,15 @@ export async function resolvePublicCardFromSupabase(slug: string): Promise<Publi
 export const getPublicCardBySlug = createServerFn({ method: "GET" })
   .validator(z.object({ slug: z.string() }))
   .handler(async ({ data }) => resolvePublicCardFromSupabase(data.slug));
+
+export const getPublicCardPageData = createServerFn({ method: "GET" })
+  .validator(z.object({ slug: z.string() }))
+  .handler(async ({ data }) => ({
+    result: await resolvePublicCardFromSupabase(data.slug),
+    publicOrigin: resolvePublicOrigin(
+      import.meta.env.VITE_PUBLIC_SITE_URL ||
+        process.env.PUBLIC_SITE_URL ||
+        process.env.CF_PAGES_URL,
+      getRequest().url,
+    ),
+  }));

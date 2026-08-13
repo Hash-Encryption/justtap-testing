@@ -61,7 +61,7 @@ describe("Phase 06 Dashboard & CardEditor Unit Suite", () => {
       ...emptyCard,
       full_name: "Hashim, Gendi",
       phone: "+966501234567",
-      email: "hgendi3@gmail.com",
+      email: "hashim@example.com",
       company: "JustTap, Inc.; LLC",
       title: "Founder & CEO",
       bio: "Line 1\nLine 2 with , and ;",

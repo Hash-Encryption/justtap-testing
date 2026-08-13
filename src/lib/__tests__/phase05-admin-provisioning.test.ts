@@ -1,10 +1,14 @@
 import { describe, expect, it } from "vitest";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { SUPABASE_ANON_KEY, SUPABASE_URL } from "../supabase";
+import { liveTestAdmin, liveTestUserA, liveTestUserB } from "./live-test-env";
 
 const anonClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
   auth: { persistSession: false },
 });
+const adminIt = liveTestAdmin ? it : it.skip;
+const userAIt = liveTestUserA ? it : it.skip;
+const userABIt = liveTestUserA && liveTestUserB ? it : it.skip;
 
 async function getOrCreateTestUser(email: string, pass: string): Promise<SupabaseClient> {
   const client = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
@@ -74,42 +78,39 @@ describe("PHASE 05: Admin Authority & NFC Tag Provisioning Matrix", () => {
     expect(searchErr?.code).toBe("42501");
   });
 
-  it("verifies normal authenticated users (User A & User B) cannot invoke any admin RPCs", async () => {
-    const userAEmail = "phase05_usera@justtap.test";
-    const userAPass = "Phase05TestPassword123!";
-    const clientA = await getOrCreateTestUser(userAEmail, userAPass);
+  userABIt(
+    "verifies normal authenticated users (User A & User B) cannot invoke any admin RPCs",
+    async () => {
+      const clientA = await getOrCreateTestUser(liveTestUserA!.email, liveTestUserA!.password);
 
-    // User A calls admin_provision_nfc_tag -> DENIED (42501)
-    const { error: provErr } = await clientA.rpc("admin_provision_nfc_tag");
-    expect(provErr?.code).toBe("42501");
+      // User A calls admin_provision_nfc_tag -> DENIED (42501)
+      const { error: provErr } = await clientA.rpc("admin_provision_nfc_tag");
+      expect(provErr?.code).toBe("42501");
 
-    // User A calls admin_assign_nfc_tag -> DENIED (42501)
-    const { error: assignErr } = await clientA.rpc("admin_assign_nfc_tag", {
-      _token: "12345678901234567890123456789012",
-      _card_id: "00000000-0000-0000-0000-000000000000",
-    });
-    expect(assignErr?.code).toBe("42501");
+      // User A calls admin_assign_nfc_tag -> DENIED (42501)
+      const { error: assignErr } = await clientA.rpc("admin_assign_nfc_tag", {
+        _token: "12345678901234567890123456789012",
+        _card_id: "00000000-0000-0000-0000-000000000000",
+      });
+      expect(assignErr?.code).toBe("42501");
 
-    // User A calls admin_get_nfc_inventory -> DENIED (42501)
-    const { error: invErr } = await clientA.rpc("admin_get_nfc_inventory");
-    expect(invErr?.code).toBe("42501");
+      // User A calls admin_get_nfc_inventory -> DENIED (42501)
+      const { error: invErr } = await clientA.rpc("admin_get_nfc_inventory");
+      expect(invErr?.code).toBe("42501");
 
-    // User A calls admin_search_cards_for_assignment -> DENIED (42501)
-    const { error: searchErr } = await clientA.rpc("admin_search_cards_for_assignment");
-    expect(searchErr?.code).toBe("42501");
+      // User A calls admin_search_cards_for_assignment -> DENIED (42501)
+      const { error: searchErr } = await clientA.rpc("admin_search_cards_for_assignment");
+      expect(searchErr?.code).toBe("42501");
 
-    // User B check
-    const userBEmail = "phase05_userb@justtap.test";
-    const userBPass = "Phase05TestPassword123!";
-    const clientB = await getOrCreateTestUser(userBEmail, userBPass);
-    const { error: bProvErr } = await clientB.rpc("admin_provision_nfc_tag");
-    expect(bProvErr?.code).toBe("42501");
-  });
+      // User B check
+      const clientB = await getOrCreateTestUser(liveTestUserB!.email, liveTestUserB!.password);
+      const { error: bProvErr } = await clientB.rpc("admin_provision_nfc_tag");
+      expect(bProvErr?.code).toBe("42501");
+    },
+  );
 
-  it("verifies normal authenticated users cannot self-escalate into user_roles", async () => {
-    const userAEmail = "phase05_usera@justtap.test";
-    const userAPass = "Phase05TestPassword123!";
-    const clientA = await getOrCreateTestUser(userAEmail, userAPass);
+  userAIt("verifies normal authenticated users cannot self-escalate into user_roles", async () => {
+    const clientA = await getOrCreateTestUser(liveTestUserA!.email, liveTestUserA!.password);
     const userA = (await clientA.auth.getUser()).data.user!;
 
     // Attempt to INSERT self as admin in public.user_roles -> DENIED BY RLS
@@ -130,144 +131,147 @@ describe("PHASE 05: Admin Authority & NFC Tag Provisioning Matrix", () => {
     expect(updateData === null || updateData.length === 0).toBe(true);
   });
 
-  it("verifies admin user can provision tags with server-generated tokens, assign, reassign, handle inactive tags, and enforce terminal revocation", async () => {
-    // Sign in as authorized admin user
-    const adminClient = await getOrCreateTestUser("hgendi3@gmail.com", "Admin.Hash.9");
-    const adminUser = (await adminClient.auth.getUser()).data.user!;
+  adminIt(
+    "verifies admin user can provision tags with server-generated tokens, assign, reassign, handle inactive tags, and enforce terminal revocation",
+    async () => {
+      // Sign in as authorized admin user
+      const adminClient = await getOrCreateTestUser(liveTestAdmin!.email, liveTestAdmin!.password);
+      const adminUser = (await adminClient.auth.getUser()).data.user!;
 
-    // 1. Provision Tag
-    const { data: provData, error: provErr } = await adminClient.rpc("admin_provision_nfc_tag");
+      // 1. Provision Tag
+      const { data: provData, error: provErr } = await adminClient.rpc("admin_provision_nfc_tag");
 
-    expect(provErr).toBeNull();
-    expect(provData).not.toBeNull();
-    const newTag = Array.isArray(provData) ? provData[0] : provData;
+      expect(provErr).toBeNull();
+      expect(provData).not.toBeNull();
+      const newTag = Array.isArray(provData) ? provData[0] : provData;
 
-    expect(newTag.token).toBeDefined();
-    expect(newTag.token).toMatch(/^[A-Za-z0-9_-]{32}$/);
-    expect(newTag.status).toBe("active");
+      expect(newTag.token).toBeDefined();
+      expect(newTag.token).toMatch(/^[A-Za-z0-9_-]{32}$/);
+      expect(newTag.status).toBe("active");
 
-    const generatedToken = newTag.token;
+      const generatedToken = newTag.token;
 
-    // 2. Create Card 1
-    const testSlug = `phase05-card-${Date.now().toString(36)}`;
-    const { data: createdCard, error: cardErr } = await adminClient
-      .from("cards")
-      .insert([
-        {
-          slug: testSlug,
-          full_name: "Phase 05 Test Owner",
-          phone: "0509998877",
-          user_id: adminUser.id,
-          plan_tier: "free",
-        },
-      ])
-      .select()
-      .single();
+      // 2. Create Card 1
+      const testSlug = `phase05-card-${Date.now().toString(36)}`;
+      const { data: createdCard, error: cardErr } = await adminClient
+        .from("cards")
+        .insert([
+          {
+            slug: testSlug,
+            full_name: "Phase 05 Test Owner",
+            phone: "0509998877",
+            user_id: adminUser.id,
+            plan_tier: "free",
+          },
+        ])
+        .select()
+        .single();
 
-    expect(cardErr).toBeNull();
-    expect(createdCard).not.toBeNull();
+      expect(cardErr).toBeNull();
+      expect(createdCard).not.toBeNull();
 
-    // 3. Assign Tag to Card 1
-    const { error: assignErr } = await adminClient.rpc("admin_assign_nfc_tag", {
-      _token: generatedToken,
-      _card_id: createdCard.id,
-    });
-    expect(assignErr).toBeNull();
+      // 3. Assign Tag to Card 1
+      const { error: assignErr } = await adminClient.rpc("admin_assign_nfc_tag", {
+        _token: generatedToken,
+        _card_id: createdCard.id,
+      });
+      expect(assignErr).toBeNull();
 
-    // Verify /t/:token resolves
-    const { data: resolvedSlugData } = await anonClient.rpc("get_public_card_by_tag_token", {
-      _token: generatedToken,
-    });
-    expect(resolvedSlugData?.[0]?.slug).toBe(testSlug);
+      // Verify /t/:token resolves
+      const { data: resolvedSlugData } = await anonClient.rpc("get_public_card_by_tag_token", {
+        _token: generatedToken,
+      });
+      expect(resolvedSlugData?.[0]?.slug).toBe(testSlug);
 
-    // 4. Test INACTIVE Tag behavior:
-    // Deactivate tag
-    const { error: deactivateErr } = await adminClient.rpc("admin_update_tag_status", {
-      _token: generatedToken,
-      _status: "inactive",
-    });
-    expect(deactivateErr).toBeNull();
+      // 4. Test INACTIVE Tag behavior:
+      // Deactivate tag
+      const { error: deactivateErr } = await adminClient.rpc("admin_update_tag_status", {
+        _token: generatedToken,
+        _status: "inactive",
+      });
+      expect(deactivateErr).toBeNull();
 
-    // Inactive tag returns 0 rows on public /t/:token
-    const { data: inactiveResolved } = await anonClient.rpc("get_public_card_by_tag_token", {
-      _token: generatedToken,
-    });
-    expect(inactiveResolved === null || inactiveResolved.length === 0).toBe(true);
+      // Inactive tag returns 0 rows on public /t/:token
+      const { data: inactiveResolved } = await anonClient.rpc("get_public_card_by_tag_token", {
+        _token: generatedToken,
+      });
+      expect(inactiveResolved === null || inactiveResolved.length === 0).toBe(true);
 
-    // Inactive tag CAN still be reassigned to Card 2 by trusted admin
-    const reassignSlug = `phase05-reassign-${Date.now().toString(36)}`;
-    const { data: reassignCard } = await adminClient
-      .from("cards")
-      .insert([
-        {
-          slug: reassignSlug,
-          full_name: "Phase 05 Reassign Owner",
-          phone: "0509998877",
-          user_id: adminUser.id,
-          plan_tier: "free",
-        },
-      ])
-      .select()
-      .single();
+      // Inactive tag CAN still be reassigned to Card 2 by trusted admin
+      const reassignSlug = `phase05-reassign-${Date.now().toString(36)}`;
+      const { data: reassignCard } = await adminClient
+        .from("cards")
+        .insert([
+          {
+            slug: reassignSlug,
+            full_name: "Phase 05 Reassign Owner",
+            phone: "0509998877",
+            user_id: adminUser.id,
+            plan_tier: "free",
+          },
+        ])
+        .select()
+        .single();
 
-    const { error: inactiveAssignErr } = await adminClient.rpc("admin_assign_nfc_tag", {
-      _token: generatedToken,
-      _card_id: reassignCard.id,
-    });
-    expect(inactiveAssignErr).toBeNull(); // Allowed for inactive tags!
+      const { error: inactiveAssignErr } = await adminClient.rpc("admin_assign_nfc_tag", {
+        _token: generatedToken,
+        _card_id: reassignCard.id,
+      });
+      expect(inactiveAssignErr).toBeNull(); // Allowed for inactive tags!
 
-    // Still does not resolve publicly while inactive
-    const { data: inactiveResolved2 } = await anonClient.rpc("get_public_card_by_tag_token", {
-      _token: generatedToken,
-    });
-    expect(inactiveResolved2 === null || inactiveResolved2.length === 0).toBe(true);
+      // Still does not resolve publicly while inactive
+      const { data: inactiveResolved2 } = await anonClient.rpc("get_public_card_by_tag_token", {
+        _token: generatedToken,
+      });
+      expect(inactiveResolved2 === null || inactiveResolved2.length === 0).toBe(true);
 
-    // Reactivate tag
-    const { error: reactivateErr } = await adminClient.rpc("admin_update_tag_status", {
-      _token: generatedToken,
-      _status: "active",
-    });
-    expect(reactivateErr).toBeNull();
+      // Reactivate tag
+      const { error: reactivateErr } = await adminClient.rpc("admin_update_tag_status", {
+        _token: generatedToken,
+        _status: "active",
+      });
+      expect(reactivateErr).toBeNull();
 
-    // Now resolves publicly to the reassigned Card 2 slug!
-    const { data: activeResolved } = await anonClient.rpc("get_public_card_by_tag_token", {
-      _token: generatedToken,
-    });
-    expect(activeResolved?.[0]?.slug).toBe(reassignSlug);
+      // Now resolves publicly to the reassigned Card 2 slug!
+      const { data: activeResolved } = await anonClient.rpc("get_public_card_by_tag_token", {
+        _token: generatedToken,
+      });
+      expect(activeResolved?.[0]?.slug).toBe(reassignSlug);
 
-    // 5. Test TERMINAL REVOCATION:
-    // Revoke tag
-    const { error: revokeErr } = await adminClient.rpc("admin_update_tag_status", {
-      _token: generatedToken,
-      _status: "revoked",
-    });
-    expect(revokeErr).toBeNull();
+      // 5. Test TERMINAL REVOCATION:
+      // Revoke tag
+      const { error: revokeErr } = await adminClient.rpc("admin_update_tag_status", {
+        _token: generatedToken,
+        _status: "revoked",
+      });
+      expect(revokeErr).toBeNull();
 
-    // Revoked tag returns 0 rows on public /t/:token
-    const { data: revokedResolvedData } = await anonClient.rpc("get_public_card_by_tag_token", {
-      _token: generatedToken,
-    });
-    expect(revokedResolvedData === null || revokedResolvedData.length === 0).toBe(true);
+      // Revoked tag returns 0 rows on public /t/:token
+      const { data: revokedResolvedData } = await anonClient.rpc("get_public_card_by_tag_token", {
+        _token: generatedToken,
+      });
+      expect(revokedResolvedData === null || revokedResolvedData.length === 0).toBe(true);
 
-    // Revoked tag CANNOT be assigned/reassigned (returns 42501 error)
-    const { error: revokedAssignErr } = await adminClient.rpc("admin_assign_nfc_tag", {
-      _token: generatedToken,
-      _card_id: createdCard.id,
-    });
-    expect(revokedAssignErr?.code).toBe("42501");
+      // Revoked tag CANNOT be assigned/reassigned (returns 42501 error)
+      const { error: revokedAssignErr } = await adminClient.rpc("admin_assign_nfc_tag", {
+        _token: generatedToken,
+        _card_id: createdCard.id,
+      });
+      expect(revokedAssignErr?.code).toBe("42501");
 
-    // Revoked tag CANNOT be reactivated (revoked -> active returns 42501 error)
-    const { error: reactivateRevokedErr } = await adminClient.rpc("admin_update_tag_status", {
-      _token: generatedToken,
-      _status: "active",
-    });
-    expect(reactivateRevokedErr?.code).toBe("42501");
+      // Revoked tag CANNOT be reactivated (revoked -> active returns 42501 error)
+      const { error: reactivateRevokedErr } = await adminClient.rpc("admin_update_tag_status", {
+        _token: generatedToken,
+        _status: "active",
+      });
+      expect(reactivateRevokedErr?.code).toBe("42501");
 
-    // Revoked tag CANNOT be set to inactive (revoked -> inactive returns 42501 error)
-    const { error: inactivateRevokedErr } = await adminClient.rpc("admin_update_tag_status", {
-      _token: generatedToken,
-      _status: "inactive",
-    });
-    expect(inactivateRevokedErr?.code).toBe("42501");
-  });
+      // Revoked tag CANNOT be set to inactive (revoked -> inactive returns 42501 error)
+      const { error: inactivateRevokedErr } = await adminClient.rpc("admin_update_tag_status", {
+        _token: generatedToken,
+        _status: "inactive",
+      });
+      expect(inactivateRevokedErr?.code).toBe("42501");
+    },
+  );
 });

@@ -156,12 +156,35 @@
   }
 }
 
-@import url("https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@500;700&display=swap");
-
 @utility glass {
   background: color-mix(in oklab, var(--color-card) 70%, transparent);
   backdrop-filter: blur(14px);
   border: 1px solid var(--color-border);
+}
+
+@keyframes justtap-card-enter {
+  from {
+    transform: translateY(0.5rem);
+  }
+}
+
+.justtap-card-enter {
+  animation: justtap-card-enter 240ms ease-out both;
+}
+
+.justtap-card :is(a, button, input, textarea):focus-visible {
+  outline: 3px solid #e6d5ac;
+  outline-offset: 2px;
+}
+
+.justtap-card :is(h1, h2, h3) {
+  font-family: inherit;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .justtap-card-enter {
+    animation: none;
+  }
 }
 
 @utility justtap-glass {
@@ -189,10 +212,6 @@
 
 @utility grid-glow {
   background-image:
-    radial-gradient(
-      60% 50% at 50% 0%,
-      rgba(107, 33, 168, 0.25),
-      transparent 70%
-    ),
+    radial-gradient(60% 50% at 50% 0%, rgba(107, 33, 168, 0.25), transparent 70%),
     linear-gradient(to bottom, transparent, #08080a);
 }

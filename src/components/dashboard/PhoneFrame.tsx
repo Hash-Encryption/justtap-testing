@@ -13,7 +13,10 @@ export function PhoneFrame({ children }: { children: ReactNode }) {
         </div>
 
         {/* Screen Container */}
-        <div className="relative h-[580px] sm:h-[620px] w-full overflow-y-auto overflow-x-hidden rounded-[2.25rem] bg-[#08080A] pt-8 custom-scrollbar scroll-smooth">
+        <div
+          data-phone-screen
+          className="relative h-[580px] sm:h-[620px] w-full overflow-y-auto overflow-x-hidden rounded-[2.25rem] bg-[#08080A] pt-8 custom-scrollbar scroll-smooth"
+        >
           {children}
         </div>
       </div>

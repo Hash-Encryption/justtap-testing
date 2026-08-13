@@ -256,15 +256,24 @@ export function escapeVCardText(text: string | null | undefined): string {
     .replace(/\r?\n/g, "\\n");
 }
 
-/** Readable text color for a given hex background. */
-export function readableOn(hex: string) {
-  const h = hex.replace("#", "");
-  if (h.length < 6) return "#ffffff";
-  const r = parseInt(h.slice(0, 2), 16);
-  const g = parseInt(h.slice(2, 4), 16);
-  const b = parseInt(h.slice(4, 6), 16);
-  const lum = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
-  return lum > 0.6 ? "#111827" : "#ffffff";
+function colorLuminance(hex: string) {
+  const channels = [1, 3, 5].map((offset) => Number.parseInt(hex.slice(offset, offset + 2), 16));
+  const [r, g, b] = channels.map((channel) => {
+    const value = channel / 255;
+    return value <= 0.04045 ? value / 12.92 : ((value + 0.055) / 1.055) ** 2.4;
+  });
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+}
+
+export function colorContrast(a: string, b: string) {
+  const [lighter, darker] = [colorLuminance(a), colorLuminance(b)].sort((x, y) => y - x);
+  return (lighter + 0.05) / (darker + 0.05);
+}
+
+/** Chooses the higher-contrast WCAG foreground for a validated hex background. */
+export function readableOn(hex: string): "#000000" | "#FFFFFF" {
+  if (!isValidHexColor(hex)) return "#FFFFFF";
+  return colorContrast("#000000", hex) > colorContrast("#FFFFFF", hex) ? "#000000" : "#FFFFFF";
 }
 
 export function buildVCard(

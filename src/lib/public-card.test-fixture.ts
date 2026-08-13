@@ -16,6 +16,13 @@ export type PublicCardTestRow = Pick<
   | "header_pattern"
   | "accent_color"
   | "bg_color"
+  | "design_mode"
+  | "surface_color"
+  | "champagne_accent"
+  | "text_color"
+  | "surface_finish"
+  | "border_radius"
+  | "font_family"
   | "whatsapp_phone"
   | "whatsapp_message"
   | "enable_arabic"
@@ -55,6 +62,13 @@ export function makePublicCardRow(overrides: Partial<PublicCardTestRow> = {}): P
     header_pattern: "wave",
     accent_color: "#8b5cf6",
     bg_color: "#ffffff",
+    design_mode: "classic_v2",
+    surface_color: "#121216",
+    champagne_accent: "#E6D5AC",
+    text_color: "#FAFAFA",
+    surface_finish: "matte",
+    border_radius: "minimal",
+    font_family: "Outfit",
     whatsapp_phone: "+966500000000",
     whatsapp_message: "Hello",
     enable_arabic: false,

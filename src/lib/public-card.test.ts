@@ -14,6 +14,15 @@ describe("public card resolver", () => {
     expect(result.card.public_features_enabled).toBe(true);
     expect(result.card.show_branding).toBe(false);
     expect(result.card.public_features).toMatchObject({ video_url: "https://example.com/video" });
+    expect(result.card).toMatchObject({
+      design_mode: "classic_v2",
+      surface_color: "#121216",
+      champagne_accent: "#E6D5AC",
+      text_color: "#FAFAFA",
+      surface_finish: "matte",
+      border_radius: "minimal",
+      font_family: "Outfit",
+    });
     expect(result.card).not.toHaveProperty("plan_tier");
     expect(result.card).not.toHaveProperty("is_active");
     expect(result.card).not.toHaveProperty("user_id");

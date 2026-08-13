@@ -13,17 +13,17 @@ Do not add features to the legacy Next.js application. Do not delete it wholesal
 
 ## Current architecture
 
-| Area                   | Current state                                                                                               |
-| ---------------------- | ----------------------------------------------------------------------------------------------------------- |
-| Application frameworks | TanStack Start under `src/` and Next.js under `app/` both exist.                                            |
-| Default npm scripts    | `dev`, `build`, and `start` target TanStack/Vite; explicit `*:legacy` scripts retain frozen Next inspection. |
-| TypeScript             | `tsconfig.v2.json` type-checks TanStack source; root `tsconfig.json` remains legacy-oriented.                |
-| Lovable template       | `.lovable/project.json` identifies a TanStack Start template.                                               |
-| Public cards           | TanStack `/c/$slug` is the only public-card route and resolves current Supabase state dynamically.          |
-| Data access            | Public slug reads use one server-only resolver; other subsystems still contain direct Supabase access.       |
-| Deployment             | Vite/Nitro emits a Cloudflare Pages worker under `dist`; `wrangler.json` targets that artifact.              |
-| Database evolution     | `supabase/migrations/` is the ordered migration source; `supabase/schema.sql` is a legacy inventory snapshot. |
-| NFC                    | No permanent immutable NFC tag resolver exists.                                                             |
+| Area                   | Current state                                                                                                                   |
+| ---------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
+| Application frameworks | TanStack Start under `src/` and Next.js under `app/` both exist.                                                                |
+| Default npm scripts    | `dev`, `build`, and `start` target TanStack/Vite; explicit `*:legacy` scripts retain frozen Next inspection.                    |
+| TypeScript             | `tsconfig.v2.json` type-checks TanStack source; root `tsconfig.json` remains legacy-oriented.                                   |
+| Lovable template       | `.lovable/project.json` identifies a TanStack Start template.                                                                   |
+| Public cards           | TanStack `/c/$slug` is the only public-card route, resolves Supabase dynamically, and renders through the shared V2 `CardView`. |
+| Data access            | Public slug reads use one server-only resolver; other subsystems still contain direct Supabase access.                          |
+| Deployment             | Vite/Nitro emits a Cloudflare Pages worker under `dist`; `wrangler.json` targets that artifact.                                 |
+| Database evolution     | `supabase/migrations/` is the ordered migration source; `supabase/schema.sql` is a legacy inventory snapshot.                   |
+| NFC                    | Immutable `/t/:token` resolution uses `public.nfc_tags` and redirects to the assigned active card's current slug.               |
 
 The current conflicts and subsystem-level detail are recorded in [INVENTORY.md](./INVENTORY.md).
 
@@ -63,9 +63,11 @@ The response model must distinguish:
 
 Phase 01 intentionally returns the same public 404 for missing and inactive cards to avoid exposing disabled-card existence. The server resolver preserves the internal distinction.
 
-The public browser model contains only `id`, `slug`, display name, phone, public email, title, company, bio, avatar/logo URLs, logo and header presentation, colors, WhatsApp display data, Arabic display fields, social links, public Pro content, and derived feature/branding flags. `user_id`, timestamps, raw activation state, raw plan tier, notification destinations, and webhook configuration are not serialized to the public route. Because public Pro settings currently share one JSON column, Phase 01 reads that JSON on the server and maps only its display keys; schema-level separation remains Phase 02 work.
+The public browser model contains only `id`, `slug`, display name, phone, public email, title, company, bio, avatar/logo URLs, public presentation/design fields, WhatsApp display data, Arabic display fields, social links, public Pro content, and derived feature/branding flags. The public RPC returns custom design settings only for a database-entitled Pro/enterprise card and otherwise projects locked Classic V2 values. `user_id`, timestamps, raw activation state, raw plan tier, notification destinations, webhook configuration, private leads, analytics, and NFC inventory are not serialized to the public route.
 
-### Future NFC resolution
+The Phase 06 CardEditor preview and Phase 07 public route both render the card surface through `src/components/card/CardView.tsx`. Preview-only shells and draft data remain outside that shared component; public loading remains server-only and uses persisted, public-safe data.
+
+### NFC resolution
 
 ```text
 physical NFC tag
@@ -75,7 +77,7 @@ physical NFC tag
   -> canonical public card
 ```
 
-An NFC tag token is permanent. A customer may rename `/c/old-name` to `/c/new-name` without rewriting the physical tag. Token generation, storage, resolution, revocation, and audit behavior are Phase 03 work and do not exist yet.
+An NFC tag token is permanent. A customer may rename `/c/old-name` to `/c/new-name` without rewriting the physical tag. Generation, assignment, resolution, revocation, and inactive-card behavior are database/RPC controlled and preserve the permanent token.
 
 ### Dashboard and editor
 
