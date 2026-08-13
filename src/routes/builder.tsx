@@ -7,6 +7,12 @@ import { toast } from "sonner";
 import { useTranslation } from "@/lib/i18n";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { slugValidationMessage, validateSlug } from "@/lib/slug";
+import {
+  GUEST_DRAFT_CARD_ID,
+  migrateLegacyCardDraft,
+  readCardDraft,
+  writeCardDraft,
+} from "@/lib/card-draft";
 
 export const Route = createFileRoute("/builder")({
   ssr: false,
@@ -22,21 +28,17 @@ export const Route = createFileRoute("/builder")({
   component: BuilderPage,
 });
 
-const GUEST_DRAFT_KEY = "justtap_guest_pending_card";
-
 function BuilderPage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const [draft, setDraft] = useState<Card>(() => {
     try {
+      const guestCard = { ...emptyCard, user_id: "guest" };
       const stored =
-        localStorage.getItem(GUEST_DRAFT_KEY) || sessionStorage.getItem(GUEST_DRAFT_KEY);
+        readCardDraft(window.localStorage, "guest", GUEST_DRAFT_CARD_ID) ??
+        migrateLegacyCardDraft(window.localStorage, "guest", guestCard);
       if (stored) {
-        const parsed = JSON.parse(stored);
-        const cardData = parsed?.card ? parsed.card : parsed;
-        if (cardData && (cardData.full_name || cardData.phone || cardData.title || cardData.bio)) {
-          return cardData as Card;
-        }
+        return { ...guestCard, ...stored.fields };
       }
     } catch {
       /* ignore storage errors */
@@ -60,11 +62,8 @@ function BuilderPage() {
     }
     const slug = slugResult.slug;
 
-    // Save pending guest draft to localStorage & sessionStorage
-    const payload = JSON.stringify({ card: { ...draft, slug }, updatedAt: Date.now() });
     try {
-      localStorage.setItem(GUEST_DRAFT_KEY, payload);
-      sessionStorage.setItem(GUEST_DRAFT_KEY, payload);
+      writeCardDraft(window.localStorage, "guest", { ...draft, slug });
     } catch {
       /* ignore storage errors */
     }

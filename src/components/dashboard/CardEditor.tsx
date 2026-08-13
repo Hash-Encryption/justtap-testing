@@ -35,6 +35,17 @@ import { Dropzone } from "./Dropzone";
 import { sanitizePhone, sanitizeText, sanitizeUrl } from "@/lib/sanitization";
 import { slugValidationMessage, validateSlug } from "@/lib/slug";
 import { saveCardRecord } from "@/lib/card-save";
+import {
+  canPersistCardDraft,
+  clearCardDraft,
+  getCardDraftId,
+  getCardDraftKey,
+  migrateLegacyCardDraft,
+  readCardDraft,
+  reconcileCardDraftAfterSave,
+  recoverNewerCardDraft,
+  writeCardDraft,
+} from "@/lib/card-draft";
 import { useTranslation } from "@/lib/i18n";
 
 async function uploadDataUrlIfNeeded(
@@ -93,6 +104,7 @@ export function CardEditor({
   const [showArabic, setShowArabic] = useState(draft.enable_arabic);
   const [draftRestored, setDraftRestored] = useState(false);
   const [lastAutoSaved, setLastAutoSaved] = useState<string | null>(null);
+  const [hydratedDraftKey, setHydratedDraftKey] = useState<string | null>(null);
 
   // Dual-mode memory state preservation
   const [customDraftState, setCustomDraftState] = useState<Partial<Card>>({
@@ -114,65 +126,148 @@ export function CardEditor({
     return JSON.stringify(draft) !== JSON.stringify(publishedCard);
   }, [draft, publishedCard]);
 
-  const draftKey =
-    userId === "guest" ? "justtap_guest_pending_card" : `justtap_card_draft_${userId}`;
-  const THREE_DAYS_MS = 3 * 24 * 60 * 60 * 1000;
-  const restoredKeyRef = useRef<string | null>(null);
+  const draftCardId = getCardDraftId(userId, draft);
+  const draftKey = getCardDraftKey(userId, draftCardId);
+  const currentDraftRef = useRef(draft);
+  const memoryUpdatedAtRef = useRef(0);
+  const hydratedKeyRef = useRef<string | null>(null);
+  const dirtyRef = useRef(isDirty);
+  const skipFlushRef = useRef(false);
+  const activeIdentityRef = useRef({ userId, cardId: draftCardId, key: draftKey });
+  currentDraftRef.current = draft;
+  dirtyRef.current = isDirty;
+  activeIdentityRef.current = { userId, cardId: draftCardId, key: draftKey };
 
-  // Restore draft once
+  // Hydrate the exact user/card draft before persistence is enabled.
   useEffect(() => {
-    if (restoredKeyRef.current === draftKey) return;
-    restoredKeyRef.current = draftKey;
+    setHydratedDraftKey(null);
+    hydratedKeyRef.current = null;
+    memoryUpdatedAtRef.current = 0;
+    skipFlushRef.current = false;
 
     try {
-      const stored = localStorage.getItem(draftKey) || sessionStorage.getItem(draftKey);
-      if (stored) {
-        const parsed = JSON.parse(stored) as { card?: Card; updatedAt?: number } | Card;
-        const cardData = "card" in parsed && parsed.card ? parsed.card : (parsed as Card);
-        const updatedAt =
-          "updatedAt" in parsed && typeof parsed.updatedAt === "number" ? parsed.updatedAt : null;
-
-        if (updatedAt && Date.now() - updatedAt > THREE_DAYS_MS) {
-          localStorage.removeItem(draftKey);
-          sessionStorage.removeItem(draftKey);
-        } else if (
-          cardData &&
-          (cardData.full_name || cardData.phone || cardData.title || cardData.bio)
-        ) {
-          const isCurrentDraftEmpty =
-            !draft.full_name && !draft.phone && !draft.title && !draft.bio;
-          if (isCurrentDraftEmpty) {
-            setDraft(cardData);
-            setShowArabic(cardData.enable_arabic);
-            setDraftRestored(true);
-            toast.info("Restored your active draft");
-          }
-        }
+      const stored =
+        readCardDraft(window.localStorage, userId, draftCardId) ??
+        migrateLegacyCardDraft(window.localStorage, userId, currentDraftRef.current);
+      const recovery = recoverNewerCardDraft(currentDraftRef.current, 0, stored);
+      if (recovery.restored) {
+        currentDraftRef.current = recovery.card;
+        memoryUpdatedAtRef.current = recovery.updatedAt;
+        setDraft(recovery.card);
+        setShowArabic(recovery.card.enable_arabic);
+        setDraftRestored(true);
+        toast.info("Restored your active draft");
+      } else {
+        setDraftRestored(false);
       }
     } catch {
       /* ignore */
     }
-  }, [draftKey]);
+    hydratedKeyRef.current = draftKey;
+    setHydratedDraftKey(draftKey);
+  }, [draftCardId, draftKey, setDraft, userId]);
 
-  // Real-time draft sync to localStorage
+  // Debounced local recovery write. The hydration guard prevents startup clobbering.
   useEffect(() => {
-    if (!draft.full_name && !draft.phone && !draft.title && !draft.bio) return;
+    if (!canPersistCardDraft(hydratedDraftKey, draftKey, isDirty)) return;
 
-    try {
-      const payload = JSON.stringify({ card: draft, updatedAt: Date.now() });
-      localStorage.setItem(draftKey, payload);
-      sessionStorage.setItem(draftKey, payload);
-      const now = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
-      setLastAutoSaved(now);
-    } catch {
-      /* ignore */
-    }
-  }, [draft, draftKey]);
+    const timeout = window.setTimeout(() => {
+      try {
+        const stored = writeCardDraft(window.localStorage, userId, currentDraftRef.current);
+        memoryUpdatedAtRef.current = stored.updatedAt;
+        setLastAutoSaved(
+          new Date(stored.updatedAt).toLocaleTimeString([], {
+            hour: "2-digit",
+            minute: "2-digit",
+          }),
+        );
+      } catch {
+        /* ignore */
+      }
+    }, 350);
+
+    return () => window.clearTimeout(timeout);
+  }, [draft, draftKey, hydratedDraftKey, isDirty, userId]);
+
+  // Flush on background/unmount and reconcile only when browser storage is newer.
+  useEffect(() => {
+    const persistNow = () => {
+      if (!canPersistCardDraft(hydratedKeyRef.current, draftKey, dirtyRef.current)) return;
+      try {
+        const stored = writeCardDraft(window.localStorage, userId, currentDraftRef.current);
+        memoryUpdatedAtRef.current = stored.updatedAt;
+        setLastAutoSaved(
+          new Date(stored.updatedAt).toLocaleTimeString([], {
+            hour: "2-digit",
+            minute: "2-digit",
+          }),
+        );
+      } catch {
+        /* ignore */
+      }
+    };
+
+    const reconcile = () => {
+      try {
+        const stored = readCardDraft(window.localStorage, userId, draftCardId);
+        const recovery = recoverNewerCardDraft(
+          currentDraftRef.current,
+          memoryUpdatedAtRef.current,
+          stored,
+        );
+        if (!recovery.restored) return;
+        currentDraftRef.current = recovery.card;
+        memoryUpdatedAtRef.current = recovery.updatedAt;
+        setDraft(recovery.card);
+        setShowArabic(recovery.card.enable_arabic);
+        setDraftRestored(true);
+        toast.info("Restored your active draft");
+      } catch {
+        /* ignore */
+      }
+    };
+
+    const onVisibilityChange = () => {
+      if (document.visibilityState === "hidden") persistNow();
+      else reconcile();
+    };
+
+    document.addEventListener("visibilitychange", onVisibilityChange);
+    window.addEventListener("focus", reconcile);
+    window.addEventListener("pageshow", reconcile);
+    return () => {
+      document.removeEventListener("visibilitychange", onVisibilityChange);
+      window.removeEventListener("focus", reconcile);
+      window.removeEventListener("pageshow", reconcile);
+    };
+  }, [draftCardId, draftKey, setDraft, userId]);
+
+  useEffect(
+    () => () => {
+      if (skipFlushRef.current || !dirtyRef.current) return;
+      const identity = activeIdentityRef.current;
+      if (hydratedKeyRef.current !== identity.key) return;
+      try {
+        writeCardDraft(window.localStorage, identity.userId, currentDraftRef.current);
+      } catch {
+        /* ignore */
+      }
+    },
+    [],
+  );
+
+  const updateDraft = (next: Card) => {
+    memoryUpdatedAtRef.current = Date.now();
+    currentDraftRef.current = next;
+    skipFlushRef.current = false;
+    setLastAutoSaved(null);
+    setDraft(next);
+  };
 
   const set = <K extends keyof Card>(key: K, value: Card[K]) =>
-    setDraft({ ...draft, [key]: value });
+    updateDraft({ ...draft, [key]: value });
   const setSocial = (key: string, value: string) =>
-    setDraft({ ...draft, social_links: { ...(draft.social_links ?? {}), [key]: value } });
+    updateDraft({ ...draft, social_links: { ...(draft.social_links ?? {}), [key]: value } });
 
   // Mode switcher handler with working draft state preservation
   const handleModeSwitch = (mode: DesignMode) => {
@@ -196,7 +291,7 @@ export function CardEditor({
       });
 
       // Reset card preview props to Classic V2 standard
-      setDraft({
+      updateDraft({
         ...draft,
         design_mode: "classic_v2",
         header_pattern: "wave",
@@ -211,7 +306,7 @@ export function CardEditor({
       });
     } else {
       // Switch to Custom Creator, restoring saved custom working state
-      setDraft({
+      updateDraft({
         ...draft,
         design_mode: "custom",
         header_pattern: customDraftState.header_pattern || "wave",
@@ -235,7 +330,7 @@ export function CardEditor({
     const preset = DESIGN_PRESET_PALETTES.find((p) => p.id === presetId);
     if (!preset) return;
 
-    setDraft({
+    updateDraft({
       ...draft,
       design_mode: "custom",
       bg_color: preset.bg_color,
@@ -269,6 +364,9 @@ export function CardEditor({
     }
 
     const updated = data as Card;
+    skipFlushRef.current = true;
+    reconcileCardDraftAfterSave(window.localStorage, userId, draftCardId, true);
+    setLastAutoSaved(null);
     setDraft(updated);
     onSaved(updated);
     toast.success(
@@ -313,9 +411,7 @@ export function CardEditor({
 
     if (userId === "guest") {
       try {
-        const payloadStr = JSON.stringify({ card: { ...draft, slug }, updatedAt: Date.now() });
-        localStorage.setItem("justtap_guest_pending_card", payloadStr);
-        sessionStorage.setItem("justtap_guest_pending_card", payloadStr);
+        writeCardDraft(window.localStorage, userId, { ...draft, slug });
       } catch {
         /* ignore */
       }
@@ -398,6 +494,16 @@ export function CardEditor({
     );
 
     setSaving(false);
+    try {
+      reconcileCardDraftAfterSave(
+        window.localStorage,
+        userId,
+        draftCardId,
+        result.status === "saved",
+      );
+    } catch {
+      /* ignore */
+    }
     if (result.status !== "saved") {
       toast.error(
         result.status === "duplicate_slug"
@@ -409,15 +515,22 @@ export function CardEditor({
       return;
     }
 
-    try {
-      localStorage.removeItem(draftKey);
-      sessionStorage.removeItem(draftKey);
-    } catch {
-      /* ignore */
-    }
-
+    skipFlushRef.current = true;
+    setLastAutoSaved(null);
     toast.success(isNew ? "Card published live!" : "Published changes live!");
     onSaved(result.card);
+  }
+
+  if (hydratedDraftKey !== draftKey) {
+    return (
+      <div
+        className="grid min-h-64 place-items-center"
+        role="status"
+        aria-label="Loading card draft"
+      >
+        <Loader2 className="h-6 w-6 animate-spin text-purple-500" />
+      </div>
+    );
   }
 
   return (
@@ -444,7 +557,7 @@ export function CardEditor({
               }`}
             />
             <span className="text-xs font-semibold text-slate-300">
-              {isDirty ? "Unsaved Changes" : "Live & Synced"}
+              {isDirty ? (lastAutoSaved ? "Draft saved locally" : "Unsaved Changes") : "Saved"}
             </span>
           </div>
         </div>
@@ -483,11 +596,11 @@ export function CardEditor({
             type="button"
             onClick={() => {
               try {
-                localStorage.removeItem(draftKey);
-                sessionStorage.removeItem(draftKey);
+                clearCardDraft(window.localStorage, userId, draftCardId);
               } catch {
                 /* ignore */
               }
+              setLastAutoSaved(null);
               setDraftRestored(false);
             }}
             className="underline opacity-80 hover:opacity-100"

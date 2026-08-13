@@ -28,6 +28,12 @@ import { QrTab } from "@/components/dashboard/QrTab";
 import { useTranslation } from "@/lib/i18n";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { slugValidationMessage, validateSlug } from "@/lib/slug";
+import {
+  clearCardDraft,
+  GUEST_DRAFT_CARD_ID,
+  migrateLegacyCardDraft,
+  readCardDraft,
+} from "@/lib/card-draft";
 
 class TabErrorBoundary extends Component<
   { children: ReactNode },
@@ -119,6 +125,9 @@ function Dashboard() {
   const navigate = useNavigate();
   const { user, loading } = useAuth();
   const isAdmin = useIsAdmin(user?.id);
+  const userId = user?.id;
+  const userEmailRef = React.useRef(user?.email);
+  userEmailRef.current = user?.email;
 
   const [cards, setCards] = useState<Card[]>([]);
   const [selectedCardId, setSelectedCardId] = useState<string | null>(null);
@@ -135,24 +144,23 @@ function Dashboard() {
   }, [loading, user, navigate]);
 
   useEffect(() => {
-    if (!user) return;
+    if (!userId) return;
     let cancelled = false;
 
     async function loadUserCards() {
-      if (!user) return;
+      if (!userId) return;
 
       // 1. Check for pending guest draft to claim
       let guestPayload: Card | null = null;
       try {
         const stored =
-          localStorage.getItem("justtap_guest_pending_card") ||
-          sessionStorage.getItem("justtap_guest_pending_card");
-        if (stored) {
-          const parsed = JSON.parse(stored);
-          const cardObj = parsed?.card ? parsed.card : parsed;
-          if (cardObj?.full_name && cardObj?.phone) {
-            guestPayload = cardObj as Card;
-          }
+          readCardDraft(window.localStorage, "guest", GUEST_DRAFT_CARD_ID) ??
+          migrateLegacyCardDraft(window.localStorage, "guest", {
+            ...emptyCard,
+            user_id: "guest",
+          });
+        if (stored?.fields.full_name && stored.fields.phone) {
+          guestPayload = { ...emptyCard, ...stored.fields, user_id: "guest" };
         }
       } catch {
         /* ignore */
@@ -162,7 +170,7 @@ function Dashboard() {
       const { data } = await supabase
         .from("cards")
         .select("*")
-        .eq("user_id", user.id)
+        .eq("user_id", userId)
         .order("created_at", { ascending: true });
 
       if (cancelled) return;
@@ -173,19 +181,15 @@ function Dashboard() {
         const slugResult = validateSlug(guestPayload.slug || guestPayload.full_name);
         if (slugResult.valid) {
           const slugToUse = slugResult.slug;
-          const avatar_url = await uploadDataUrlIfNeeded(
-            guestPayload.avatar_url,
-            user.id,
-            "avatar",
-          );
-          const logo_url = await uploadDataUrlIfNeeded(guestPayload.logo_url, user.id, "logo");
+          const avatar_url = await uploadDataUrlIfNeeded(guestPayload.avatar_url, userId, "avatar");
+          const logo_url = await uploadDataUrlIfNeeded(guestPayload.logo_url, userId, "logo");
 
           const payload = {
-            user_id: user.id,
+            user_id: userId,
             slug: slugToUse,
             full_name: guestPayload.full_name.trim(),
             phone: guestPayload.phone.trim(),
-            email: guestPayload.email || user.email || null,
+            email: guestPayload.email || userEmailRef.current || null,
             title: guestPayload.title || null,
             company: guestPayload.company || null,
             bio: guestPayload.bio || null,
@@ -216,8 +220,7 @@ function Dashboard() {
 
           if (created) {
             try {
-              localStorage.removeItem("justtap_guest_pending_card");
-              sessionStorage.removeItem("justtap_guest_pending_card");
+              clearCardDraft(window.localStorage, "guest", GUEST_DRAFT_CARD_ID);
             } catch {
               /* ignore */
             }
@@ -241,7 +244,7 @@ function Dashboard() {
           setDraft(first);
         }
       } else {
-        setDraft({ ...emptyCard, user_id: user.id });
+        setDraft({ ...emptyCard, user_id: userId });
       }
 
       // Check NFC tag assignment status for user cards via customer-safe RPC
@@ -268,7 +271,7 @@ function Dashboard() {
     return () => {
       cancelled = true;
     };
-  }, [user]);
+  }, [userId]);
 
   async function signOut() {
     await supabase.auth.signOut();
