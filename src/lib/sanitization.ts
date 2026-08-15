@@ -74,25 +74,62 @@ export function sanitizePhone(phone: string | null | undefined): string {
 }
 
 /** Zod Schema for visitor lead capture ("Exchange Info" form) */
-export const LeadSubmissionSchema = z.object({
-  card_id: z.string().uuid("Invalid card identifier"),
-  sender_name: z
-    .string()
-    .min(1, "Name is required")
-    .max(100, "Name is too long")
-    .transform((val) => sanitizeText(val, 100)),
-  sender_phone: z
-    .string()
-    .min(3, "Phone number is required")
-    .max(30, "Phone number is too long")
-    .transform((val) => sanitizePhone(val)),
-  note: z
-    .string()
-    .max(500, "Note exceeds maximum limit of 500 characters")
-    .nullable()
-    .optional()
-    .transform((val) => (val ? sanitizeText(val, 500) : null)),
-});
+export const LeadSubmissionSchema = z
+  .object({
+    card_slug: z
+      .string()
+      .transform(normalizeSlug)
+      .refine((slug) => validateSlug(slug).valid, "Invalid card identifier"),
+    sender_name: z
+      .string()
+      .min(1, "Name is required")
+      .max(100, "Name is too long")
+      .transform((val) => sanitizeText(val, 100))
+      .refine((val) => val.length > 0, "Name is required"),
+    sender_phone: z
+      .string()
+      .min(3, "Phone number is required")
+      .max(30, "Phone number is too long")
+      .transform((val) => sanitizePhone(val))
+      .refine((val) => /^\+?[0-9() -]{3,30}$/.test(val), "Invalid phone number"),
+    sender_email: z
+      .string()
+      .trim()
+      .max(254, "Email is too long")
+      .email("Invalid email format")
+      .or(z.literal(""))
+      .nullable()
+      .optional()
+      .transform((val) => val || null),
+    sender_company: z
+      .string()
+      .max(160, "Company is too long")
+      .nullable()
+      .optional()
+      .transform((val) => {
+        const clean = sanitizeText(val, 160);
+        return clean || null;
+      }),
+    sender_job_title: z
+      .string()
+      .max(160, "Job title is too long")
+      .nullable()
+      .optional()
+      .transform((val) => {
+        const clean = sanitizeText(val, 160);
+        return clean || null;
+      }),
+    note: z
+      .string()
+      .max(1000, "Note exceeds maximum limit of 1000 characters")
+      .nullable()
+      .optional()
+      .transform((val) => {
+        const clean = sanitizeText(val, 1000);
+        return clean || null;
+      }),
+  })
+  .strict();
 
 export type LeadSubmission = z.infer<typeof LeadSubmissionSchema>;
 

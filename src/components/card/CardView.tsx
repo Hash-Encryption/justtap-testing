@@ -165,9 +165,12 @@ export function CardView({ card, preview = false }: Props) {
 
     const form = new FormData(e.currentTarget);
     const rawData = {
-      card_id: card.id,
+      card_slug: card.slug,
       sender_name: String(form.get("sender_name") || ""),
       sender_phone: String(form.get("sender_phone") || ""),
+      sender_email: String(form.get("sender_email") || ""),
+      sender_company: String(form.get("sender_company") || ""),
+      sender_job_title: String(form.get("sender_job_title") || ""),
       note: String(form.get("note") || "") || null,
     };
 
@@ -182,11 +185,14 @@ export function CardView({ card, preview = false }: Props) {
     const sanitized = parsed.data;
 
     setSending(true);
-    const { error } = await supabase.from("card_leads").insert({
-      card_id: sanitized.card_id,
-      sender_name: sanitized.sender_name,
-      sender_phone: sanitized.sender_phone,
-      note: sanitized.note,
+    const { error } = await supabase.rpc("create_public_connection", {
+      _card_slug: sanitized.card_slug,
+      _sender_name: sanitized.sender_name,
+      _sender_phone: sanitized.sender_phone,
+      _sender_email: sanitized.sender_email,
+      _sender_company: sanitized.sender_company,
+      _sender_job_title: sanitized.sender_job_title,
+      _visitor_note: sanitized.note,
     });
     setSending(false);
 
@@ -200,7 +206,7 @@ export function CardView({ card, preview = false }: Props) {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        card_id: sanitized.card_id,
+        card_id: card.id,
         sender_name: sanitized.sender_name,
         sender_phone: sanitized.sender_phone,
         note: sanitized.note,
@@ -534,6 +540,7 @@ export function CardView({ card, preview = false }: Props) {
               name="sender_name"
               autoComplete="name"
               required
+              maxLength={100}
               placeholder={ar ? "الاسم" : "Your name"}
               className="h-12 w-full rounded-xl border border-border bg-transparent px-4 text-sm outline-none focus:border-ring"
             />
@@ -546,7 +553,42 @@ export function CardView({ card, preview = false }: Props) {
               autoComplete="tel"
               required
               inputMode="tel"
+              maxLength={30}
               placeholder={ar ? "رقم الهاتف" : "Your phone"}
+              className="h-12 w-full rounded-xl border border-border bg-transparent px-4 text-sm outline-none focus:border-ring"
+            />
+            <label htmlFor="lead-email" className="sr-only">
+              {ar ? "البريد الإلكتروني (اختياري)" : "Email (optional)"}
+            </label>
+            <input
+              id="lead-email"
+              name="sender_email"
+              type="email"
+              autoComplete="email"
+              maxLength={254}
+              placeholder={ar ? "البريد الإلكتروني (اختياري)" : "Email (optional)"}
+              className="h-12 w-full rounded-xl border border-border bg-transparent px-4 text-sm outline-none focus:border-ring"
+            />
+            <label htmlFor="lead-company" className="sr-only">
+              {ar ? "الشركة (اختياري)" : "Company (optional)"}
+            </label>
+            <input
+              id="lead-company"
+              name="sender_company"
+              autoComplete="organization"
+              maxLength={160}
+              placeholder={ar ? "الشركة (اختياري)" : "Company (optional)"}
+              className="h-12 w-full rounded-xl border border-border bg-transparent px-4 text-sm outline-none focus:border-ring"
+            />
+            <label htmlFor="lead-job-title" className="sr-only">
+              {ar ? "المسمى الوظيفي (اختياري)" : "Job title (optional)"}
+            </label>
+            <input
+              id="lead-job-title"
+              name="sender_job_title"
+              autoComplete="organization-title"
+              maxLength={160}
+              placeholder={ar ? "المسمى الوظيفي (اختياري)" : "Job title (optional)"}
               className="h-12 w-full rounded-xl border border-border bg-transparent px-4 text-sm outline-none focus:border-ring"
             />
             <label htmlFor="lead-note" className="sr-only">
@@ -556,6 +598,7 @@ export function CardView({ card, preview = false }: Props) {
               id="lead-note"
               name="note"
               rows={3}
+              maxLength={1000}
               placeholder={ar ? "ملاحظة قصيرة" : "Short note (optional)"}
               className="w-full rounded-xl border border-border bg-transparent px-4 py-3 text-sm outline-none focus:border-ring"
             />

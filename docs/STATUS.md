@@ -1,16 +1,17 @@
 # JustTap V2 Status
 
-Last updated: 2026-08-13
+Last updated: 2026-08-15
 
 ## Current phase
 
-Phase 07 — Public Card Renderer + Custom Design Integration. Implementation, real Supabase acceptance, Cloudflare feature-branch staging, and responsive visual acceptance are complete on `v2/07-public-card-renderer` from approved Phase 06 checkpoint `ca0e754329a43bea67f34e26a89d08d2300aa4a4`. The Phase 07 worktree remains intentionally uncommitted and unpushed pending independent review and user authorization.
+Connections + Analytics Upgrade Phase 01 — the secure Connections data model, narrow public capture RPC, owner RLS, and Free/Pro management boundary are complete on `upgrade/01-connections-data-model` from checkpoint `f1c9e4f03ae03c1d40ff7bba0a7ec39287f165b3`.
 
 ## Completed
 
 - Established TanStack Start as the sole V2 target and froze the Next.js tree.
 - Added architecture, plan, decisions, security, status, and repository inventory documents.
 - Recorded the retirement of all demo-card and Pro Demo Mode behavior.
+- Added migration `20260815010000_connections_data_model.sql`, replacing direct anonymous lead inserts with `create_public_connection`, preserving owner-private reads/deletes, and limiting private management updates to Pro/enterprise owners.
 - Committed approved Phase 00 checkpoint as `9609dea`.
 - Made TanStack `/c/$slug` the only public-card route and moved slug lookup into one server-only resolver.
 - Passed Phase 01 acceptance and Phase 02 schema / versioned migration `20260811193000_phase02_cards_rls.sql` with owner RLS, narrow RPC, and client entitlement triggers at checkpoint `0f57b7cf2e3a1d0111ad55cacc54c72d5ebb187a`.
@@ -45,13 +46,14 @@ Phase 07 — Public Card Renderer + Custom Design Integration. Implementation, r
 
 ## In progress
 
-- Phase 07 independent checkpoint review and authorization.
+- Phase 01 checkpoint owner review.
 
 ## Deferred work
 
 - Apple Wallet signing/certificate infrastructure, billing lifecycle, analytics redesign, and leads redesign remain deferred to their authorized phases.
 - Controlled Real Supabase Pro-user Custom Creator persistence remains not verified because no controlled legitimate Pro fixture is available.
+- Durable Connection abuse prevention, notification/webhook hardening, and the dedicated management UI remain deferred to their authorized upgrade phases.
 
 ## Next phase
 
-Do not begin Phase 08. Stop for Phase 07 final checkpoint review and authorization.
+Do not begin Connections + Analytics Upgrade Phase 02. Stop for Phase 01 checkpoint review and authorization.
