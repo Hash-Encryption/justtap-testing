@@ -627,13 +627,19 @@ function Dashboard() {
 
         {/* TAB 2: ANALYTICS */}
         {tab === "analytics" && (
-          <div className="space-y-6">
-            <h1 className="text-2xl font-bold text-white font-display">Analytics</h1>
+          <div>
             {selectedCard?.id ? (
               <AnalyticsTab
                 key={selectedCard.id}
                 cardId={selectedCard.id}
                 isPro={selectedCard.plan_tier === "pro" || selectedCard.plan_tier === "enterprise"}
+                cards={cards}
+                onSelectCardId={(id) => {
+                  setSelectedCardId(id);
+                  const target = cards.find((c) => c.id === id);
+                  if (target) setDraft(target);
+                }}
+                onNavigateToConnections={() => setTab("leads")}
               />
             ) : (
               <p className="text-xs text-slate-400">Select a card to view analytics.</p>
@@ -655,13 +661,18 @@ function Dashboard() {
 
         {/* TAB 4: CONNECTIONS */}
         {tab === "leads" && (
-          <div className="space-y-6">
-            <h1 className="text-2xl font-bold text-white font-display">Connections</h1>
+          <div>
             {selectedCard?.id ? (
               <ConnectionsTab
                 key={selectedCard.id}
                 cardId={selectedCard.id}
                 isPro={selectedCard.plan_tier === "pro" || selectedCard.plan_tier === "enterprise"}
+                cards={cards}
+                onSelectCardId={(id) => {
+                  setSelectedCardId(id);
+                  const target = cards.find((c) => c.id === id);
+                  if (target) setDraft(target);
+                }}
               />
             ) : (
               <p className="text-xs text-slate-400">Select a card to view Connections.</p>
