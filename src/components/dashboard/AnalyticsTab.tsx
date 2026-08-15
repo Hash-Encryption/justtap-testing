@@ -63,6 +63,32 @@ const STATUS_DISPLAY_LABELS: Record<ConnectionStatus, string> = {
   done: "Done",
 };
 
+const CANONICAL_ACTION_LABELS: Record<string, string> = {
+  vcard_download: "Contact Saves",
+  connection_submit: "Connections",
+  phone_click: "Call",
+  email_click: "Email",
+  whatsapp_click: "WhatsApp",
+  social_click: "Social Link",
+  website_click: "Website",
+  share: "Share",
+  booking_click: "Booking",
+  custom_cta_click: "Custom Link",
+  pdf_download: "PDF Download",
+  video_play: "Video Play",
+  wallet_add: "Wallet Pass",
+};
+
+function getActionLabel(action: string): string {
+  if (ANALYTICS_ACTION_LABELS[action as keyof typeof ANALYTICS_ACTION_LABELS]) {
+    return ANALYTICS_ACTION_LABELS[action as keyof typeof ANALYTICS_ACTION_LABELS];
+  }
+  if (CANONICAL_ACTION_LABELS[action]) {
+    return CANONICAL_ACTION_LABELS[action];
+  }
+  return action.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
 const chartConfig = {
   profile_views: { label: "Profile Views", color: "#a855f7" },
   contact_saves: { label: "Contact Saves", color: "#34d399" },
@@ -611,7 +637,7 @@ function AnalyticsContent({
                   {(() => {
                     const maxCount = Math.max(...data.top_actions.map((item) => item.count), 1);
                     return data.top_actions.map((item) => {
-                      const label = ANALYTICS_ACTION_LABELS[item.action] || item.action;
+                      const label = getActionLabel(item.action);
                       const percentage = Math.max(Math.round((item.count / maxCount) * 100), 4);
                       return (
                         <div key={item.action} className="space-y-1.5">
