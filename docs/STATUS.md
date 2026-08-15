@@ -4,7 +4,7 @@ Last updated: 2026-08-15
 
 ## Current phase
 
-Connections + Analytics Upgrade Phase 04 — Connections functionality is implemented on `upgrade/04-connections-functionality` from the approved Phase 03 checkpoint `9beb73d47cda76ba61f3cccd9325712a1d7dfc4b`.
+Connections + Analytics Upgrade Phase 05 — analytics functional UI is implemented on `upgrade/05-analytics-functional-ui` from the approved Phase 04 checkpoint `6fa0679868d81199d4694b5deb7017d919b87095`.
 
 ## Completed
 
@@ -15,6 +15,7 @@ Connections + Analytics Upgrade Phase 04 — Connections functionality is implem
 - Added migration `20260815020000_analytics_event_pipeline.sql`, replacing direct analytics inserts with `record_public_card_event`, active-card slug resolution, canonical event/metadata validation, UUID retry deduplication, privacy-scoped sessions, and query-supporting indexes.
 - Added Phase 03 NFC / QR entry attribution with constrained `direct`, `profile_qr`, and `permanent_tag` page-view sources; physical NFC and permanent-tag QR remain honestly combined behind immutable `/t/$token` identity.
 - Completed Phase 04 Connections functionality without a schema migration: the existing slug-driven public RPC now has explicit submission states and successful `connection_submit` emission; the owner dashboard exposes the complete Free Connection record and available WhatsApp/Call/Email actions; trusted Pro/enterprise cards expose private owner notes, tags, follow-up status, and formula-safe CSV export through the existing database-enforced boundary.
+- Added migration `20260815040000_analytics_functional_ui.sql` with an authenticated aggregate-only owner analytics RPC, UTC ranges, authoritative Pro entitlement, and Pro-owner/admin raw SELECT enforcement; the dashboard now has locked, loading, empty, retryable error, KPI, trend, action, and traffic-source states without raw analytics reads.
 - Migrated `page_view` and `vcard_download` to the shared best-effort pipeline without changing the public card or vCard success path.
 - Committed approved Phase 00 checkpoint as `9609dea`.
 - Made TanStack `/c/$slug` the only public-card route and moved slug lookup into one server-only resolver.
@@ -60,4 +61,4 @@ Connections + Analytics Upgrade Phase 04 — Connections functionality is implem
 
 ## Next phase
 
-Do not begin Connections + Analytics Upgrade Phase 05. Stop for the Phase 04 checkpoint review and authorization.
+Do not begin Connections + Analytics Upgrade Phase 06. Stop for the Phase 05 checkpoint review and authorization.

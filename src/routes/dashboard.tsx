@@ -630,7 +630,11 @@ function Dashboard() {
           <div className="space-y-6">
             <h1 className="text-2xl font-bold text-white font-display">Analytics</h1>
             {selectedCard?.id ? (
-              <AnalyticsTab cardId={selectedCard.id} />
+              <AnalyticsTab
+                key={selectedCard.id}
+                cardId={selectedCard.id}
+                isPro={selectedCard.plan_tier === "pro" || selectedCard.plan_tier === "enterprise"}
+              />
             ) : (
               <p className="text-xs text-slate-400">Select a card to view analytics.</p>
             )}
