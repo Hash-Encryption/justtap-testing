@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   ANALYTICS_EVENT_TYPES,
   getAnalyticsSessionId,
+  getPublicCardEntrySource,
   getPublicAnalyticsMetadata,
 } from "./analytics";
 
@@ -46,6 +47,14 @@ describe("analytics event pipeline", () => {
     });
     expect(getPublicAnalyticsMetadata("invalid", 900)).toEqual({ device_category: "tablet" });
     expect(getPublicAnalyticsMetadata("", 1440)).toEqual({ device_category: "desktop" });
+  });
+
+  it("accepts only the two controlled entry markers and defaults everything else to direct", () => {
+    expect(getPublicCardEntrySource("")).toBe("direct");
+    expect(getPublicCardEntrySource("?jt_entry=profile_qr")).toBe("profile_qr");
+    expect(getPublicCardEntrySource("?jt_entry=permanent_tag")).toBe("permanent_tag");
+    expect(getPublicCardEntrySource("?jt_entry=nfc")).toBe("direct");
+    expect(getPublicCardEntrySource("?source=profile_qr")).toBe("direct");
   });
 
   it("routes public tracking through the narrow RPC without direct table inserts", () => {

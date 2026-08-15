@@ -13,6 +13,7 @@ Connections + Analytics Upgrade Phase 02 — the secure analytics event pipeline
 - Recorded the retirement of all demo-card and Pro Demo Mode behavior.
 - Added migration `20260815010000_connections_data_model.sql`, replacing direct anonymous lead inserts with `create_public_connection`, preserving owner-private reads/deletes, and limiting private management updates to Pro/enterprise owners.
 - Added migration `20260815020000_analytics_event_pipeline.sql`, replacing direct analytics inserts with `record_public_card_event`, active-card slug resolution, canonical event/metadata validation, UUID retry deduplication, privacy-scoped sessions, and query-supporting indexes.
+- Added Phase 03 NFC / QR entry attribution with constrained `direct`, `profile_qr`, and `permanent_tag` page-view sources; physical NFC and permanent-tag QR remain honestly combined behind immutable `/t/$token` identity.
 - Migrated `page_view` and `vcard_download` to the shared best-effort pipeline without changing the public card or vCard success path.
 - Committed approved Phase 00 checkpoint as `9609dea`.
 - Made TanStack `/c/$slug` the only public-card route and moved slug lookup into one server-only resolver.

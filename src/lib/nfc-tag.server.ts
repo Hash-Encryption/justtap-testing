@@ -47,6 +47,37 @@ export async function resolveTagTokenFromSupabase(token: string): Promise<TagLoo
   );
 }
 
+export async function recordPermanentTagPageViewFromSupabase(token: string): Promise<boolean> {
+  const url = getSupabaseUrl();
+  const anonKey = getSupabaseAnonKey();
+
+  try {
+    const response = await fetch(`${url}/rest/v1/rpc/record_public_tag_page_view`, {
+      method: "POST",
+      headers: {
+        apikey: anonKey,
+        Authorization: `Bearer ${anonKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ _token: token, _event_id: crypto.randomUUID() }),
+    });
+
+    if (!response.ok) {
+      console.error("[analytics] Permanent-tag page view was not recorded", {
+        status: response.status,
+      });
+      return false;
+    }
+
+    return (await response.json()) === true;
+  } catch (error) {
+    console.error("[analytics] Permanent-tag page view was not recorded", {
+      message: error instanceof Error ? error.message : String(error),
+    });
+    return false;
+  }
+}
+
 export const getPublicCardByTagToken = createServerFn({ method: "GET" })
   .validator(z.object({ token: z.string() }))
   .handler(async ({ data }) => resolveTagTokenFromSupabase(data.token));

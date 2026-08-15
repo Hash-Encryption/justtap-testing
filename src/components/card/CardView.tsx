@@ -22,7 +22,12 @@ import {
 import { toast } from "sonner";
 import { HeaderCut } from "./HeaderCut";
 import { supabase } from "@/lib/supabase";
-import { createAnalyticsEventContext, trackPublicCardEvent } from "@/lib/analytics";
+import {
+  createAnalyticsEventContext,
+  trackProfileQrPageView,
+  trackPublicCardEvent,
+  type AnalyticsEntrySource,
+} from "@/lib/analytics";
 import { formatWhatsAppNumber, getEmbedVideoUrl, type Card } from "@/lib/card";
 import type { PublicCard } from "@/lib/public-card";
 import { checkRateLimit } from "@/lib/rate-limit";
@@ -40,6 +45,8 @@ type Props = {
   card: Card | PublicCard;
   /** Preview mode disables analytics + outbound actions (dashboard editor). */
   preview?: boolean;
+  /** Entry attribution applies only to the initial public page view. */
+  entrySource?: AnalyticsEntrySource;
 };
 
 function outboundLinkProps(href: string | null | undefined, preview: boolean, newTab = false) {
@@ -47,7 +54,7 @@ function outboundLinkProps(href: string | null | undefined, preview: boolean, ne
   return newTab ? { href, target: "_blank" as const, rel: "noreferrer noopener" } : { href };
 }
 
-export function CardView({ card, preview = false }: Props) {
+export function CardView({ card, preview = false, entrySource = "direct" }: Props) {
   const [lang, setLang] = useState<"en" | "ar">("en");
   const [leadOpen, setLeadOpen] = useState(false);
   const [shareOpen, setShareOpen] = useState(false);
@@ -132,10 +139,12 @@ export function CardView({ card, preview = false }: Props) {
     : !card.pro_features?.remove_branding || card.plan_tier === "free";
 
   useEffect(() => {
-    if (preview) return;
+    if (preview || entrySource === "permanent_tag") return;
     pageViewContext.current ??= createAnalyticsEventContext();
-    void trackPublicCardEvent(card.slug, "page_view", pageViewContext.current);
-  }, [card.slug, preview]);
+    void (entrySource === "profile_qr"
+      ? trackProfileQrPageView(card.slug, pageViewContext.current)
+      : trackPublicCardEvent(card.slug, "page_view", pageViewContext.current));
+  }, [card.slug, entrySource, preview]);
 
   const socials = [
     { key: "linkedin", href: social.linkedin, label: "LinkedIn", Icon: Linkedin },

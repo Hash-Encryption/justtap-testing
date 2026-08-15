@@ -32,7 +32,7 @@ export function QrTab({ card, onUpgradeRequest }: QrTabProps) {
 
   const appUrl = typeof window !== "undefined" ? window.location.origin : "https://justtap.app";
 
-  const cardProfileUrl = `${appUrl}/c/${card.slug}`;
+  const cardProfileUrl = `${appUrl}/c/${card.slug}?jt_entry=profile_qr`;
   const offlineVCardData = buildVCard(card);
   const isPro = card.plan_tier === "pro" || card.plan_tier === "enterprise";
 

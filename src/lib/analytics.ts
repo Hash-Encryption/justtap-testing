@@ -18,6 +18,7 @@ export const ANALYTICS_EVENT_TYPES = [
 ] as const;
 
 export type AnalyticsEventType = (typeof ANALYTICS_EVENT_TYPES)[number];
+export type AnalyticsEntrySource = "direct" | "profile_qr" | "permanent_tag";
 export type AnalyticsMetadata = {
   referrer_host?: string;
   device_category?: "mobile" | "tablet" | "desktop";
@@ -29,6 +30,7 @@ export type AnalyticsEventContext = {
 };
 
 const SESSION_KEY = "justtap.analytics.session.v1";
+export const ENTRY_SOURCE_QUERY_KEY = "jt_entry";
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 type SessionStore = Pick<Storage, "getItem" | "setItem">;
@@ -79,6 +81,11 @@ export function createAnalyticsEventContext(): AnalyticsEventContext {
   };
 }
 
+export function getPublicCardEntrySource(search: string): AnalyticsEntrySource {
+  const source = new URLSearchParams(search).get(ENTRY_SOURCE_QUERY_KEY);
+  return source === "profile_qr" || source === "permanent_tag" ? source : "direct";
+}
+
 export async function trackPublicCardEvent(
   cardSlug: string,
   eventType: AnalyticsEventType,
@@ -87,6 +94,20 @@ export async function trackPublicCardEvent(
   const { data, error } = await supabase.rpc("record_public_card_event", {
     _card_slug: cardSlug,
     _event_type: eventType,
+    _event_id: context.eventId,
+    _session_id: context.sessionId,
+    _metadata: context.metadata,
+  });
+
+  return !error && data !== null;
+}
+
+export async function trackProfileQrPageView(
+  cardSlug: string,
+  context = createAnalyticsEventContext(),
+): Promise<boolean> {
+  const { data, error } = await supabase.rpc("record_public_profile_qr_page_view", {
+    _card_slug: cardSlug,
     _event_id: context.eventId,
     _session_id: context.sessionId,
     _metadata: context.metadata,
