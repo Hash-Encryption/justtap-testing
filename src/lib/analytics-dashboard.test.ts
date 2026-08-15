@@ -100,12 +100,12 @@ describe("owner analytics dashboard", () => {
   it("wires locked, loading, empty, error/retry, chart, fallback, and card isolation", () => {
     expect(ui).toContain("if (!isPro)");
     expect(ui.indexOf("if (!isPro)")).toBeLessThan(ui.indexOf('.rpc("get_owner_card_analytics"'));
-    expect(ui).toContain("Loading analytics…");
-    expect(ui).toContain("No activity in this range");
-    expect(ui).toContain("Analytics couldn&apos;t be loaded.");
-    expect(ui).toContain("Try again");
+    expect(ui).toContain('t("loadingAnalytics")');
+    expect(ui).toContain('t("noActivityTitle")');
+    expect(ui).toContain('t("analyticsErrorTitle")');
+    expect(ui).toContain('t("tryAgain")');
     expect(ui).toContain("<LineChart");
-    expect(ui).toContain("View trend data table");
+    expect(ui).toContain('t("viewTrendDataTable")');
     expect(ui).toContain("aria-pressed={range === value}");
     expect(ui).not.toContain('.from("card_analytics")');
     expect(dashboard).toContain("key={selectedCard.id}");

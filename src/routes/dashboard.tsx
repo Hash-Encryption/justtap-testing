@@ -310,11 +310,11 @@ function Dashboard() {
   }
 
   const navItems: { id: Tab; label: string; icon: React.ReactNode }[] = [
-    { id: "cards", label: "Cards", icon: <LayoutGrid className="w-4 h-4" /> },
-    { id: "analytics", label: "Analytics", icon: <BarChart3 className="w-4 h-4" /> },
-    { id: "qr", label: "QR & Export", icon: <QrCode className="w-4 h-4" /> },
-    { id: "leads", label: "Connections", icon: <Inbox className="w-4 h-4" /> },
-    { id: "pro", label: "Pro Features", icon: <Sparkles className="w-4 h-4 text-amber-400" /> },
+    { id: "cards", label: t("cardsTab"), icon: <LayoutGrid className="w-4 h-4" /> },
+    { id: "analytics", label: t("analyticsTab"), icon: <BarChart3 className="w-4 h-4" /> },
+    { id: "qr", label: t("qrCodeTab"), icon: <QrCode className="w-4 h-4" /> },
+    { id: "leads", label: t("leadsTab"), icon: <Inbox className="w-4 h-4" /> },
+    { id: "pro", label: t("proTab"), icon: <Sparkles className="w-4 h-4 text-amber-400" /> },
   ];
 
   return (
@@ -328,10 +328,10 @@ function Dashboard() {
       />
 
       {/* DESKTOP SIDEBAR NAVIGATION */}
-      <aside className="hidden md:flex flex-col w-64 shrink-0 min-h-screen justtap-glass border-r border-slate-800 p-5 justify-between sticky top-0 h-screen z-30">
+      <aside className="hidden md:flex flex-col w-64 shrink-0 min-h-screen justtap-glass border-r rtl:border-r-0 rtl:border-l border-slate-800 p-5 justify-between sticky top-0 h-screen z-30">
         <div className="space-y-8">
           {/* Logo */}
-          <Link to="/" className="flex items-center space-x-2 px-2">
+          <Link to="/" className="flex items-center space-x-2 rtl:space-x-reverse px-2">
             <span className="font-display text-xl font-extrabold text-white tracking-tight">
               JustTap<span className="text-purple-500">.</span>
             </span>
@@ -354,7 +354,7 @@ function Dashboard() {
                       setEditing(false);
                     }
                   }}
-                  className={`w-full flex items-center space-x-3 px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all ${
+                  className={`w-full flex items-center space-x-3 rtl:space-x-reverse px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all text-start ${
                     active
                       ? "bg-purple-700 text-white shadow-lg shadow-purple-700/25"
                       : "text-slate-400 hover:text-white hover:bg-slate-900/60"
@@ -375,20 +375,20 @@ function Dashboard() {
           {isAdmin && (
             <Link
               to="/admin"
-              className="flex items-center space-x-2 text-xs font-semibold text-amber-300 hover:text-amber-200 px-3 py-2 rounded-xl bg-amber-500/10 border border-amber-500/20 transition-colors"
+              className="flex items-center space-x-2 rtl:space-x-reverse text-xs font-semibold text-amber-300 hover:text-amber-200 px-3 py-2 rounded-xl bg-amber-500/10 border border-amber-500/20 transition-colors"
             >
               <Shield className="w-3.5 h-3.5" />
-              <span>Admin Portal</span>
+              <span>{t("adminPortal")}</span>
             </Link>
           )}
 
           <button
             type="button"
             onClick={() => void signOut()}
-            className="w-full flex items-center space-x-2 text-xs font-semibold text-slate-400 hover:text-white px-3 py-2 rounded-xl hover:bg-slate-900 transition-colors"
+            className="w-full flex items-center space-x-2 rtl:space-x-reverse text-xs font-semibold text-slate-400 hover:text-white px-3 py-2 rounded-xl hover:bg-slate-900 transition-colors"
           >
             <LogOut className="w-3.5 h-3.5" />
-            <span>Sign Out</span>
+            <span>{t("signOut")}</span>
           </button>
         </div>
       </aside>

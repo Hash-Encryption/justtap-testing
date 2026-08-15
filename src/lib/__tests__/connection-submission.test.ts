@@ -93,6 +93,6 @@ describe("Connection submission contract", () => {
     expect(dashboard).toContain("connections.length > 0");
     expect(dashboard).toContain("sender_company");
     expect(dashboard).toContain("sender_job_title");
-    expect(dashboard).toContain("Visitor note");
+    expect(dashboard).toContain('t("visitorNote")');
   });
 });

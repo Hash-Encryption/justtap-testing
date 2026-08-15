@@ -200,9 +200,27 @@
   font-family: inherit;
 }
 
+.font-arabic,
+[dir="rtl"],
+[dir="rtl"] body {
+  font-family: "Plus Jakarta Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Noto Sans Arabic", "Cairo", sans-serif;
+}
+
+[dir="rtl"] :is(h1, h2, h3, .font-display) {
+  font-family: "Outfit", "Plus Jakarta Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Noto Sans Arabic", sans-serif;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .justtap-card-enter {
-    animation: none;
+    animation: none !important;
+  }
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
   }
 }
 

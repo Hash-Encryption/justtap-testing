@@ -95,14 +95,139 @@ const translations = {
     arBio: "نبذة",
 
     // Dashboard Tabs
-    myCardTab: "My card",
+    myCardTab: "Cards",
+    cardsTab: "Cards",
     analyticsTab: "Analytics",
-    leadsTab: "Leads",
-    qrCodeTab: "QR code",
+    leadsTab: "Connections",
+    qrCodeTab: "QR & Export",
+    proTab: "Pro Features",
     welcomeTitle: "Welcome to JustTap",
     noCardDesc:
       "You don't have a digital business card created yet. Create your personalized profile to start sharing your contact info.",
     createMyCardBtn: "Create My Digital Card",
+
+    // Analytics Tab
+    analyticsTitle: "Analytics",
+    analyticsSubtitle: "Understand how people interact with your card.",
+    selectCardAria: "Select card for analytics",
+    selectCardConnectionsAria: "Select card for connections",
+    analyticsDateRangeAria: "Analytics date range",
+    range7d: "7D",
+    range30d: "30D",
+    range90d: "90D",
+    rangeAll: "All",
+    loadingAnalytics: "Loading analytics…",
+    analyticsErrorTitle: "Analytics couldn't be loaded.",
+    analyticsErrorDesc: "Check your network connection and try again.",
+    tryAgain: "Try again",
+    analyticsProTitle: "Analytics is a Pro feature",
+    analyticsProDesc:
+      "Upgrade your card to Pro to unlock real-time profile views, contact saves, connection trends, and traffic source insights.",
+    profileViews: "Profile Views",
+    contactSaves: "Contact Saves",
+    connections: "Connections",
+    conversionRate: "Conversion Rate",
+    noActivityTitle: "No activity in this range",
+    noActivityDesc:
+      "Activity appears here after people view your public card or exchange information.",
+    profileActivity: "Profile Activity",
+    viewsLegend: "Views",
+    savesLegend: "Saves",
+    connectionsLegend: "Connections",
+    profileActivityAria: "Profile Views, Contact Saves, and Connections over time",
+    viewTrendDataTable: "View trend data table ↓",
+    utcPeriod: "UTC Period",
+    trafficSources: "Traffic Sources",
+    trafficSourcesSubtitle: "Entry channels to your card",
+    noTrafficSourcesTitle: "No traffic source data yet",
+    noTrafficSourcesDesc:
+      "Source data will appear when visitors enter through a Link, Profile QR, or JustTap Card.",
+    sourceLink: "Link",
+    sourceProfileQr: "Profile QR",
+    sourceJustTapCard: "JustTap Card",
+    topActions: "Top Actions",
+    topActionsSubtitle: "High-intent actions taken by visitors",
+    noTopActionsTitle: "No tracked actions in this range.",
+    noTopActionsDesc: "Actions like saving contacts and connecting will appear here.",
+    actionVcard: "Contact Saves",
+    actionConnection: "Connections",
+    actionPhone: "Call",
+    actionEmail: "Email",
+    actionWhatsapp: "WhatsApp",
+    actionSocial: "Social Link",
+    actionWebsite: "Website",
+    actionShare: "Share",
+    actionBooking: "Booking",
+    actionCustomCta: "Custom Link",
+    actionPdf: "PDF Download",
+    actionVideo: "Video Play",
+    actionWallet: "Wallet Pass",
+    peakActivity: "Peak Activity",
+    peakActivitySubtitle: "Highest profile view day in this period",
+    noPeakActivityTitle: "No peak activity yet",
+    noPeakActivityDesc:
+      "Peak activity will appear after your profile receives views in this period.",
+    recentContacts: "Recent Contacts",
+    recentContactsSubtitle: "Latest people who exchanged details through your card",
+    viewAll: "View all",
+    loadingRecentContacts: "Loading recent contacts…",
+    noContactsYet: "No contacts yet",
+    noContactsYetDesc: "When people exchange info, they will appear here.",
+
+    // Connections Tab
+    connectionsTitle: "Connections",
+    connectionsSubtitle: "People who exchanged information through your card.",
+    exportCsv: "Export CSV",
+    csvProNotice: "CSV export is available on Pro",
+    searchConnectionsPlaceholder: "Search connections...",
+    clearSearch: "Clear search",
+    filterConnectionsAria: "Filter connections by status",
+    statusAll: "All",
+    statusNew: "New",
+    statusFollowUp: "Follow Up",
+    statusContacted: "Contacted",
+    statusDone: "Done",
+    loadingConnections: "Loading Connections…",
+    connectionsErrorTitle: "Connections couldn't be loaded.",
+    noConnectionsOverallTitle: "No connections yet",
+    noConnectionsOverallDesc:
+      "When someone exchanges their information through your JustTap card, they’ll appear here.",
+    noFilteredConnectionsTitle: "No connections match your filters",
+    noFilteredConnectionsDesc: "Try adjusting your search query or status filter.",
+    clearFilters: "Clear filters",
+    connectedOn: "Connected on",
+    callAction: "Call",
+    emailAction: "Email",
+    whatsappAction: "WhatsApp",
+    viewDetails: "View details",
+    visitorNote: "Visitor note",
+    visitorNoteDesc: "Shared by this person when they connected.",
+    privateTags: "Private tags",
+    addTagPlaceholder: "Add tag (e.g. event, priority)…",
+    add: "Add",
+    followUpStatus: "Follow-up status",
+    privateNote: "Private note",
+    onlyYouCanSeeThis: "Only you can see this",
+    privateNotePlaceholder: "Add a private follow-up note…",
+    saving: "Saving…",
+    deleteConnection: "Delete connection",
+    deleteConnectionDialogTitle: "Delete",
+    deleteConnectionDialogDesc:
+      "This removes this Connection from your account. This action cannot be undone.",
+    cancel: "Cancel",
+    delete: "Delete",
+    deleting: "Deleting…",
+    proFollowUpFeaturesTitle: "Pro Follow-up Features",
+    proFollowUpFeaturesDesc:
+      "Private notes, custom tags, and pipeline follow-up statuses are available on Pro.",
+    justNow: "Just now",
+    yesterday: "Yesterday",
+    close: "Close",
+    removeTagAria: "Remove tag",
+    exportedCsvToast: "Connections exported to CSV.",
+    savedFollowUpToast: "Follow-up details saved.",
+    deleteFailedToast: "We couldn't delete this Connection. Please try again.",
+    saveFailedToast: "We couldn't save these follow-up details. Please try again.",
   },
   ar: {
     // Navigation & Common
@@ -194,17 +319,140 @@ const translations = {
     arBio: "النبذة التعريفية بالعربية",
 
     // Dashboard Tabs
-    myCardTab: "بطاقتي",
+    myCardTab: "البطاقات",
+    cardsTab: "البطاقات",
     analyticsTab: "الإحصائيات",
-    leadsTab: "التفاعلات والعملاء",
-    qrCodeTab: "رمز QR",
+    leadsTab: "جهات الاتصال",
+    qrCodeTab: "رمز QR والتصدير",
+    proTab: "ميزات Pro",
     welcomeTitle: "مرحباً بك في JustTap",
     noCardDesc: "لم تقم بإنشاء بطاقة عمل رقمية بعد. أنشئ ملفك الشخصي لتبدأ بمشاركة معلوماتك فوراً.",
     createMyCardBtn: "إنشاء بطاقتي الرقمية",
+
+    // Analytics Tab
+    analyticsTitle: "الإحصائيات",
+    analyticsSubtitle: "تعرّف على كيفية تفاعل الأشخاص مع بطاقتك.",
+    selectCardAria: "اختر بطاقة لعرض الإحصائيات",
+    selectCardConnectionsAria: "اختر بطاقة لعرض جهات الاتصال",
+    analyticsDateRangeAria: "الفترة الزمنية للإحصائيات",
+    range7d: "7D",
+    range30d: "30D",
+    range90d: "90D",
+    rangeAll: "الكل",
+    loadingAnalytics: "جاري تحميل الإحصائيات…",
+    analyticsErrorTitle: "تعذّر تحميل الإحصائيات.",
+    analyticsErrorDesc: "تحقق من اتصالك بالإنترنت ثم حاول مجدداً.",
+    tryAgain: "إعادة المحاولة",
+    analyticsProTitle: "الإحصائيات ميزة خاصة بحسابات Pro",
+    analyticsProDesc:
+      "قم بترقية بطاقتك إلى Pro لمتابعة مشاهدات الملف، حفظ جهات الاتصال، وتتبع مصادر الزيارات في الوقت الفعلي.",
+    profileViews: "مشاهدات الملف",
+    contactSaves: "حفظ جهة الاتصال",
+    connections: "جهات الاتصال",
+    conversionRate: "معدل التحويل",
+    noActivityTitle: "لا يوجد نشاط في هذه الفترة",
+    noActivityDesc: "سيظهر النشاط هنا بمجرد زيارة بطاقتك أو تبادل المعلومات معك.",
+    profileActivity: "نشاط الملف الشخصي",
+    viewsLegend: "المشاهدات",
+    savesLegend: "الحفظ",
+    connectionsLegend: "جهات الاتصال",
+    profileActivityAria: "مشاهدات الملف وحفظ جهات الاتصال والتواصل عبر الوقت",
+    viewTrendDataTable: "عرض جدول بيانات النشاط ↓",
+    utcPeriod: "التاريخ (UTC)",
+    trafficSources: "مصادر الزيارات",
+    trafficSourcesSubtitle: "قنوات الوصول إلى بطاقتك",
+    noTrafficSourcesTitle: "لا توجد بيانات لمصادر الزيارات بعد",
+    noTrafficSourcesDesc:
+      "ستظهر البيانات عندما يدخل الزوار عبر الرابط، رمز QR، أو بطاقة JustTap.",
+    sourceLink: "الرابط",
+    sourceProfileQr: "رمز QR للملف",
+    sourceJustTapCard: "بطاقة JustTap",
+    topActions: "أبرز الإجراءات",
+    topActionsSubtitle: "الإجراءات الأعلى تفاعلاً من الزوار",
+    noTopActionsTitle: "لا توجد إجراءات مسجلة في هذه الفترة.",
+    noTopActionsDesc: "ستظهر هنا الإجراءات مثل حفظ جهة الاتصال والتواصل.",
+    actionVcard: "حفظ جهة الاتصال",
+    actionConnection: "جهات الاتصال",
+    actionPhone: "اتصال هاتفي",
+    actionEmail: "بريد إلكتروني",
+    actionWhatsapp: "واتساب",
+    actionSocial: "رابط تواصل",
+    actionWebsite: "موقع إلكتروني",
+    actionShare: "مشاركة",
+    actionBooking: "حجز موعد",
+    actionCustomCta: "رابط مخصص",
+    actionPdf: "تحميل PDF",
+    actionVideo: "تشغيل فيديو",
+    actionWallet: "بطاقة المحفظة",
+    peakActivity: "ذروة النشاط",
+    peakActivitySubtitle: "اليوم الأكثر تفاعلاً في هذه الفترة",
+    noPeakActivityTitle: "لا يوجد نشاط مسجل بعد",
+    noPeakActivityDesc: "ستظهر ذروة النشاط عندما يتلقى ملفك مشاهدات خلال هذه الفترة.",
+    recentContacts: "أحدث جهات الاتصال",
+    recentContactsSubtitle: "آخر الأشخاص الذين تبادلوا معلوماتهم عبر بطاقتك",
+    viewAll: "عرض الكل",
+    loadingRecentContacts: "جاري تحميل أحدث جهات الاتصال…",
+    noContactsYet: "لا توجد جهات اتصال بعد",
+    noContactsYetDesc: "عندما يتبادل الأشخاص معلوماتهم معك، ستظهر هنا.",
+
+    // Connections Tab
+    connectionsTitle: "جهات الاتصال",
+    connectionsSubtitle: "الأشخاص الذين تبادلوا بياناتهم عبر بطاقتك.",
+    exportCsv: "تصدير CSV",
+    csvProNotice: "تصدير CSV متاح في باقة Pro",
+    searchConnectionsPlaceholder: "بحث في جهات الاتصال...",
+    clearSearch: "مسح البحث",
+    filterConnectionsAria: "فلترة جهات الاتصال حسب الحالة",
+    statusAll: "الكل",
+    statusNew: "جديد",
+    statusFollowUp: "متابعة",
+    statusContacted: "تم التواصل",
+    statusDone: "مكتمل",
+    loadingConnections: "جاري تحميل جهات الاتصال…",
+    connectionsErrorTitle: "تعذّر تحميل جهات الاتصال.",
+    noConnectionsOverallTitle: "لا توجد جهات اتصال بعد",
+    noConnectionsOverallDesc:
+      "عندما يتبادل شخص ما معلوماته عبر بطاقتك، ستظهر بياناته هنا.",
+    noFilteredConnectionsTitle: "لا توجد نتائج مطابقة لخيارات البحث",
+    noFilteredConnectionsDesc: "جرب تعديل كلمة البحث أو فلتر الحالة.",
+    clearFilters: "مسح الفلاتر",
+    connectedOn: "تاريخ التواصل",
+    callAction: "اتصال",
+    emailAction: "بريد",
+    whatsappAction: "واتساب",
+    viewDetails: "عرض التفاصيل",
+    visitorNote: "ملاحظة الزائر",
+    visitorNoteDesc: "تمت مشاركتها من هذا الشخص عند التواصل.",
+    privateTags: "وسوم خاصة",
+    addTagPlaceholder: "إضافة وسم (مثل: مؤتمر، أولوية)…",
+    add: "إضافة",
+    followUpStatus: "حالة المتابعة",
+    privateNote: "ملاحظة خاصة",
+    onlyYouCanSeeThis: "أنت فقط من يرى هذا",
+    privateNotePlaceholder: "أضف ملاحظة متابعة خاصة…",
+    saving: "جاري الحفظ…",
+    deleteConnection: "حذف جهة الاتصال",
+    deleteConnectionDialogTitle: "حذف",
+    deleteConnectionDialogDesc:
+      "سيؤدي هذا إلى حذف جهة الاتصال نهائياً من حسابك. لا يمكن التراجع عن هذا الإجراء.",
+    cancel: "إلغاء",
+    delete: "حذف",
+    deleting: "جاري الحذف…",
+    proFollowUpFeaturesTitle: "ميزات المتابعة المتقدمة (Pro)",
+    proFollowUpFeaturesDesc:
+      "الملاحظات الخاصة والوسوم وحالات المتابعة متاحة حصرياً لمشتركي Pro.",
+    justNow: "الآن",
+    yesterday: "أمس",
+    close: "إغلاق",
+    removeTagAria: "حذف الوسم",
+    exportedCsvToast: "تم تصدير جهات الاتصال كملف CSV بنجاح.",
+    savedFollowUpToast: "تم حفظ تفاصيل المتابعة.",
+    deleteFailedToast: "تعذّر حذف جهة الاتصال. يرجى المحاولة مجدداً.",
+    saveFailedToast: "تعذّر حفظ تفاصيل المتابعة. يرجى المحاولة مجدداً.",
   },
 };
 
-type Translations = typeof translations.en;
+export type Translations = typeof translations.en;
 
 interface LanguageContextType {
   lang: Language;
@@ -270,4 +518,61 @@ export function useTranslation() {
     throw new Error("useTranslation must be used within LanguageProvider");
   }
   return ctx;
+}
+
+export function formatLocalizedRelativeTime(dateString: string, lang: Language = "en"): string {
+  const date = new Date(dateString);
+  const now = new Date();
+  const diffMs = now.getTime() - date.getTime();
+  const diffMinutes = Math.floor(diffMs / (1000 * 60));
+  const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+
+  if (lang === "ar") {
+    if (diffMinutes < 1) return "الآن";
+    if (diffMinutes < 60) return `منذ ${diffMinutes} د`;
+    if (diffHours < 24) return `منذ ${diffHours} س`;
+    if (diffDays === 1) return "أمس";
+    if (diffDays < 7) return `منذ ${diffDays} ي`;
+    return date.toLocaleDateString("ar-EG", { month: "short", day: "numeric" });
+  }
+
+  if (diffMinutes < 1) return "Just now";
+  if (diffMinutes < 60) return `${diffMinutes}m ago`;
+  if (diffHours < 24) return `${diffHours}h ago`;
+  if (diffDays === 1) return "Yesterday";
+  if (diffDays < 7) return `${diffDays}d ago`;
+  return date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+}
+
+export function formatLocalizedPeakDate(
+  periodStr: string,
+  lang: Language = "en",
+): { formattedDate: string; dayOfWeek: string } {
+  try {
+    const parts = periodStr.split("-").map(Number);
+    if (parts.length === 3) {
+      const year = parts[0];
+      const month = parts[1];
+      const day = parts[2];
+      if (year && month && day) {
+        const utcDate = new Date(Date.UTC(year, month - 1, day));
+        const locale = lang === "ar" ? "ar-EG" : "en-US";
+        const formattedDate = utcDate.toLocaleDateString(locale, {
+          month: "long",
+          day: "numeric",
+          year: "numeric",
+          timeZone: "UTC",
+        });
+        const dayOfWeek = utcDate.toLocaleDateString(locale, {
+          weekday: "long",
+          timeZone: "UTC",
+        });
+        return { formattedDate, dayOfWeek };
+      }
+    }
+  } catch {
+    /* fallback */
+  }
+  return { formattedDate: periodStr, dayOfWeek: "" };
 }
