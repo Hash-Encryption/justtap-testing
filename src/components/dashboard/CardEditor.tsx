@@ -537,42 +537,42 @@ export function CardEditor({
     <div className="relative pb-24 space-y-6">
       {/* TOP EDITOR BAR */}
       <div className="justtap-glass rounded-2xl p-4 flex flex-col sm:flex-row items-center justify-between gap-4 border border-slate-800">
-        <div className="flex items-center space-x-3 w-full sm:w-auto justify-between sm:justify-start">
+        <div className="flex items-center space-x-3 rtl:space-x-reverse w-full sm:w-auto justify-between sm:justify-start">
           {onBackToDashboard && (
             <button
               type="button"
               onClick={onBackToDashboard}
-              className="flex items-center space-x-1.5 text-xs text-slate-400 hover:text-white px-3 py-1.5 rounded-xl border border-slate-800 bg-slate-900/60 transition-colors"
+              className="flex items-center space-x-1.5 rtl:space-x-reverse text-xs text-slate-400 hover:text-white px-3 py-1.5 rounded-xl border border-slate-800 bg-slate-900/60 transition-colors"
             >
-              <ArrowLeft className="w-3.5 h-3.5" />
-              <span>Back to Cards</span>
+              <ArrowLeft className="w-3.5 h-3.5 rtl:rotate-180" />
+              <span>{t("backToCards")}</span>
             </button>
           )}
 
           {/* Sync Status Badge */}
-          <div className="flex items-center space-x-2">
+          <div className="flex items-center space-x-2 rtl:space-x-reverse">
             <span
               className={`h-2.5 w-2.5 rounded-full ${
                 isDirty ? "bg-amber-400 animate-pulse" : "bg-emerald-400"
               }`}
             />
             <span className="text-xs font-semibold text-slate-300">
-              {isDirty ? (lastAutoSaved ? "Draft saved locally" : "Unsaved Changes") : "Saved"}
+              {isDirty ? (lastAutoSaved ? t("draftSavedLocally") : t("unsavedChanges")) : t("saved")}
             </span>
           </div>
         </div>
 
         {/* Action controls */}
-        <div className="flex items-center space-x-2.5 w-full sm:w-auto justify-end">
+        <div className="flex items-center space-x-2.5 rtl:space-x-reverse w-full sm:w-auto justify-end">
           {!isNew && draft.id && (
             <button
               type="button"
               onClick={() => setShowDeactivateModal(true)}
-              className="px-3.5 py-2 rounded-xl border border-red-500/30 bg-red-500/10 text-red-300 hover:bg-red-500/20 text-xs font-semibold flex items-center space-x-1.5 transition-all"
+              className="px-3.5 py-2 rounded-xl border border-red-500/30 bg-red-500/10 text-red-300 hover:bg-red-500/20 text-xs font-semibold flex items-center space-x-1.5 rtl:space-x-reverse transition-all"
             >
               <PowerOff className="w-3.5 h-3.5" />
               <span>
-                {(draft.is_active ?? true) ? "Disable Public Profile" : "Enable Public Profile"}
+                {(draft.is_active ?? true) ? t("disablePublicProfile") : t("enablePublicProfile")}
               </span>
             </button>
           )}
@@ -581,17 +581,17 @@ export function CardEditor({
             type="button"
             onClick={() => void publishChanges()}
             disabled={saving}
-            className="px-5 py-2.5 rounded-xl bg-purple-700 hover:bg-purple-600 text-white font-bold text-xs shadow-lg shadow-purple-700/30 flex items-center space-x-2 transition-all disabled:opacity-60"
+            className="px-5 py-2.5 rounded-xl bg-purple-700 hover:bg-purple-600 text-white font-bold text-xs shadow-lg shadow-purple-700/30 flex items-center space-x-2 rtl:space-x-reverse transition-all disabled:opacity-60"
           >
             {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-            <span>Publish Changes</span>
+            <span>{t("publishChanges")}</span>
           </button>
         </div>
       </div>
 
       {draftRestored && (
         <div className="flex items-center justify-between rounded-xl bg-purple-950/40 border border-purple-800/40 px-4 py-2.5 text-xs text-purple-200">
-          <span>Loaded your working draft from browser storage.</span>
+          <span>{t("loadedDraftStorage")}</span>
           <button
             type="button"
             onClick={() => {
@@ -605,7 +605,7 @@ export function CardEditor({
             }}
             className="underline opacity-80 hover:opacity-100"
           >
-            Clear draft
+            {t("clearDraft")}
           </button>
         </div>
       )}
@@ -625,26 +625,26 @@ export function CardEditor({
             <button
               type="button"
               onClick={() => handleModeSwitch("classic_v2")}
-              className={`flex-1 py-2 px-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center space-x-1.5 ${
+              className={`flex-1 py-2 px-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center space-x-1.5 rtl:space-x-reverse ${
                 draft.design_mode !== "custom"
                   ? "bg-purple-700 text-white shadow-md shadow-purple-700/30"
                   : "text-slate-400 hover:text-white"
               }`}
             >
-              <span>Classic V2</span>
+              <span>{t("modeClassicV2")}</span>
             </button>
 
             <button
               type="button"
               onClick={() => handleModeSwitch("custom")}
-              className={`flex-1 py-2 px-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center space-x-1.5 ${
+              className={`flex-1 py-2 px-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center space-x-1.5 rtl:space-x-reverse ${
                 draft.design_mode === "custom"
                   ? "bg-gradient-to-r from-amber-500 to-amber-600 text-slate-950 shadow-md shadow-amber-500/20"
                   : "text-slate-400 hover:text-white"
               }`}
             >
               <Sparkles className="w-3.5 h-3.5" />
-              <span>Custom Creator</span>
+              <span>{t("modeCustomCreator")}</span>
               {!isPro && <Lock className="w-3 h-3 text-amber-400" />}
             </button>
           </div>
@@ -656,30 +656,30 @@ export function CardEditor({
           {draft.design_mode === "custom" && (
             <div className="justtap-glass rounded-3xl p-6 space-y-6 border border-amber-500/20 relative">
               <div className="flex items-center justify-between border-b border-slate-800 pb-4">
-                <div className="flex items-center space-x-2">
+                <div className="flex items-center space-x-2 rtl:space-x-reverse">
                   <Sparkles className="w-5 h-5 text-amber-400" />
                   <h3 className="text-base font-bold text-white font-display">
-                    Custom Creator Engine
+                    {t("customCreatorEngine")}
                   </h3>
                 </div>
                 <span className="text-[10px] font-extrabold px-2.5 py-1 rounded-full bg-amber-400/10 text-amber-300 border border-amber-400/20">
-                  PRO ONLY
+                  {t("proOnlyBadge")}
                 </span>
               </div>
 
               {/* 1. PRESET PALETTES */}
               <div className="space-y-3">
-                <span className="text-xs font-semibold text-slate-300 block">Preset Palettes</span>
+                <span className="text-xs font-semibold text-slate-300 block">{t("presetPalettes")}</span>
                 <div className="grid grid-cols-2 gap-2.5">
                   {DESIGN_PRESET_PALETTES.map((preset) => (
                     <button
                       key={preset.id}
                       type="button"
                       onClick={() => applyPreset(preset.id)}
-                      className="p-3 rounded-xl bg-slate-900/80 border border-slate-800 hover:border-amber-500/40 text-left transition-all space-y-1.5"
+                      className="p-3 rounded-xl bg-slate-900/80 border border-slate-800 hover:border-amber-500/40 text-start transition-all space-y-1.5"
                     >
                       <span className="text-xs font-bold text-white block">{preset.name}</span>
-                      <div className="flex items-center space-x-1.5">
+                      <div className="flex items-center space-x-1.5 rtl:space-x-reverse">
                         <span
                           className="w-4 h-4 rounded-full border border-white/20"
                           style={{ backgroundColor: preset.bg_color }}
@@ -705,7 +705,7 @@ export function CardEditor({
               {/* 2. HEADER DIVIDER PATTERNS */}
               <div className="space-y-3">
                 <span className="text-xs font-semibold text-slate-300 block">
-                  Header Divider Pattern
+                  {t("headerDividerPattern")}
                 </span>
                 <div className="flex flex-wrap gap-2">
                   {PATTERNS.map((p) => (
@@ -727,7 +727,7 @@ export function CardEditor({
 
               {/* 3. SURFACE FINISHES */}
               <div className="space-y-3">
-                <span className="text-xs font-semibold text-slate-300 block">Surface Finish</span>
+                <span className="text-xs font-semibold text-slate-300 block">{t("surfaceFinish")}</span>
                 <div className="grid grid-cols-2 gap-2">
                   {FINISHES.map((f) => (
                     <button
@@ -749,31 +749,31 @@ export function CardEditor({
               {/* 4. FIVE CUSTOM COLOR CONTROLS */}
               <div className="space-y-3">
                 <span className="text-xs font-semibold text-slate-300 block">
-                  Five Color Controls
+                  {t("fiveColorControls")}
                 </span>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
                   <ColorPickerField
-                    label="1. Background"
+                    label={t("colorBg")}
                     value={draft.bg_color || "#08080A"}
                     onChange={(v) => set("bg_color", v)}
                   />
                   <ColorPickerField
-                    label="2. Surface"
+                    label={t("colorSurface")}
                     value={draft.surface_color || "#121216"}
                     onChange={(v) => set("surface_color", v)}
                   />
                   <ColorPickerField
-                    label="3. Primary Accent"
+                    label={t("colorPrimaryAccent")}
                     value={draft.accent_color || "#6B21A8"}
                     onChange={(v) => set("accent_color", v)}
                   />
                   <ColorPickerField
-                    label="4. Champagne Accent"
+                    label={t("colorChampagneAccent")}
                     value={draft.champagne_accent || "#E6D5AC"}
                     onChange={(v) => set("champagne_accent", v)}
                   />
                   <ColorPickerField
-                    label="5. Text Color"
+                    label={t("colorText")}
                     value={draft.text_color || "#FAFAFA"}
                     onChange={(v) => set("text_color", v)}
                   />
@@ -783,7 +783,7 @@ export function CardEditor({
               {/* 5. CORNER STYLE & FONT */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <span className="text-xs font-semibold text-slate-300 block">Corner Style</span>
+                  <span className="text-xs font-semibold text-slate-300 block">{t("cornerStyle")}</span>
                   <div className="flex gap-1.5">
                     {RADIUS_OPTIONS.map((r) => (
                       <button
@@ -803,7 +803,7 @@ export function CardEditor({
                 </div>
 
                 <div className="space-y-2">
-                  <span className="text-xs font-semibold text-slate-300 block">Card Font</span>
+                  <span className="text-xs font-semibold text-slate-300 block">{t("cardFont")}</span>
                   <div className="flex gap-1.5">
                     {FONT_OPTIONS.map((font) => (
                       <button
@@ -878,7 +878,7 @@ export function CardEditor({
               label={t("whatsappNumber")}
               value={draft.whatsapp_phone ?? ""}
               onChange={(v) => set("whatsapp_phone", v)}
-              hint="Auto-formats local numbers (e.g. 0501234567 -> 966501234567)"
+              hint={t("whatsappHint")}
             />
             <Input
               label={t("whatsappMessage")}
@@ -962,34 +962,34 @@ export function CardEditor({
 
             <div className="space-y-2">
               <h3 className="text-xl font-bold text-white">
-                {(draft.is_active ?? true) ? "Disable Public Profile?" : "Enable Public Profile?"}
+                {(draft.is_active ?? true)
+                  ? t("disablePublicModalTitle")
+                  : t("enablePublicModalTitle")}
               </h3>
               <p className="text-xs text-slate-400 leading-relaxed">
                 {(draft.is_active ?? true)
-                  ? "This will turn your public profile (/c/" +
-                    draft.slug +
-                    ") into a 404 inactive page. Note: Your physical permanent token (/t/:token) identity will remain completely safe and protected."
-                  : "This will reactivate your public profile URL (/c/" + draft.slug + ")."}
+                  ? t("disablePublicModalDesc")
+                  : t("enablePublicModalDesc")}
               </p>
             </div>
 
-            <div className="flex justify-end space-x-3 pt-2">
+            <div className="flex justify-end space-x-3 rtl:space-x-reverse pt-2">
               <button
                 type="button"
                 onClick={() => setShowDeactivateModal(false)}
                 className="px-4 py-2 text-xs font-semibold text-slate-400 hover:text-white"
               >
-                Cancel
+                {t("cancel")}
               </button>
 
               <button
                 type="button"
                 onClick={() => void handleToggleDeactivate()}
                 disabled={deactivating}
-                className="px-4 py-2 rounded-xl bg-red-600 hover:bg-red-500 text-white font-bold text-xs flex items-center space-x-1.5"
+                className="px-4 py-2 rounded-xl bg-red-600 hover:bg-red-500 text-white font-bold text-xs flex items-center space-x-1.5 rtl:space-x-reverse"
               >
                 {deactivating ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : null}
-                <span>Confirm</span>
+                <span>{t("confirm")}</span>
               </button>
             </div>
           </div>

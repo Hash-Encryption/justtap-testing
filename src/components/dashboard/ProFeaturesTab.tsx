@@ -23,6 +23,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { useTranslation } from "@/lib/i18n";
 
 type Props = {
   card: Card;
@@ -31,6 +32,7 @@ type Props = {
 };
 
 export function ProFeaturesTab({ card, onChange, userId }: Props) {
+  const { t } = useTranslation();
   const [uploadingPdf, setUploadingPdf] = useState(false);
   const [upgradeOpen, setUpgradeOpen] = useState(false);
   const [testingWebhook, setTestingWebhook] = useState(false);
@@ -199,21 +201,20 @@ export function ProFeaturesTab({ card, onChange, userId }: Props) {
           <div>
             <div className="inline-flex items-center gap-1.5 rounded-full bg-primary/20 px-3 py-1 text-xs font-semibold text-primary">
               <Sparkles className="h-3.5 w-3.5" />
-              Special Features & Pro Blocks
+              {t("proBlocksBadge")}
             </div>
             <h2 className="mt-2 font-display text-xl font-bold">
-              Elevate Your Profile with Interactive Blocks
+              {t("proBlocksTitle")}
             </h2>
             <p className="mt-1 text-xs text-muted-foreground">
-              Add video intros, PDF menus/brochures, live Calendly booking, custom CTAs & Apple
-              Wallet passes.
+              {t("proBlocksDesc")}
             </p>
           </div>
 
           <div className="flex shrink-0 items-center gap-3">
             {isPro && (
               <span className="rounded-full border border-emerald-500/30 bg-emerald-500/20 px-4 py-2 text-xs font-semibold text-emerald-400">
-                Pro Status: Active
+                {t("proStatusActive")}
               </span>
             )}
 
@@ -223,7 +224,7 @@ export function ProFeaturesTab({ card, onChange, userId }: Props) {
                 onClick={() => setUpgradeOpen(true)}
                 className="flex items-center gap-1.5 rounded-full bg-primary px-4 py-2 text-xs font-semibold text-primary-foreground transition hover:opacity-90"
               >
-                <Sparkles className="h-3.5 w-3.5" /> Upgrade to Pro
+                <Sparkles className="h-3.5 w-3.5" /> {t("upgradeToPro")}
               </button>
             )}
           </div>
@@ -233,9 +234,7 @@ export function ProFeaturesTab({ card, onChange, userId }: Props) {
           <div className="mt-4 flex items-center gap-2 rounded-2xl bg-amber-500/10 p-3 text-xs text-amber-500">
             <Lock className="h-4 w-4 shrink-0" />
             <span>
-              You are currently on the <strong>Free Plan</strong>. You can customize these special
-              features below and preview them in the live simulator, but upgrade to Pro ($9.99/mo)
-              to make them live for public visitors.
+              {t("freePlanNotice")}
             </span>
           </div>
         )}
@@ -250,7 +249,7 @@ export function ProFeaturesTab({ card, onChange, userId }: Props) {
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h3 className="font-semibold text-sm">Video Intro Embed</h3>
+                <h3 className="font-semibold text-sm">{t("videoIntroTitle")}</h3>
                 {!isPro && (
                   <span className="rounded-full bg-primary/20 px-2 py-0.5 text-[10px] font-bold uppercase text-primary">
                     PRO
@@ -258,7 +257,7 @@ export function ProFeaturesTab({ card, onChange, userId }: Props) {
                 )}
               </div>
               <p className="text-xs text-muted-foreground">
-                Embed a YouTube, Loom, or Vimeo video directly onto your digital card.
+                {t("videoIntroDesc")}
               </p>
             </div>
           </div>
@@ -269,11 +268,11 @@ export function ProFeaturesTab({ card, onChange, userId }: Props) {
             type="url"
             value={pro.video_url || ""}
             onChange={(e) => updatePro("video_url", sanitizeUrl(e.target.value) || e.target.value)}
-            placeholder="https://www.youtube.com/watch?v=... or YouTube Shorts / Loom / Vimeo link"
+            placeholder={t("videoIntroPlaceholder")}
             className="h-11 w-full rounded-xl border border-border bg-transparent px-4 text-xs outline-none focus:border-primary"
           />
           <p className="text-[11px] text-muted-foreground">
-            Supports YouTube Shorts, YouTube Watch, Loom, Vimeo, and Google Drive video URLs.
+            {t("videoIntroSupportHint")}
           </p>
 
           {pro.video_url && (
@@ -313,7 +312,7 @@ export function ProFeaturesTab({ card, onChange, userId }: Props) {
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h3 className="font-semibold text-sm">PDF & Document Attachment</h3>
+                <h3 className="font-semibold text-sm">{t("pdfDocTitle")}</h3>
                 {!isPro && (
                   <span className="rounded-full bg-primary/20 px-2 py-0.5 text-[10px] font-bold uppercase text-primary">
                     PRO
@@ -321,7 +320,7 @@ export function ProFeaturesTab({ card, onChange, userId }: Props) {
                 )}
               </div>
               <p className="text-xs text-muted-foreground">
-                Attach a downloadable food menu, company brochure, catalog, or CV.
+                {t("pdfDocDesc")}
               </p>
             </div>
           </div>
@@ -330,20 +329,20 @@ export function ProFeaturesTab({ card, onChange, userId }: Props) {
         <div className="mt-4 grid gap-3 md:grid-cols-2">
           <div>
             <label className="mb-1 block text-xs font-medium text-muted-foreground">
-              Button Display Label
+              {t("pdfBtnLabel")}
             </label>
             <input
               type="text"
               value={pro.pdf_label || ""}
               onChange={(e) => updatePro("pdf_label", sanitizeText(e.target.value, 60))}
-              placeholder="e.g. Download Product Catalog (PDF)"
+              placeholder={t("pdfBtnPlaceholder")}
               className="h-11 w-full rounded-xl border border-border bg-transparent px-4 text-xs outline-none focus:border-primary"
             />
           </div>
 
           <div>
             <label className="mb-1 block text-xs font-medium text-muted-foreground">
-              Upload PDF or Paste PDF URL
+              {t("pdfUploadLabel")}
             </label>
             <div className="flex gap-2">
               <input
@@ -357,7 +356,7 @@ export function ProFeaturesTab({ card, onChange, userId }: Props) {
               />
               <label className="flex h-11 shrink-0 cursor-pointer items-center gap-1.5 rounded-xl border border-border px-3 text-xs font-medium hover:bg-secondary">
                 <Upload className="h-3.5 w-3.5" />
-                {uploadingPdf ? "…" : "Upload"}
+                {uploadingPdf ? "…" : t("uploadBtn")}
                 <input
                   type="file"
                   accept="application/pdf"
@@ -379,7 +378,7 @@ export function ProFeaturesTab({ card, onChange, userId }: Props) {
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h3 className="font-semibold text-sm">Live Appointment Booking</h3>
+                <h3 className="font-semibold text-sm">{t("bookingTitle")}</h3>
                 {!isPro && (
                   <span className="rounded-full bg-primary/20 px-2 py-0.5 text-[10px] font-bold uppercase text-primary">
                     PRO
@@ -387,8 +386,7 @@ export function ProFeaturesTab({ card, onChange, userId }: Props) {
                 )}
               </div>
               <p className="text-xs text-muted-foreground">
-                Link your Calendly, SavvyCal, or TidyCal URL so visitors can book meetings
-                instantly.
+                {t("bookingDesc")}
               </p>
             </div>
           </div>
@@ -401,7 +399,7 @@ export function ProFeaturesTab({ card, onChange, userId }: Props) {
             onChange={(e) =>
               updatePro("booking_url", sanitizeUrl(e.target.value) || e.target.value)
             }
-            placeholder="https://calendly.com/your-name/30min"
+            placeholder={t("bookingPlaceholder")}
             className="h-11 w-full rounded-xl border border-border bg-transparent px-4 text-xs outline-none focus:border-primary"
           />
         </div>
@@ -416,7 +414,7 @@ export function ProFeaturesTab({ card, onChange, userId }: Props) {
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h3 className="font-semibold text-sm">Custom Call-To-Action (CTA) Button</h3>
+                <h3 className="font-semibold text-sm">{t("customCtaTitle")}</h3>
                 {!isPro && (
                   <span className="rounded-full bg-primary/20 px-2 py-0.5 text-[10px] font-bold uppercase text-primary">
                     PRO
@@ -424,8 +422,7 @@ export function ProFeaturesTab({ card, onChange, userId }: Props) {
                 )}
               </div>
               <p className="text-xs text-muted-foreground">
-                Add a high-priority action button (e.g. &quot;Pay via Stripe&quot;, &quot;View
-                Portfolio&quot;, &quot;Get Directions&quot;).
+                {t("customCtaDesc")}
               </p>
             </div>
           </div>
@@ -434,20 +431,20 @@ export function ProFeaturesTab({ card, onChange, userId }: Props) {
         <div className="mt-4 grid gap-3 md:grid-cols-2">
           <div>
             <label className="mb-1 block text-xs font-medium text-muted-foreground">
-              Button Title
+              {t("customCtaButtonTitle")}
             </label>
             <input
               type="text"
               value={pro.custom_cta_label || ""}
               onChange={(e) => updatePro("custom_cta_label", sanitizeText(e.target.value, 40))}
-              placeholder="e.g. Book Consultation"
+              placeholder={t("customCtaButtonPlaceholder")}
               className="h-11 w-full rounded-xl border border-border bg-transparent px-4 text-xs outline-none focus:border-primary"
             />
           </div>
 
           <div>
             <label className="mb-1 block text-xs font-medium text-muted-foreground">
-              Destination Link
+              {t("customCtaDestinationLabel")}
             </label>
             <input
               type="url"
@@ -471,7 +468,7 @@ export function ProFeaturesTab({ card, onChange, userId }: Props) {
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h3 className="font-semibold text-sm">Instant Email Lead Alerts (Main Feature)</h3>
+                <h3 className="font-semibold text-sm">{t("emailAlertsTitle")}</h3>
                 {!isPro && (
                   <span className="rounded-full bg-primary/20 px-2 py-0.5 text-[10px] font-bold uppercase text-primary">
                     PRO
@@ -479,14 +476,13 @@ export function ProFeaturesTab({ card, onChange, userId }: Props) {
                 )}
               </div>
               <p className="text-xs text-muted-foreground">
-                Receive an automatic email notification the moment a visitor scans your card &amp;
-                submits their contact info.
+                {t("emailAlertsDesc")}
               </p>
             </div>
           </div>
 
           <div className="flex items-center gap-2">
-            <label className="text-xs font-medium cursor-pointer">Email Alerts</label>
+            <label className="text-xs font-medium cursor-pointer">{t("emailAlertsToggle")}</label>
             <input
               type="checkbox"
               checked={pro.enable_email_alerts !== false}
@@ -500,7 +496,7 @@ export function ProFeaturesTab({ card, onChange, userId }: Props) {
           <div className="mt-4 space-y-4 pt-3 border-t border-border/40">
             <div>
               <label className="mb-1 block text-xs font-medium text-muted-foreground">
-                Destination Email Address for Lead Notifications
+                {t("emailAlertsDestLabel")}
               </label>
               <div className="flex gap-2">
                 <input
@@ -516,13 +512,12 @@ export function ProFeaturesTab({ card, onChange, userId }: Props) {
                   disabled={testingEmail}
                   className="flex shrink-0 items-center gap-1.5 rounded-xl bg-primary px-4 py-2 text-xs font-semibold text-primary-foreground hover:opacity-90 disabled:opacity-50"
                 >
-                  <Send className="h-3.5 w-3.5" />
-                  {testingEmail ? "Sending..." : "Send Test Email Alert"}
+                  <Send className="h-3.5 w-3.5 rtl:rotate-180" />
+                  {testingEmail ? t("sendingTestEmail") : t("sendTestEmailBtn")}
                 </button>
               </div>
               <p className="mt-1.5 text-[11px] text-muted-foreground">
-                Leads are also saved permanently in your{" "}
-                <strong className="text-foreground">Leads Inbox</strong> tab for CSV export.
+                {t("leadsInboxHint")}
               </p>
             </div>
           </div>
@@ -538,19 +533,19 @@ export function ProFeaturesTab({ card, onChange, userId }: Props) {
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h3 className="font-semibold text-sm">Advanced HTTP Webhook (Zapier / Make.com)</h3>
+                <h3 className="font-semibold text-sm">{t("webhookTitle")}</h3>
                 <span className="rounded-full bg-secondary px-2 py-0.5 text-[10px] font-medium text-muted-foreground">
-                  Optional
+                  {t("webhookOptional")}
                 </span>
               </div>
               <p className="text-xs text-muted-foreground">
-                Forward raw JSON lead payloads to external automation systems or custom APIs.
+                {t("webhookDesc")}
               </p>
             </div>
           </div>
 
           <div className="flex items-center gap-2">
-            <label className="text-xs font-medium cursor-pointer">Enable Webhook</label>
+            <label className="text-xs font-medium cursor-pointer">{t("enableWebhookToggle")}</label>
             <input
               type="checkbox"
               checked={pro.enable_lead_webhook ?? false}
@@ -564,7 +559,7 @@ export function ProFeaturesTab({ card, onChange, userId }: Props) {
           <div className="mt-4 space-y-3 pt-3 border-t border-border/40">
             <div>
               <label className="mb-1 block text-xs font-medium text-muted-foreground">
-                Webhook Catch Endpoint URL
+                {t("webhookUrlLabel")}
               </label>
               <div className="flex gap-2">
                 <input
@@ -582,8 +577,8 @@ export function ProFeaturesTab({ card, onChange, userId }: Props) {
                   disabled={testingWebhook}
                   className="flex shrink-0 items-center gap-1.5 rounded-xl border border-border px-3 text-xs font-medium hover:bg-secondary disabled:opacity-50"
                 >
-                  <Send className="h-3.5 w-3.5" />
-                  {testingWebhook ? "…" : "Test Webhook"}
+                  <Send className="h-3.5 w-3.5 rtl:rotate-180" />
+                  {testingWebhook ? "…" : t("testWebhookBtn")}
                 </button>
               </div>
             </div>
@@ -600,9 +595,9 @@ export function ProFeaturesTab({ card, onChange, userId }: Props) {
                 <Sparkles className="h-5 w-5" />
               </div>
               <div>
-                <h4 className="text-xs font-semibold">Remove Branding Badge</h4>
+                <h4 className="text-xs font-semibold">{t("removeBrandingTitle")}</h4>
                 <p className="text-[11px] text-muted-foreground">
-                  Hide &quot;Powered by JustTap&quot; footer watermark.
+                  {t("removeBrandingDesc")}
                 </p>
               </div>
             </div>
@@ -622,7 +617,7 @@ export function ProFeaturesTab({ card, onChange, userId }: Props) {
         <div className="flex items-center gap-2 text-xs">
           <Sparkles className="h-4 w-4 text-primary" />
           <span className="font-medium text-muted-foreground">
-            {isPro ? "Pro features active on your account" : "Customize special features & publish"}
+            {isPro ? t("proFeaturesActiveOnAccount") : t("customizeSpecialFeatures")}
           </span>
         </div>
         <button
@@ -631,7 +626,7 @@ export function ProFeaturesTab({ card, onChange, userId }: Props) {
           disabled={saving}
           className="flex items-center gap-2 rounded-xl bg-primary px-5 py-2.5 text-xs font-semibold text-primary-foreground hover:opacity-90 transition-opacity disabled:opacity-50"
         >
-          {saving ? "Saving..." : "Save & Publish Special Features"}
+          {saving ? t("saving") : t("saveProFeaturesBtn")}
         </button>
       </div>
 
@@ -643,30 +638,25 @@ export function ProFeaturesTab({ card, onChange, userId }: Props) {
               <Sparkles className="h-7 w-7" />
             </div>
             <DialogTitle className="font-display text-xl font-bold">
-              Upgrade to JustTap Pro
+              {t("upgradeModalTitle")}
             </DialogTitle>
             <DialogDescription className="text-xs text-muted-foreground">
-              Unlock video embeds, PDF downloads, Calendly appointment booking, Apple Wallet passes,
-              and custom branding for your physical NFC business cards.
+              {t("upgradeModalDesc")}
             </DialogDescription>
           </DialogHeader>
 
-          <div className="my-4 space-y-2 rounded-2xl bg-secondary/50 p-4 text-left text-xs">
+          <div className="my-4 space-y-2 rounded-2xl bg-secondary/50 p-4 text-start text-xs">
             <div className="flex items-center gap-2 font-medium">
               <CheckCircle2 className="h-4 w-4 text-emerald-400 shrink-0" />
-              Embedded YouTube, Loom, & Vimeo Video Intros
+              {t("upgradeFeature1")}
             </div>
             <div className="flex items-center gap-2 font-medium">
               <CheckCircle2 className="h-4 w-4 text-emerald-400 shrink-0" />
-              PDF Document Uploader & Download Buttons
+              {t("upgradeFeature2")}
             </div>
             <div className="flex items-center gap-2 font-medium">
               <CheckCircle2 className="h-4 w-4 text-emerald-400 shrink-0" />
-              Calendly & TidyCal Meeting Booking Embeds
-            </div>
-            <div className="flex items-center gap-2 font-medium">
-              <CheckCircle2 className="h-4 w-4 text-emerald-400 shrink-0" />
-              Remove &quot;Powered by JustTap&quot; Branding
+              {t("upgradeFeature3")}
             </div>
           </div>
 
@@ -676,14 +666,14 @@ export function ProFeaturesTab({ card, onChange, userId }: Props) {
               onClick={() => setUpgradeOpen(false)}
               className="h-12 w-full rounded-2xl bg-primary text-sm font-bold text-primary-foreground hover:opacity-90 transition-opacity"
             >
-              Close
+              {t("close")}
             </button>
             <button
               type="button"
               onClick={() => setUpgradeOpen(false)}
               className="h-10 w-full rounded-2xl text-xs font-medium text-muted-foreground hover:text-foreground"
             >
-              Maybe Later
+              {t("maybeLater")}
             </button>
           </div>
         </DialogContent>

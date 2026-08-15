@@ -4,7 +4,6 @@ import {
   CheckCircle2,
   Crown,
   Download,
-  ExternalLink,
   Lock,
   QrCode,
   Smartphone,
@@ -14,6 +13,7 @@ import {
 import { toast } from "sonner";
 import { buildVCard, type Card } from "@/lib/card";
 import { supabase } from "@/lib/supabase";
+import { useTranslation } from "@/lib/i18n";
 
 interface QrTabProps {
   card: Card;
@@ -21,6 +21,7 @@ interface QrTabProps {
 }
 
 export function QrTab({ card, onUpgradeRequest }: QrTabProps) {
+  const { t, lang } = useTranslation();
   const [profileQrUrl, setProfileQrUrl] = useState<string>("");
   const [offlineQrUrl, setOfflineQrUrl] = useState<string>("");
   const [permanentQrUrl, setPermanentQrUrl] = useState<string>("");
@@ -148,15 +149,20 @@ export function QrTab({ card, onUpgradeRequest }: QrTabProps) {
     ctx.stroke();
     ctx.restore();
 
+    const displayName =
+      lang === "ar" && card.full_name_ar ? card.full_name_ar : card.full_name;
+    const displayTitle =
+      lang === "ar" && card.title_ar ? card.title_ar : card.title || card.company || "";
+
     ctx.textAlign = "center";
     ctx.font = "bold 56px Outfit, sans-serif";
     ctx.fillStyle = "#FAFAFA";
-    ctx.fillText(card.full_name, 540, 420);
+    ctx.fillText(displayName, 540, 420);
 
-    if (card.title || card.company) {
+    if (displayTitle) {
       ctx.font = "500 36px sans-serif";
       ctx.fillStyle = "#E6D5AC";
-      ctx.fillText(card.title || card.company || "", 540, 485);
+      ctx.fillText(displayTitle, 540, 485);
     }
 
     if (card.phone) {
@@ -182,11 +188,21 @@ export function QrTab({ card, onUpgradeRequest }: QrTabProps) {
 
         ctx.font = "bold 28px sans-serif";
         ctx.fillStyle = "#FAFAFA";
-        ctx.fillText("SCAN FOR CONTACT INFO", 540, 1260);
+        ctx.fillText(
+          lang === "ar" ? "امسح الكود لحفظ جهة الاتصال" : "SCAN FOR CONTACT INFO",
+          540,
+          1260,
+        );
 
         ctx.font = "400 24px sans-serif";
         ctx.fillStyle = "#A1A1AA";
-        ctx.fillText("Works offline without internet connection", 540, 1305);
+        ctx.fillText(
+          lang === "ar"
+            ? "يعمل دون الحاجة لاتصال بالإنترنت"
+            : "Works offline without internet connection",
+          540,
+          1305,
+        );
 
         ctx.font = "extrabold 32px sans-serif";
         ctx.fillStyle = "#6B21A8";
@@ -230,17 +246,19 @@ export function QrTab({ card, onUpgradeRequest }: QrTabProps) {
     }
   };
 
+  const cardDisplayName =
+    lang === "ar" && card.full_name_ar ? card.full_name_ar : card.full_name;
+
   return (
     <div className="space-y-8 max-w-4xl mx-auto">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h3 className="text-xl font-bold text-white flex items-center space-x-2 font-display">
+          <h3 className="text-xl font-bold text-white flex items-center space-x-2 rtl:space-x-reverse font-display">
             <QrCode className="w-5 h-5 text-purple-400" />
-            <span>QR Code & Export Hub</span>
+            <span>{t("qrHubTitle")}</span>
           </h3>
-          <p className="text-xs text-slate-400">
-            Export high-res QR codes, offline vCards, wallpapers, and Apple Wallet passes for{" "}
-            {card.full_name}.
+          <p className="text-xs text-slate-400 mt-1">
+            {t("qrHubSubtitle")}
           </p>
         </div>
 
@@ -248,10 +266,10 @@ export function QrTab({ card, onUpgradeRequest }: QrTabProps) {
           <button
             type="button"
             onClick={() => setShowUpgradeModal(true)}
-            className="py-2 px-4 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-slate-950 font-extrabold text-xs rounded-xl shadow-lg flex items-center space-x-1.5 transition-all self-start sm:self-auto"
+            className="py-2 px-4 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-slate-950 font-extrabold text-xs rounded-xl shadow-lg flex items-center space-x-1.5 rtl:space-x-reverse transition-all self-start sm:self-auto"
           >
             <Crown className="w-4 h-4 fill-slate-950" />
-            <span>Upgrade to PRO</span>
+            <span>{t("upgradeToPro")}</span>
           </button>
         )}
       </div>
@@ -262,41 +280,41 @@ export function QrTab({ card, onUpgradeRequest }: QrTabProps) {
           <button
             type="button"
             onClick={() => setActiveQr("profile")}
-            className={`flex items-center space-x-1.5 px-4 py-2 rounded-xl text-xs font-bold transition-all ${
+            className={`flex items-center space-x-1.5 rtl:space-x-reverse px-4 py-2 rounded-xl text-xs font-bold transition-all ${
               activeQr === "profile"
                 ? "bg-purple-700 text-white shadow-md shadow-purple-700/30"
                 : "text-slate-400 hover:text-white"
             }`}
           >
             <Sparkles className="w-3.5 h-3.5" />
-            <span>Dynamic Profile</span>
+            <span>{t("qrDynamicProfile")}</span>
           </button>
 
           <button
             type="button"
             onClick={() => setActiveQr("offline")}
-            className={`flex items-center space-x-1.5 px-4 py-2 rounded-xl text-xs font-bold transition-all ${
+            className={`flex items-center space-x-1.5 rtl:space-x-reverse px-4 py-2 rounded-xl text-xs font-bold transition-all ${
               activeQr === "offline"
                 ? "bg-emerald-700 text-white shadow-md shadow-emerald-700/30"
                 : "text-slate-400 hover:text-white"
             }`}
           >
             <Zap className="w-3.5 h-3.5" />
-            <span>Offline vCard</span>
+            <span>{t("qrOfflineVCard")}</span>
           </button>
 
           {permanentToken && (
             <button
               type="button"
               onClick={() => setActiveQr("permanent")}
-              className={`flex items-center space-x-1.5 px-4 py-2 rounded-xl text-xs font-bold transition-all ${
+              className={`flex items-center space-x-1.5 rtl:space-x-reverse px-4 py-2 rounded-xl text-xs font-bold transition-all ${
                 activeQr === "permanent"
                   ? "bg-amber-600 text-white shadow-md shadow-amber-600/30"
                   : "text-slate-400 hover:text-white"
               }`}
             >
               <Lock className="w-3.5 h-3.5" />
-              <span>Permanent Tag QR</span>
+              <span>{t("qrPermanentTag")}</span>
             </button>
           )}
         </div>
@@ -304,27 +322,24 @@ export function QrTab({ card, onUpgradeRequest }: QrTabProps) {
         <p className="text-xs text-slate-400 text-center max-w-sm leading-relaxed">
           {activeQr === "profile" ? (
             <>
-              Links to your live public profile (
-              <code className="text-purple-300">/c/{card.slug}</code>). Requires internet.
+              {t("qrDescDynamic")} (<code className="text-purple-300" dir="ltr">/c/{card.slug}</code>)
             </>
           ) : activeQr === "permanent" ? (
             <>
-              Encodes permanent tag identity (
-              <code className="text-amber-300">/t/{permanentToken}</code>). Protected from slug
-              changes.
+              {t("qrDescPermanent")} (<code className="text-amber-300" dir="ltr">/t/{permanentToken}</code>)
             </>
           ) : (
-            "Encodes raw vCard contact text directly. Phone cameras save contact info with no internet needed."
+            t("qrDescOffline")
           )}
         </p>
 
         {/* QR Display */}
-        <div className="p-4 bg-white rounded-2xl shadow-inner border border-slate-200">
+        <div className="p-4 bg-white rounded-2xl shadow-inner border border-slate-200" dir="ltr">
           {activeQrUrl ? (
             <img src={activeQrUrl} alt="QR Code" className="w-56 h-56 object-contain" />
           ) : (
             <div className="w-56 h-56 bg-slate-100 flex items-center justify-center text-slate-400 text-xs">
-              Generating QR...
+              {t("generatingQr")}
             </div>
           )}
         </div>
@@ -335,24 +350,24 @@ export function QrTab({ card, onUpgradeRequest }: QrTabProps) {
             <a
               href={activeQrUrl}
               download={`JustTap_QR_${activeQr}_${card.slug}.png`}
-              className="py-2.5 px-3 bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs rounded-xl border border-slate-700 flex items-center justify-center space-x-1.5 transition-colors"
+              className="py-2.5 px-3 bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs rounded-xl border border-slate-700 flex items-center justify-center space-x-1.5 rtl:space-x-reverse transition-colors"
             >
               <Download className="w-3.5 h-3.5" />
-              <span>Standard PNG</span>
+              <span>{t("standardPng")}</span>
             </a>
 
             <button
               type="button"
               onClick={() => handleDownloadHighResQr(activeQr)}
-              className={`py-2.5 px-3 text-xs font-bold rounded-xl border flex items-center justify-center space-x-1.5 transition-all ${
+              className={`py-2.5 px-3 text-xs font-bold rounded-xl border flex items-center justify-center space-x-1.5 rtl:space-x-reverse transition-all ${
                 isPro
                   ? "bg-purple-950/60 hover:bg-purple-900/60 text-purple-300 border-purple-500/40"
                   : "bg-slate-950/40 text-slate-500 border-slate-800 cursor-pointer"
               }`}
             >
               {!isPro && <Lock className="w-3 h-3 text-amber-400" />}
-              <span>2000px High-Res</span>
-              {!isPro && <span className="text-[9px] text-amber-400 font-extrabold ml-1">PRO</span>}
+              <span>{t("highRes2000px")}</span>
+              {!isPro && <span className="text-[9px] text-amber-400 font-extrabold ml-1 rtl:mr-1 rtl:ml-0">PRO</span>}
             </button>
           </div>
 
@@ -366,16 +381,16 @@ export function QrTab({ card, onUpgradeRequest }: QrTabProps) {
                 : "bg-slate-950/60 text-slate-400 border-slate-800"
             }`}
           >
-            <span className="flex items-center space-x-2">
+            <span className="flex items-center space-x-2 rtl:space-x-reverse">
               {isPro ? (
                 <Download className="w-4 h-4" />
               ) : (
                 <Lock className="w-4 h-4 text-amber-400" />
               )}
-              <span>Apple Wallet Pass (.pkpass)</span>
+              <span>{t("appleWalletPassBtn")}</span>
             </span>
             <span className="text-[10px] font-extrabold px-2.5 py-0.5 rounded-md bg-amber-500/10 text-amber-300 border border-amber-500/20">
-              {isPro ? "SIGNED" : "PRO"}
+              {isPro ? t("signedBadge") : "PRO"}
             </span>
           </button>
         </div>
@@ -384,9 +399,9 @@ export function QrTab({ card, onUpgradeRequest }: QrTabProps) {
       {/* LOCKSCREEN WALLPAPER GENERATOR HUB */}
       <div className="justtap-glass rounded-3xl p-6 space-y-4 border border-slate-800">
         <div className="flex items-center justify-between">
-          <h4 className="text-base font-bold text-white flex items-center space-x-2 font-display">
+          <h4 className="text-base font-bold text-white flex items-center space-x-2 rtl:space-x-reverse font-display">
             <Smartphone className="w-5 h-5 text-amber-400" />
-            <span>Lockscreen Wallpaper Generator</span>
+            <span>{t("wallpaperGenTitle")}</span>
           </h4>
           {!isPro && (
             <span className="text-[10px] text-amber-400 bg-amber-400/10 px-2 py-0.5 rounded-full font-extrabold border border-amber-400/20">
@@ -396,14 +411,13 @@ export function QrTab({ card, onUpgradeRequest }: QrTabProps) {
         </div>
 
         <p className="text-xs text-slate-400 leading-relaxed">
-          Generates a 1080x1920px smartphone wallpaper featuring your name, title, contact info, and
-          embedded offline vCard QR code.
+          {t("wallpaperGenDesc")}
         </p>
 
         <button
           type="button"
           onClick={handleGenerateWallpaper}
-          className={`w-full py-3 px-4 text-xs font-bold rounded-xl border flex items-center justify-center space-x-2 transition-all ${
+          className={`w-full py-3 px-4 text-xs font-bold rounded-xl border flex items-center justify-center space-x-2 rtl:space-x-reverse transition-all ${
             isPro
               ? "bg-[#6B21A8] hover:bg-[#7E22CE] text-[#FAFAFA] border-[#6B21A8] shadow-lg shadow-[rgba(107,33,168,0.25)]"
               : "bg-[#08080A] text-[#A1A1AA] border-[#22222A]"
@@ -412,12 +426,12 @@ export function QrTab({ card, onUpgradeRequest }: QrTabProps) {
           {!isPro ? (
             <>
               <Lock className="w-4 h-4 text-amber-400" />
-              <span>Generate 1080x1920 Wallpaper (PRO)</span>
+              <span>{t("wallpaperGenBtnPro")}</span>
             </>
           ) : (
             <>
               <Download className="w-4 h-4" />
-              <span>Generate & Download 1080x1920 Wallpaper</span>
+              <span>{t("wallpaperGenBtn")}</span>
             </>
           )}
         </button>
@@ -434,25 +448,24 @@ export function QrTab({ card, onUpgradeRequest }: QrTabProps) {
             </div>
 
             <div className="space-y-2">
-              <h3 className="text-2xl font-extrabold text-white">Upgrade to JustTap PRO</h3>
+              <h3 className="text-2xl font-extrabold text-white">{t("upgradeModalTitle")}</h3>
               <p className="text-xs text-slate-400 leading-relaxed">
-                Unlock high-res 2000px PNG downloads, custom lockscreen wallpaper generation, and
-                remove watermark branding!
+                {t("upgradeModalDesc")}
               </p>
             </div>
 
-            <div className="bg-slate-950/60 p-4 rounded-2xl border border-slate-800 text-left space-y-2 text-xs text-slate-300">
-              <div className="flex items-center space-x-2">
+            <div className="bg-slate-950/60 p-4 rounded-2xl border border-slate-800 text-start space-y-2 text-xs text-slate-300">
+              <div className="flex items-center space-x-2 rtl:space-x-reverse">
                 <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
-                <span>High-Res 2000px PNG QR Code Downloads</span>
+                <span>{t("upgradeFeature1")}</span>
               </div>
-              <div className="flex items-center space-x-2">
+              <div className="flex items-center space-x-2 rtl:space-x-reverse">
                 <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
-                <span>Smart Lockscreen Wallpaper (1080x1920px)</span>
+                <span>{t("upgradeFeature2")}</span>
               </div>
-              <div className="flex items-center space-x-2">
+              <div className="flex items-center space-x-2 rtl:space-x-reverse">
                 <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
-                <span>Remove &quot;Powered by JustTap&quot; watermark</span>
+                <span>{t("upgradeFeature3")}</span>
               </div>
             </div>
 
@@ -465,7 +478,7 @@ export function QrTab({ card, onUpgradeRequest }: QrTabProps) {
                 }}
                 className="w-full py-3.5 px-6 bg-gradient-to-r from-amber-500 to-amber-600 text-slate-950 font-extrabold rounded-2xl shadow-xl text-sm transition-all"
               >
-                Upgrade to PRO Now
+                {t("upgradeNowBtn")}
               </button>
 
               <button
@@ -473,7 +486,7 @@ export function QrTab({ card, onUpgradeRequest }: QrTabProps) {
                 onClick={() => setShowUpgradeModal(false)}
                 className="w-full py-2 text-xs text-slate-400 hover:text-white"
               >
-                Maybe Later
+                {t("maybeLater")}
               </button>
             </div>
           </div>
