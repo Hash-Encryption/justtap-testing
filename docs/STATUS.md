@@ -4,7 +4,7 @@ Last updated: 2026-08-15
 
 ## Current phase
 
-Connections + Analytics Upgrade Phase 02 — the secure analytics event pipeline is complete on `upgrade/02-analytics-event-pipeline` from the approved Phase 01 checkpoint `8b7186f556cbe645a4d082c4788351a079615ca2`.
+Connections + Analytics Upgrade Phase 04 — Connections functionality is implemented on `upgrade/04-connections-functionality` from the approved Phase 03 checkpoint `9beb73d47cda76ba61f3cccd9325712a1d7dfc4b`.
 
 ## Completed
 
@@ -14,6 +14,7 @@ Connections + Analytics Upgrade Phase 02 — the secure analytics event pipeline
 - Added migration `20260815010000_connections_data_model.sql`, replacing direct anonymous lead inserts with `create_public_connection`, preserving owner-private reads/deletes, and limiting private management updates to Pro/enterprise owners.
 - Added migration `20260815020000_analytics_event_pipeline.sql`, replacing direct analytics inserts with `record_public_card_event`, active-card slug resolution, canonical event/metadata validation, UUID retry deduplication, privacy-scoped sessions, and query-supporting indexes.
 - Added Phase 03 NFC / QR entry attribution with constrained `direct`, `profile_qr`, and `permanent_tag` page-view sources; physical NFC and permanent-tag QR remain honestly combined behind immutable `/t/$token` identity.
+- Completed Phase 04 Connections functionality without a schema migration: the existing slug-driven public RPC now has explicit submission states and successful `connection_submit` emission; the owner dashboard exposes the complete Free Connection record and available WhatsApp/Call/Email actions; trusted Pro/enterprise cards expose private owner notes, tags, follow-up status, and formula-safe CSV export through the existing database-enforced boundary.
 - Migrated `page_view` and `vcard_download` to the shared best-effort pipeline without changing the public card or vCard success path.
 - Committed approved Phase 00 checkpoint as `9609dea`.
 - Made TanStack `/c/$slug` the only public-card route and moved slug lookup into one server-only resolver.
@@ -49,14 +50,14 @@ Connections + Analytics Upgrade Phase 02 — the secure analytics event pipeline
 
 ## In progress
 
-- Phase 01 checkpoint owner review.
+- Phase 04 checkpoint owner review.
 
 ## Deferred work
 
-- Apple Wallet signing/certificate infrastructure, billing lifecycle, final analytics aggregation/UI, and later Connections product work remain deferred to their authorized phases.
+- Apple Wallet signing/certificate infrastructure, billing lifecycle, final analytics aggregation/UI, and later Connections notification/automation work remain deferred to their authorized phases.
 - Controlled Real Supabase Pro-user Custom Creator persistence remains not verified because no controlled legitimate Pro fixture is available.
-- Durable Connection abuse prevention, notification/webhook hardening, and the dedicated management UI remain deferred to their authorized upgrade phases.
+- Durable Connection abuse prevention and notification/webhook hardening remain deferred to their authorized upgrade phases.
 
 ## Next phase
 
-Do not begin Connections + Analytics Upgrade Phase 03. Stop for the Phase 02 checkpoint review and authorization.
+Do not begin Connections + Analytics Upgrade Phase 05. Stop for the Phase 04 checkpoint review and authorization.

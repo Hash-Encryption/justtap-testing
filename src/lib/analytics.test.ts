@@ -72,6 +72,15 @@ describe("analytics event pipeline", () => {
     );
 
     expect(renderer).toContain('trackPublicCardEvent(card.slug, "page_view"');
+    expect(renderer).toContain('trackPublicCardEvent(card.slug, "connection_submit"');
+    expect(renderer.indexOf('trackPublicCardEvent(card.slug, "connection_submit"')).toBeGreaterThan(
+      renderer.indexOf('rpc("create_public_connection"'),
+    );
+    const failedSubmission = renderer.slice(
+      renderer.indexOf("if (error) {", renderer.indexOf('rpc("create_public_connection"')),
+      renderer.indexOf("formElement.reset()"),
+    );
+    expect(failedSubmission).not.toContain('"connection_submit"');
     expect(renderer).not.toContain('from("card_analytics").insert');
     expect(vcard).toContain('rpc("record_public_card_event"');
     expect(vcard).not.toContain('from("card_analytics").insert');

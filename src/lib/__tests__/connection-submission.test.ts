@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { LeadSubmissionSchema } from "../sanitization";
 
@@ -50,5 +51,48 @@ describe("Connection submission contract", () => {
     ["privileged tags", { ...validSubmission, tags: ["private"] }],
   ])("rejects %s", (_label, submission) => {
     expect(LeadSubmissionSchema.safeParse(submission).success).toBe(false);
+  });
+
+  it("keeps public capture slug-driven and private management database-enforced", () => {
+    const renderer = readFileSync(
+      new URL("../../components/card/CardView.tsx", import.meta.url),
+      "utf8",
+    );
+    const migration = readFileSync(
+      new URL(
+        "../../../supabase/migrations/20260815010000_connections_data_model.sql",
+        import.meta.url,
+      ),
+      "utf8",
+    );
+    const publicFunction = migration.slice(
+      migration.indexOf("CREATE OR REPLACE FUNCTION public.create_public_connection"),
+      migration.indexOf("REVOKE ALL ON FUNCTION public.create_public_connection"),
+    );
+
+    expect(renderer).toContain('rpc("create_public_connection"');
+    expect(renderer).toContain("_card_slug: sanitized.card_slug");
+    expect(renderer).not.toContain('from("card_leads").insert');
+    expect(renderer).toContain("submissionInFlight.current");
+    expect(renderer).toContain('data-connection-state="success"');
+    expect(migration).toContain("REVOKE ALL ON TABLE public.card_leads FROM anon");
+    expect(migration).toContain("GRANT UPDATE (owner_note, status, tags)");
+    expect(migration).toContain("profile.plan_tier IN ('pro', 'enterprise')");
+    expect(publicFunction).not.toMatch(/\b_(?:owner_note|status|tags)\b/);
+  });
+
+  it("renders distinct dashboard loading, empty, error, and data states", () => {
+    const dashboard = readFileSync(
+      new URL("../../components/dashboard/LeadsTab.tsx", import.meta.url),
+      "utf8",
+    );
+
+    expect(dashboard).toContain("{loading && (");
+    expect(dashboard).toContain("{!loading && error && (");
+    expect(dashboard).toContain("connections.length === 0");
+    expect(dashboard).toContain("connections.length > 0");
+    expect(dashboard).toContain("sender_company");
+    expect(dashboard).toContain("sender_job_title");
+    expect(dashboard).toContain("Visitor note");
   });
 });

@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import {
   Calendar,
   Check,
+  CircleCheck,
   Copy,
   Download,
   ExternalLink,
@@ -10,6 +11,7 @@ import {
   HeartHandshake,
   Instagram,
   Linkedin,
+  Loader2,
   Mail,
   MessageCircle,
   Phone,
@@ -60,7 +62,11 @@ export function CardView({ card, preview = false, entrySource = "direct" }: Prop
   const [shareOpen, setShareOpen] = useState(false);
   const [walletOpen, setWalletOpen] = useState(false);
   const [copied, setCopied] = useState(false);
-  const [sending, setSending] = useState(false);
+  const [submissionState, setSubmissionState] = useState<
+    "idle" | "submitting" | "success" | "error"
+  >("idle");
+  const [submissionError, setSubmissionError] = useState<string | null>(null);
+  const submissionInFlight = useRef(false);
   const pageViewContext = useRef<ReturnType<typeof createAnalyticsEventContext> | null>(null);
   const ar = lang === "ar" && card.enable_arabic;
 
@@ -155,15 +161,18 @@ export function CardView({ card, preview = false, entrySource = "direct" }: Prop
 
   async function submitLead(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
+    const formElement = e.currentTarget;
     if (preview) {
       toast.info("Preview mode — lead capture is live on the published card.");
       return;
     }
+    if (submissionInFlight.current) return;
 
     // 1. Client-side rate limiting (max 3 lead submissions per minute)
     const rateCheck = checkRateLimit(`lead:${card.id}`, 3, 60_000);
     if (!rateCheck.allowed) {
-      toast.error(
+      setSubmissionState("error");
+      setSubmissionError(
         ar
           ? "لقد تجاوزت الحد المسموح. يرجى الانتظار دقيقة."
           : "Too many attempts. Please wait a minute before submitting again.",
@@ -171,7 +180,7 @@ export function CardView({ card, preview = false, entrySource = "direct" }: Prop
       return;
     }
 
-    const form = new FormData(e.currentTarget);
+    const form = new FormData(formElement);
     const rawData = {
       card_slug: card.slug,
       sender_name: String(form.get("sender_name") || ""),
@@ -186,43 +195,62 @@ export function CardView({ card, preview = false, entrySource = "direct" }: Prop
     const parsed = LeadSubmissionSchema.safeParse(rawData);
     if (!parsed.success) {
       const issue = parsed.error.issues[0]?.message;
-      toast.error(issue || (ar ? "تأكد من البيانات المدخلة" : "Please check your inputs"));
+      setSubmissionState("error");
+      setSubmissionError(issue || (ar ? "تأكد من البيانات المدخلة" : "Please check your inputs"));
       return;
     }
 
     const sanitized = parsed.data;
+    submissionInFlight.current = true;
+    setSubmissionState("submitting");
+    setSubmissionError(null);
 
-    setSending(true);
-    const { error } = await supabase.rpc("create_public_connection", {
-      _card_slug: sanitized.card_slug,
-      _sender_name: sanitized.sender_name,
-      _sender_phone: sanitized.sender_phone,
-      _sender_email: sanitized.sender_email,
-      _sender_company: sanitized.sender_company,
-      _sender_job_title: sanitized.sender_job_title,
-      _visitor_note: sanitized.note,
-    });
-    setSending(false);
+    try {
+      const { error } = await supabase.rpc("create_public_connection", {
+        _card_slug: sanitized.card_slug,
+        _sender_name: sanitized.sender_name,
+        _sender_phone: sanitized.sender_phone,
+        _sender_email: sanitized.sender_email,
+        _sender_company: sanitized.sender_company,
+        _sender_job_title: sanitized.sender_job_title,
+        _visitor_note: sanitized.note,
+      });
 
-    if (error) {
-      toast.error(error.message);
-      return;
+      if (error) {
+        setSubmissionState("error");
+        setSubmissionError(
+          ar
+            ? "تعذر إرسال معلوماتك. تحقق من البيانات وحاول مرة أخرى."
+            : "We couldn't share your information. Check the details and try again.",
+        );
+        return;
+      }
+
+      formElement.reset();
+      setSubmissionState("success");
+      void trackPublicCardEvent(card.slug, "connection_submit");
+
+      // Existing email notification remains best-effort and cannot block Connection capture.
+      void fetch("/api/lead-email", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          card_id: card.id,
+          sender_name: sanitized.sender_name,
+          sender_phone: sanitized.sender_phone,
+          note: sanitized.note,
+        }),
+      }).catch(() => {});
+    } catch {
+      setSubmissionState("error");
+      setSubmissionError(
+        ar
+          ? "تعذر إرسال معلوماتك. حاول مرة أخرى."
+          : "We couldn't share your information. Please try again.",
+      );
+    } finally {
+      submissionInFlight.current = false;
     }
-
-    // Fire background lead email notification asynchronously
-    void fetch("/api/lead-email", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        card_id: card.id,
-        sender_name: sanitized.sender_name,
-        sender_phone: sanitized.sender_phone,
-        note: sanitized.note,
-      }),
-    }).catch(() => {});
-
-    setLeadOpen(false);
-    toast.success(ar ? "تم إرسال معلوماتك بنجاح!" : "Your info was sent successfully!");
   }
 
   function saveContact() {
@@ -505,7 +533,13 @@ export function CardView({ card, preview = false, entrySource = "direct" }: Prop
           <button
             data-card-action="exchange"
             type="button"
-            onClick={() => setLeadOpen(true)}
+            onClick={() => {
+              if (!submissionInFlight.current) {
+                setSubmissionState("idle");
+                setSubmissionError(null);
+              }
+              setLeadOpen(true);
+            }}
             aria-label="Exchange info"
             className={`${preview ? "h-10 w-10" : "h-12 w-12"} flex shrink-0 items-center justify-center rounded-full transition active:scale-95`}
             style={{ backgroundColor: accent, color: onAccent }}
@@ -548,86 +582,137 @@ export function CardView({ card, preview = false, entrySource = "direct" }: Prop
                 : "Share your details and they'll land straight in the inbox."}
             </DrawerDescription>
           </DrawerHeader>
-          <form onSubmit={submitLead} className="space-y-3 px-4 pb-8" dir={ar ? "rtl" : "ltr"}>
-            <label htmlFor="lead-name" className="sr-only">
-              {ar ? "الاسم" : "Your name"}
-            </label>
-            <input
-              id="lead-name"
-              name="sender_name"
-              autoComplete="name"
-              required
-              maxLength={100}
-              placeholder={ar ? "الاسم" : "Your name"}
-              className="h-12 w-full rounded-xl border border-border bg-transparent px-4 text-sm outline-none focus:border-ring"
-            />
-            <label htmlFor="lead-phone" className="sr-only">
-              {ar ? "رقم الهاتف" : "Your phone"}
-            </label>
-            <input
-              id="lead-phone"
-              name="sender_phone"
-              autoComplete="tel"
-              required
-              inputMode="tel"
-              maxLength={30}
-              placeholder={ar ? "رقم الهاتف" : "Your phone"}
-              className="h-12 w-full rounded-xl border border-border bg-transparent px-4 text-sm outline-none focus:border-ring"
-            />
-            <label htmlFor="lead-email" className="sr-only">
-              {ar ? "البريد الإلكتروني (اختياري)" : "Email (optional)"}
-            </label>
-            <input
-              id="lead-email"
-              name="sender_email"
-              type="email"
-              autoComplete="email"
-              maxLength={254}
-              placeholder={ar ? "البريد الإلكتروني (اختياري)" : "Email (optional)"}
-              className="h-12 w-full rounded-xl border border-border bg-transparent px-4 text-sm outline-none focus:border-ring"
-            />
-            <label htmlFor="lead-company" className="sr-only">
-              {ar ? "الشركة (اختياري)" : "Company (optional)"}
-            </label>
-            <input
-              id="lead-company"
-              name="sender_company"
-              autoComplete="organization"
-              maxLength={160}
-              placeholder={ar ? "الشركة (اختياري)" : "Company (optional)"}
-              className="h-12 w-full rounded-xl border border-border bg-transparent px-4 text-sm outline-none focus:border-ring"
-            />
-            <label htmlFor="lead-job-title" className="sr-only">
-              {ar ? "المسمى الوظيفي (اختياري)" : "Job title (optional)"}
-            </label>
-            <input
-              id="lead-job-title"
-              name="sender_job_title"
-              autoComplete="organization-title"
-              maxLength={160}
-              placeholder={ar ? "المسمى الوظيفي (اختياري)" : "Job title (optional)"}
-              className="h-12 w-full rounded-xl border border-border bg-transparent px-4 text-sm outline-none focus:border-ring"
-            />
-            <label htmlFor="lead-note" className="sr-only">
-              {ar ? "ملاحظة قصيرة" : "Short note (optional)"}
-            </label>
-            <textarea
-              id="lead-note"
-              name="note"
-              rows={3}
-              maxLength={1000}
-              placeholder={ar ? "ملاحظة قصيرة" : "Short note (optional)"}
-              className="w-full rounded-xl border border-border bg-transparent px-4 py-3 text-sm outline-none focus:border-ring"
-            />
-            <button
-              type="submit"
-              disabled={sending}
-              className="h-12 w-full rounded-xl text-sm font-semibold disabled:opacity-60"
-              style={{ backgroundColor: accent, color: onAccent }}
+          {submissionState === "success" ? (
+            <div
+              role="status"
+              data-connection-state="success"
+              className="space-y-4 px-6 pb-8 text-center"
+              dir={ar ? "rtl" : "ltr"}
             >
-              {sending ? "…" : ar ? "أرسل معلوماتي" : "Send My Info"}
-            </button>
-          </form>
+              <CircleCheck className="mx-auto h-12 w-12 text-emerald-500" />
+              <div>
+                <p className="text-base font-semibold">
+                  {ar ? "تمت مشاركة معلوماتك" : "Your information was shared"}
+                </p>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  {ar
+                    ? "يمكن لصاحب البطاقة الآن التواصل معك."
+                    : "The card owner can now follow up with you."}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setLeadOpen(false)}
+                className="h-12 w-full rounded-xl text-sm font-semibold"
+                style={{ backgroundColor: accent, color: onAccent }}
+              >
+                {ar ? "تم" : "Done"}
+              </button>
+            </div>
+          ) : (
+            <form
+              onSubmit={submitLead}
+              aria-busy={submissionState === "submitting"}
+              data-connection-state={submissionState}
+              className="space-y-3 px-4 pb-8"
+              dir={ar ? "rtl" : "ltr"}
+            >
+              <fieldset disabled={submissionState === "submitting"} className="space-y-3">
+                <label htmlFor="lead-name" className="block text-xs font-semibold">
+                  {ar ? "الاسم *" : "Name *"}
+                </label>
+                <input
+                  id="lead-name"
+                  name="sender_name"
+                  autoComplete="name"
+                  required
+                  maxLength={100}
+                  placeholder={ar ? "اسمك" : "Your name"}
+                  className="h-12 w-full rounded-xl border border-border bg-transparent px-4 text-sm outline-none focus:border-ring"
+                />
+                <label htmlFor="lead-phone" className="block text-xs font-semibold">
+                  {ar ? "رقم الهاتف *" : "Phone *"}
+                </label>
+                <input
+                  id="lead-phone"
+                  name="sender_phone"
+                  autoComplete="tel"
+                  required
+                  inputMode="tel"
+                  maxLength={30}
+                  placeholder={ar ? "رقم هاتفك" : "Your phone"}
+                  className="h-12 w-full rounded-xl border border-border bg-transparent px-4 text-sm outline-none focus:border-ring"
+                />
+                <label htmlFor="lead-email" className="block text-xs font-semibold">
+                  {ar ? "البريد الإلكتروني (اختياري)" : "Email (optional)"}
+                </label>
+                <input
+                  id="lead-email"
+                  name="sender_email"
+                  type="email"
+                  autoComplete="email"
+                  maxLength={254}
+                  placeholder="name@example.com"
+                  className="h-12 w-full rounded-xl border border-border bg-transparent px-4 text-sm outline-none focus:border-ring"
+                />
+                <label htmlFor="lead-company" className="block text-xs font-semibold">
+                  {ar ? "الشركة (اختياري)" : "Company (optional)"}
+                </label>
+                <input
+                  id="lead-company"
+                  name="sender_company"
+                  autoComplete="organization"
+                  maxLength={160}
+                  placeholder={ar ? "اسم الشركة" : "Company name"}
+                  className="h-12 w-full rounded-xl border border-border bg-transparent px-4 text-sm outline-none focus:border-ring"
+                />
+                <label htmlFor="lead-job-title" className="block text-xs font-semibold">
+                  {ar ? "المسمى الوظيفي (اختياري)" : "Job title (optional)"}
+                </label>
+                <input
+                  id="lead-job-title"
+                  name="sender_job_title"
+                  autoComplete="organization-title"
+                  maxLength={160}
+                  placeholder={ar ? "المسمى الوظيفي" : "Job title"}
+                  className="h-12 w-full rounded-xl border border-border bg-transparent px-4 text-sm outline-none focus:border-ring"
+                />
+                <label htmlFor="lead-note" className="block text-xs font-semibold">
+                  {ar ? "ملاحظة للمالك (اختياري)" : "Note for the owner (optional)"}
+                </label>
+                <textarea
+                  id="lead-note"
+                  name="note"
+                  rows={3}
+                  maxLength={1000}
+                  placeholder={ar ? "اكتب ملاحظة قصيرة" : "Add a short note"}
+                  className="w-full rounded-xl border border-border bg-transparent px-4 py-3 text-sm outline-none focus:border-ring"
+                />
+                {submissionError && (
+                  <p
+                    role="alert"
+                    className="rounded-xl bg-destructive/10 px-3 py-2 text-sm text-destructive"
+                  >
+                    {submissionError}
+                  </p>
+                )}
+                <button
+                  type="submit"
+                  className="flex h-12 w-full items-center justify-center gap-2 rounded-xl text-sm font-semibold disabled:opacity-60"
+                  style={{ backgroundColor: accent, color: onAccent }}
+                >
+                  {submissionState === "submitting" && <Loader2 className="h-4 w-4 animate-spin" />}
+                  {submissionState === "submitting"
+                    ? ar
+                      ? "جارٍ الإرسال…"
+                      : "Sharing…"
+                    : ar
+                      ? "أرسل معلوماتي"
+                      : "Share My Info"}
+                </button>
+              </fieldset>
+            </form>
+          )}
         </DrawerContent>
       </Drawer>
 

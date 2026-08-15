@@ -23,7 +23,7 @@ import { useAuth, useIsAdmin } from "@/hooks/useAuth";
 import { CardEditor } from "@/components/dashboard/CardEditor";
 import { ProFeaturesTab } from "@/components/dashboard/ProFeaturesTab";
 import { AnalyticsTab } from "@/components/dashboard/AnalyticsTab";
-import { LeadsTab } from "@/components/dashboard/LeadsTab";
+import { ConnectionsTab } from "@/components/dashboard/LeadsTab";
 import { QrTab } from "@/components/dashboard/QrTab";
 import { useTranslation } from "@/lib/i18n";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
@@ -106,7 +106,7 @@ export const Route = createFileRoute("/dashboard")({
       { title: "Dashboard — JustTap Digital Cards" },
       {
         name: "description",
-        content: "Manage your digital business cards, analytics, leads and QR codes.",
+        content: "Manage your digital business cards, analytics, Connections and QR codes.",
       },
       { property: "og:title", content: "Dashboard — JustTap" },
       {
@@ -313,7 +313,7 @@ function Dashboard() {
     { id: "cards", label: "Cards", icon: <LayoutGrid className="w-4 h-4" /> },
     { id: "analytics", label: "Analytics", icon: <BarChart3 className="w-4 h-4" /> },
     { id: "qr", label: "QR & Export", icon: <QrCode className="w-4 h-4" /> },
-    { id: "leads", label: "Leads", icon: <Inbox className="w-4 h-4" /> },
+    { id: "leads", label: "Connections", icon: <Inbox className="w-4 h-4" /> },
     { id: "pro", label: "Pro Features", icon: <Sparkles className="w-4 h-4 text-amber-400" /> },
   ];
 
@@ -649,14 +649,18 @@ function Dashboard() {
           </div>
         )}
 
-        {/* TAB 4: LEADS */}
+        {/* TAB 4: CONNECTIONS */}
         {tab === "leads" && (
           <div className="space-y-6">
-            <h1 className="text-2xl font-bold text-white font-display">Captured Leads</h1>
+            <h1 className="text-2xl font-bold text-white font-display">Connections</h1>
             {selectedCard?.id ? (
-              <LeadsTab cardId={selectedCard.id} />
+              <ConnectionsTab
+                key={selectedCard.id}
+                cardId={selectedCard.id}
+                isPro={selectedCard.plan_tier === "pro" || selectedCard.plan_tier === "enterprise"}
+              />
             ) : (
-              <p className="text-xs text-slate-400">Select a card to view leads.</p>
+              <p className="text-xs text-slate-400">Select a card to view Connections.</p>
             )}
           </div>
         )}
