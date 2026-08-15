@@ -97,3 +97,11 @@ These accepted decisions are permanent repository memory until replaced by a lat
 - Decision: Card slugs normalize trim, case, whitespace, and repeated hyphens, then validate as 2-48 characters in lowercase `[a-z0-9-]` segments without leading or trailing hyphens.
 - Why: Creation, update, resolution, vCard, and OpenGraph paths need one deterministic identity rule.
 - Consequence: Unsupported characters are rejected rather than silently deleted. No reserved words are required in Phase 01 because cards live under the isolated `/c/` namespace. The existing database unique constraint remains the authoritative duplicate invariant.
+
+## ADR-013: Public analytics uses one narrow event RPC
+
+- Status: Accepted
+- Date: 2026-08-15
+- Decision: Public card analytics enters through `record_public_card_event`; clients cannot insert directly into `card_analytics`.
+- Why: A slug-based RPC can derive an active card, validate a fixed event/metadata contract, and make retry IDs idempotent without exposing internal ownership fields.
+- Consequence: Public emitters use the shared helper and canonical taxonomy. Session identity is a random per-tab UUID; raw user agents, fingerprints, precise location, and NFC/QR attribution are outside this phase.

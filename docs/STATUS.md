@@ -4,7 +4,7 @@ Last updated: 2026-08-15
 
 ## Current phase
 
-Connections + Analytics Upgrade Phase 01 — the secure Connections data model, narrow public capture RPC, owner RLS, and Free/Pro management boundary are complete on `upgrade/01-connections-data-model` from checkpoint `f1c9e4f03ae03c1d40ff7bba0a7ec39287f165b3`.
+Connections + Analytics Upgrade Phase 02 — the secure analytics event pipeline is complete on `upgrade/02-analytics-event-pipeline` from the approved Phase 01 checkpoint `8b7186f556cbe645a4d082c4788351a079615ca2`.
 
 ## Completed
 
@@ -12,6 +12,8 @@ Connections + Analytics Upgrade Phase 01 — the secure Connections data model, 
 - Added architecture, plan, decisions, security, status, and repository inventory documents.
 - Recorded the retirement of all demo-card and Pro Demo Mode behavior.
 - Added migration `20260815010000_connections_data_model.sql`, replacing direct anonymous lead inserts with `create_public_connection`, preserving owner-private reads/deletes, and limiting private management updates to Pro/enterprise owners.
+- Added migration `20260815020000_analytics_event_pipeline.sql`, replacing direct analytics inserts with `record_public_card_event`, active-card slug resolution, canonical event/metadata validation, UUID retry deduplication, privacy-scoped sessions, and query-supporting indexes.
+- Migrated `page_view` and `vcard_download` to the shared best-effort pipeline without changing the public card or vCard success path.
 - Committed approved Phase 00 checkpoint as `9609dea`.
 - Made TanStack `/c/$slug` the only public-card route and moved slug lookup into one server-only resolver.
 - Passed Phase 01 acceptance and Phase 02 schema / versioned migration `20260811193000_phase02_cards_rls.sql` with owner RLS, narrow RPC, and client entitlement triggers at checkpoint `0f57b7cf2e3a1d0111ad55cacc54c72d5ebb187a`.
@@ -50,10 +52,10 @@ Connections + Analytics Upgrade Phase 01 — the secure Connections data model, 
 
 ## Deferred work
 
-- Apple Wallet signing/certificate infrastructure, billing lifecycle, analytics redesign, and leads redesign remain deferred to their authorized phases.
+- Apple Wallet signing/certificate infrastructure, billing lifecycle, final analytics aggregation/UI, and later Connections product work remain deferred to their authorized phases.
 - Controlled Real Supabase Pro-user Custom Creator persistence remains not verified because no controlled legitimate Pro fixture is available.
 - Durable Connection abuse prevention, notification/webhook hardening, and the dedicated management UI remain deferred to their authorized upgrade phases.
 
 ## Next phase
 
-Do not begin Connections + Analytics Upgrade Phase 02. Stop for Phase 01 checkpoint review and authorization.
+Do not begin Connections + Analytics Upgrade Phase 03. Stop for the Phase 02 checkpoint review and authorization.

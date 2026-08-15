@@ -130,6 +130,8 @@ Supabase is the persistent source of truth. Target access boundaries are explici
 
 Database changes use ordered, versioned migrations. `public.get_public_card_by_slug(text)` is a `SECURITY DEFINER` function with a fixed `search_path`, one validated slug parameter, and an explicit public return shape. Anonymous callers cannot select `public.cards`; the function returns only active cards and never ownership, timestamps, plan tier, private notification settings, or webhook configuration. Authenticated owners operate only on their own rows through RLS, while a trigger rejects browser-role changes to `plan_tier`. Future billing/webhooks must use a trusted server or service-role operation to change entitlements.
 
+Public analytics uses `public.record_public_card_event`, another fixed-search-path `SECURITY DEFINER` boundary. It derives an active card from the public slug, validates the canonical event and constrained privacy-safe metadata, and deduplicates a random event UUID per card. Direct public table inserts are revoked; owner/admin reads remain RLS-scoped.
+
 ### Cloudflare
 
 The deployment artifact is the TanStack Start server output produced by Vite/Nitro in `dist`, including `dist/_worker.js` and a generated `_routes.json` that sends arbitrary non-asset paths to the worker. Static assets remain edge-served, while customer cards are dynamic routes. The legacy Next static export directory and `/c/* -> /c.html` rewrite are not part of the target. No Phase 01 deployment is authorized; production environment and live Cloudflare verification remain Phase 17 work.

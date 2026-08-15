@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   Calendar,
   Check,
@@ -22,6 +22,7 @@ import {
 import { toast } from "sonner";
 import { HeaderCut } from "./HeaderCut";
 import { supabase } from "@/lib/supabase";
+import { createAnalyticsEventContext, trackPublicCardEvent } from "@/lib/analytics";
 import { formatWhatsAppNumber, getEmbedVideoUrl, type Card } from "@/lib/card";
 import type { PublicCard } from "@/lib/public-card";
 import { checkRateLimit } from "@/lib/rate-limit";
@@ -53,6 +54,7 @@ export function CardView({ card, preview = false }: Props) {
   const [walletOpen, setWalletOpen] = useState(false);
   const [copied, setCopied] = useState(false);
   const [sending, setSending] = useState(false);
+  const pageViewContext = useRef<ReturnType<typeof createAnalyticsEventContext> | null>(null);
   const ar = lang === "ar" && card.enable_arabic;
 
   const cardUrl =
@@ -130,13 +132,10 @@ export function CardView({ card, preview = false }: Props) {
     : !card.pro_features?.remove_branding || card.plan_tier === "free";
 
   useEffect(() => {
-    if (preview || !card.id) return;
-    void supabase.from("card_analytics").insert({
-      card_id: card.id,
-      event_type: "page_view",
-      user_agent: typeof navigator !== "undefined" ? navigator.userAgent : null,
-    });
-  }, [card.id, preview]);
+    if (preview) return;
+    pageViewContext.current ??= createAnalyticsEventContext();
+    void trackPublicCardEvent(card.slug, "page_view", pageViewContext.current);
+  }, [card.slug, preview]);
 
   const socials = [
     { key: "linkedin", href: social.linkedin, label: "LinkedIn", Icon: Linkedin },
@@ -222,7 +221,16 @@ export function CardView({ card, preview = false }: Props) {
       toast.info("Preview mode — the .vcf download works on the live card.");
       return;
     }
-    window.location.href = `/api/vcard/${card.slug}`;
+    const analytics = createAnalyticsEventContext();
+    const query = new URLSearchParams({ event_id: analytics.eventId });
+    if (analytics.sessionId) query.set("session_id", analytics.sessionId);
+    if (analytics.metadata.referrer_host) {
+      query.set("referrer_host", analytics.metadata.referrer_host);
+    }
+    if (analytics.metadata.device_category) {
+      query.set("device_category", analytics.metadata.device_category);
+    }
+    window.location.href = `/api/vcard/${card.slug}?${query}`;
   }
 
   const formattedWaNumber = formatWhatsAppNumber(card.whatsapp_phone || card.phone);
