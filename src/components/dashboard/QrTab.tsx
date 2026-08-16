@@ -220,23 +220,31 @@ export function QrTab({ card, onUpgradeRequest }: QrTabProps) {
     }
   };
 
-  const handleDownloadWalletPass = async () => {
+  const handleDownloadWalletPass = async (passType: "digital" | "contact" = "digital") => {
     if (!isPro) {
       setShowUpgradeModal(true);
       return;
     }
     try {
-      const tokenQuery = permanentToken ? `?token=${encodeURIComponent(permanentToken)}` : "";
-      const res = await fetch(`/api/wallet/${card.slug}${tokenQuery}`);
+      const typeParam = `type=${passType}`;
+      const tokenParam =
+        passType === "digital" && permanentToken
+          ? `&token=${encodeURIComponent(permanentToken)}`
+          : "";
+      const res = await fetch(`/api/wallet/${card.slug}?${typeParam}${tokenParam}`);
       if (res.status === 200) {
         const blob = await res.blob();
         const url = URL.createObjectURL(blob);
         const a = document.createElement("a");
         a.href = url;
-        a.download = `${card.slug}.pkpass`;
+        a.download = `${card.slug}-${passType}.pkpass`;
         a.click();
         URL.revokeObjectURL(url);
-        toast.success("Downloaded Apple Wallet Pass!");
+        toast.success(
+          passType === "contact"
+            ? (lang === "ar" ? "تم تحميل بطاقة جهة الاتصال لـ Apple Wallet!" : "Downloaded Contact Card Wallet Pass!")
+            : (lang === "ar" ? "تم تحميل البطاقة الرقمية لـ Apple Wallet!" : "Downloaded Digital Card Wallet Pass!"),
+        );
       } else {
         const data = await res.json().catch(() => ({}));
         toast.error(data.error || "Apple Wallet pass download failed.");
@@ -374,7 +382,7 @@ export function QrTab({ card, onUpgradeRequest }: QrTabProps) {
           {/* Wallet Pass Download button under applicable QR */}
           <button
             type="button"
-            onClick={handleDownloadWalletPass}
+            onClick={() => handleDownloadWalletPass(activeQr === "offline" ? "contact" : "digital")}
             className={`w-full py-3 px-4 font-semibold text-xs rounded-xl border flex items-center justify-between shadow-sm transition-colors ${
               isPro
                 ? "bg-black hover:bg-slate-950 text-white border-slate-700"
@@ -387,7 +395,11 @@ export function QrTab({ card, onUpgradeRequest }: QrTabProps) {
               ) : (
                 <Lock className="w-4 h-4 text-amber-400" />
               )}
-              <span>{t("appleWalletPassBtn")}</span>
+              <span>
+                {activeQr === "offline"
+                  ? t("appleWalletContactBtn")
+                  : t("appleWalletDigitalBtn")}
+              </span>
             </span>
             <span className="text-[10px] font-extrabold px-2.5 py-0.5 rounded-md bg-amber-500/10 text-amber-300 border border-amber-500/20">
               {isPro ? t("signedBadge") : "PRO"}

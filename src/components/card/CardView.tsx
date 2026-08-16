@@ -206,7 +206,7 @@ export function CardView({ card, preview = false, entrySource = "direct" }: Prop
     setSubmissionError(null);
 
     try {
-      const { error } = await supabase.rpc("create_public_connection", {
+      const { data: connectionId, error } = await supabase.rpc("create_public_connection", {
         _card_slug: sanitized.card_slug,
         _sender_name: sanitized.sender_name,
         _sender_phone: sanitized.sender_phone,
@@ -236,6 +236,7 @@ export function CardView({ card, preview = false, entrySource = "direct" }: Prop
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           card_id: card.id,
+          connection_id: connectionId,
           sender_name: sanitized.sender_name,
           sender_phone: sanitized.sender_phone,
           note: sanitized.note,

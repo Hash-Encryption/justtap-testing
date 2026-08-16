@@ -44,7 +44,7 @@ const testWalletKey = ["server", "only", "test", "key"].join("-");
 const resolveCard = vi.fn(async () => ({ status: "found" as const, card }));
 
 describe("WalletWallet Apple pass endpoint", () => {
-  it("calls WalletWallet server-side and returns the decoded signed pkpass", async () => {
+  it("calls WalletWallet server-side and returns the decoded signed Digital Card pkpass", async () => {
     const pass = Uint8Array.from([0x50, 0x4b, 0x03, 0x04, 0x01, 0x02]);
     const providerFetch = vi.fn(async () =>
       Response.json({
@@ -69,17 +69,87 @@ describe("WalletWallet Apple pass endpoint", () => {
       Authorization: "Bearer server-only-test-key",
       "Content-Type": "application/json",
     });
-    expect(JSON.parse(String(init?.body))).toMatchObject({
+    const body = JSON.parse(String(init?.body));
+    expect(body).toMatchObject({
+      serialNumber: "justtap-digital-11111111-1111-4111-8111-111111111111",
       barcodeValue: "https://justtap.pages.dev/t/0123456789abcdef0123456789abcdef",
       barcodeFormat: "QR",
+      description: "Live digital business card for Known Card",
+      headerFields: [{ label: "CARD", value: "Digital Card" }],
       primaryFields: [{ label: "NAME", value: "Known Card" }],
     });
+    expect(body.secondaryFields).toContainEqual({ label: "CARD", value: "Digital Card" });
     expect(response.status).toBe(200);
     expect(response.headers.get("content-type")).toBe("application/vnd.apple.pkpass");
     expect(response.headers.get("content-disposition")).toBe(
       'attachment; filename="justtap.pkpass"',
     );
     expect(new Uint8Array(await response.arrayBuffer())).toEqual(pass);
+  });
+
+  it("calls WalletWallet server-side and returns Contact Card pass with canonical vCard barcode", async () => {
+    const pass = Uint8Array.from([0x50, 0x4b, 0x03, 0x04, 0x05, 0x06]);
+    const providerFetch = vi.fn(async () =>
+      Response.json({
+        serialNumber: "serial-contact-1",
+        applePass: Buffer.from(pass).toString("base64"),
+      }),
+    );
+
+    const contactRequest = new Request("https://justtap.pages.dev/api/wallet/known-card?type=contact");
+    const response = await handleWalletRequest("known-card", contactRequest, {
+      fetch: providerFetch as typeof fetch,
+      walletApiKey: testWalletKey,
+      resolveCard,
+    });
+
+    expect(providerFetch).toHaveBeenCalledOnce();
+    const [, init] = providerFetch.mock.calls[0];
+    const body = JSON.parse(String(init?.body));
+
+    expect(body).toMatchObject({
+      serialNumber: "justtap-contact-11111111-1111-4111-8111-111111111111",
+      barcodeFormat: "QR",
+      description: "Contact information for Known Card",
+      headerFields: [{ label: "CARD", value: "Contact Card" }],
+      primaryFields: [{ label: "NAME", value: "Known Card" }],
+    });
+    expect(body.secondaryFields).toContainEqual({ label: "CARD", value: "Contact Card" });
+    expect(body.barcodeValue).toContain("BEGIN:VCARD");
+    expect(body.barcodeValue).toContain("FN:Known Card");
+    expect(body.barcodeValue).toContain("TEL;TYPE=CELL:+966500000000");
+    expect(body.barcodeValue).toContain("EMAIL;TYPE=INTERNET:public@example.com");
+    expect(body.barcodeValue).toContain("END:VCARD");
+    expect(response.status).toBe(200);
+  });
+
+  it("proves Digital Card and Contact Card have distinct pass serial identities ensuring coexistence", async () => {
+    const providerFetch = vi.fn(async () =>
+      Response.json({
+        applePass: Buffer.from(Uint8Array.from([0x50, 0x4b, 0x01, 0x02])).toString("base64"),
+      }),
+    );
+
+    // 1. Digital Pass
+    await handleWalletRequest("known-card", new Request("https://justtap.pages.dev/api/wallet/known-card?type=digital"), {
+      fetch: providerFetch as typeof fetch,
+      walletApiKey: testWalletKey,
+      resolveCard,
+    });
+    const digitalBody = JSON.parse(String(providerFetch.mock.calls[0][1]?.body));
+
+    // 2. Contact Pass
+    await handleWalletRequest("known-card", new Request("https://justtap.pages.dev/api/wallet/known-card?type=contact"), {
+      fetch: providerFetch as typeof fetch,
+      walletApiKey: testWalletKey,
+      resolveCard,
+    });
+    const contactBody = JSON.parse(String(providerFetch.mock.calls[1][1]?.body));
+
+    expect(digitalBody.serialNumber).not.toBe(contactBody.serialNumber);
+    expect(digitalBody.serialNumber).toBe("justtap-digital-11111111-1111-4111-8111-111111111111");
+    expect(contactBody.serialNumber).toBe("justtap-contact-11111111-1111-4111-8111-111111111111");
+    expect(digitalBody.barcodeValue).not.toBe(contactBody.barcodeValue);
   });
 
   it.each([

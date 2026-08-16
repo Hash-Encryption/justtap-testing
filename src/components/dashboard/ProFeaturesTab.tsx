@@ -98,9 +98,14 @@ export function ProFeaturesTab({ card, onChange, userId }: Props) {
 
     setTestingEmail(true);
     try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const accessToken = sessionData?.session?.access_token;
       const res = await fetch("/api/lead-email", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
+        },
         body: JSON.stringify({
           card_id: card.id,
           sender_name: "Sarah Smith (Test Lead)",
@@ -112,7 +117,7 @@ export function ProFeaturesTab({ card, onChange, userId }: Props) {
 
       const data = await res.json();
       if (res.ok) {
-        toast.success(`Test lead email dispatched to ${data.recipient || emailToUse}!`);
+        toast.success(`Test lead email dispatched to ${emailToUse}!`);
       } else {
         toast.error(data.error || "Failed to send test email");
       }
@@ -131,9 +136,14 @@ export function ProFeaturesTab({ card, onChange, userId }: Props) {
 
     setTestingWebhook(true);
     try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const accessToken = sessionData?.session?.access_token;
       const res = await fetch("/api/lead-webhook", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
+        },
         body: JSON.stringify({
           card_id: card.id,
           sender_name: "Test Visitor (Zapier Test)",

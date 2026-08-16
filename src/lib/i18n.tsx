@@ -179,6 +179,8 @@ const translations = {
     standardPng: "Standard PNG",
     highRes2000px: "2000px High-Res",
     appleWalletPassBtn: "Apple Wallet Pass (.pkpass)",
+    appleWalletDigitalBtn: "Digital Card — Apple Wallet (.pkpass)",
+    appleWalletContactBtn: "Contact Card — Apple Wallet (.pkpass)",
     signedBadge: "SIGNED",
     wallpaperGenTitle: "Lockscreen Wallpaper Generator",
     wallpaperGenDesc:
@@ -540,6 +542,8 @@ const translations = {
     standardPng: "صورة PNG قياسية",
     highRes2000px: "عالي الدقة (2000 بكسل)",
     appleWalletPassBtn: "بطاقة محفظة Apple Wallet (.pkpass)",
+    appleWalletDigitalBtn: "البطاقة الرقمية — Apple Wallet (.pkpass)",
+    appleWalletContactBtn: "بطاقة جهة الاتصال — Apple Wallet (.pkpass)",
     signedBadge: "معتمد",
     wallpaperGenTitle: "توليد خلفية شاشة القفل",
     wallpaperGenDesc:

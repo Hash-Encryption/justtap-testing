@@ -44,6 +44,48 @@ export const Route = createFileRoute("/api/lead-email")({
           }
 
           const card = data as Card;
+
+          // Check caller authentication
+          const authHeader = request.headers.get("Authorization");
+          const token = authHeader?.startsWith("Bearer ") ? authHeader.slice(7) : null;
+          let isOwner = false;
+          if (token) {
+            const { data: userData } = await client.auth.getUser(token);
+            if (userData?.user && userData.user.id === card.user_id) {
+              isOwner = true;
+            }
+          }
+
+          if (is_test) {
+            if (!isOwner) {
+              return new Response(
+                JSON.stringify({ error: "Unauthorized: Owner authentication required for test mode" }),
+                { status: 401, headers: { "Content-Type": "application/json" } },
+              );
+            }
+          } else {
+            const connectionId = body.connection_id;
+            if (!connectionId) {
+              return new Response(
+                JSON.stringify({ error: "Connection verification required" }),
+                { status: 403, headers: { "Content-Type": "application/json" } },
+              );
+            }
+            const { data: leadRecord } = await client
+              .from("card_leads")
+              .select("id")
+              .eq("id", connectionId)
+              .eq("card_id", card_id)
+              .maybeSingle();
+
+            if (!leadRecord) {
+              return new Response(
+                JSON.stringify({ error: "Invalid connection verification" }),
+                { status: 403, headers: { "Content-Type": "application/json" } },
+              );
+            }
+          }
+
           const pro = card.pro_features;
           const recipientEmail = pro?.notify_email || card.email;
           const isEmailEnabled = pro?.enable_email_alerts !== false;
@@ -151,7 +193,6 @@ export const Route = createFileRoute("/api/lead-email")({
           return new Response(
             JSON.stringify({
               success: true,
-              recipient: recipientEmail,
               email_status: emailStatus,
             }),
             {
