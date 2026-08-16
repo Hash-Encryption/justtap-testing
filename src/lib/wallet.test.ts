@@ -131,7 +131,54 @@ describe("WalletWallet Apple pass endpoint", () => {
     expect(await response.json()).toMatchObject({ code: "WALLET_NOT_ENTITLED" });
   });
 
-  it("has no local certificate path, staging disable, or browser-side Wallet secret", () => {
+  it("derives the tag barcode URL dynamically from request origin in testing and custom environments", async () => {
+    const testingOrigin = "https://justtap-testing.pages.dev";
+    const customOrigin = "https://preview-123.justtap-testing.pages.dev";
+    const token = "aabbccddeeff00112233445566778899";
+
+    const providerFetch = vi.fn(async () =>
+      Response.json({
+        serialNumber: "serial-test",
+        applePass: Buffer.from(Uint8Array.from([0x50, 0x4b, 0x01, 0x02])).toString("base64"),
+      }),
+    );
+
+    // Test on testing domain
+    await handleWalletRequest(
+      "known-card",
+      new Request(`${testingOrigin}/api/wallet/known-card?token=${token}`),
+      {
+        fetch: providerFetch as typeof fetch,
+        walletApiKey: testWalletKey,
+        resolveCard,
+        resolveTagToken: async () => ({ status: "found", slug: "known-card" }),
+      },
+    );
+
+    const [, init1] = providerFetch.mock.calls[0];
+    expect(JSON.parse(String(init1?.body))).toMatchObject({
+      barcodeValue: `${testingOrigin}/t/${token}`,
+    });
+
+    // Test on custom preview domain
+    await handleWalletRequest(
+      "known-card",
+      new Request(`${customOrigin}/api/wallet/known-card?token=${token}`),
+      {
+        fetch: providerFetch as typeof fetch,
+        walletApiKey: testWalletKey,
+        resolveCard,
+        resolveTagToken: async () => ({ status: "found", slug: "known-card" }),
+      },
+    );
+
+    const [, init2] = providerFetch.mock.calls[1];
+    expect(JSON.parse(String(init2?.body))).toMatchObject({
+      barcodeValue: `${customOrigin}/t/${token}`,
+    });
+  });
+
+  it("has no local certificate path, staging disable, hardcoded tag domain, or browser-side Wallet secret", () => {
     const routeSource = readFileSync(
       new URL("../routes/api/wallet.$slug.ts", import.meta.url),
       "utf8",
@@ -143,6 +190,7 @@ describe("WalletWallet Apple pass endpoint", () => {
 
     expect(routeSource).not.toMatch(/PASS_TYPE_ID|PRIVATE_KEY|certificate/i);
     expect(routeSource).not.toMatch(/environment\s*===?\s*["']staging["']/i);
+    expect(routeSource).not.toContain("https://justtap.pages.dev/t/");
     expect(dashboardSource).not.toContain("Signing Unavailable in Staging");
     expect(dashboardSource).not.toMatch(/WALLET_API_KEY|VITE_.*WALLET/i);
   });

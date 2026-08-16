@@ -79,7 +79,7 @@ export async function handleWalletRequest(
     const resolveTagToken = dependencies.resolveTagToken ?? resolveTagTokenFromSupabase;
     const tag = await resolveTagToken(tagToken);
     if (tag.status === "found" && tag.slug === cleanSlug) {
-      barcodeValue = `https://justtap.pages.dev/t/${tagToken}`;
+      barcodeValue = `${requestUrl.origin}/t/${tagToken}`;
     }
   }
 
