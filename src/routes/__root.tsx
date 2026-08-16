@@ -126,9 +126,29 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
 });
 
 function RootShell({ children }: { children: ReactNode }) {
+  const publicEnv = {
+    VITE_SUPABASE_URL:
+      (typeof process !== "undefined" && process.env?.VITE_SUPABASE_URL) ||
+      (typeof import.meta !== "undefined" && import.meta.env?.VITE_SUPABASE_URL) ||
+      "",
+    VITE_SUPABASE_ANON_KEY:
+      (typeof process !== "undefined" && process.env?.VITE_SUPABASE_ANON_KEY) ||
+      (typeof import.meta !== "undefined" && import.meta.env?.VITE_SUPABASE_ANON_KEY) ||
+      "",
+    VITE_PUBLIC_SITE_URL:
+      (typeof process !== "undefined" && process.env?.VITE_PUBLIC_SITE_URL) ||
+      (typeof import.meta !== "undefined" && import.meta.env?.VITE_PUBLIC_SITE_URL) ||
+      "",
+  };
+
   return (
     <html lang="en">
       <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `window.__PUBLIC_ENV__ = ${JSON.stringify(publicEnv)};`,
+          }}
+        />
         <HeadContent />
       </head>
       <body>

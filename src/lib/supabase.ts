@@ -1,10 +1,9 @@
 import { createClient } from "@supabase/supabase-js";
-import { env, isPublicSupabaseConfigured } from "./env";
+import { env, isPublicSupabaseConfigured, getPublicEnvVariable } from "./env";
 
 export function getSupabaseUrl(): string {
   return (
-    (typeof import.meta !== "undefined" && import.meta.env?.VITE_SUPABASE_URL) ||
-    (typeof process !== "undefined" && process.env?.VITE_SUPABASE_URL) ||
+    getPublicEnvVariable("SUPABASE_URL") ||
     env.SUPABASE_URL ||
     "https://supabase.invalid"
   );
@@ -12,8 +11,7 @@ export function getSupabaseUrl(): string {
 
 export function getSupabaseAnonKey(): string {
   return (
-    (typeof import.meta !== "undefined" && import.meta.env?.VITE_SUPABASE_ANON_KEY) ||
-    (typeof process !== "undefined" && process.env?.VITE_SUPABASE_ANON_KEY) ||
+    getPublicEnvVariable("SUPABASE_ANON_KEY") ||
     env.SUPABASE_ANON_KEY ||
     "missing-public-anon-key"
   );

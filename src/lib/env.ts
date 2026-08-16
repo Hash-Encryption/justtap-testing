@@ -5,20 +5,32 @@ const publicEnvSchema = z.object({
   SUPABASE_ANON_KEY: z.string().min(20, "VITE_SUPABASE_ANON_KEY must be configured"),
 });
 
+declare global {
+  interface Window {
+    __PUBLIC_ENV__?: {
+      VITE_SUPABASE_URL?: string;
+      VITE_SUPABASE_ANON_KEY?: string;
+      VITE_PUBLIC_SITE_URL?: string;
+    };
+  }
+}
+
 export function getPublicEnvVariable(
   key: "SUPABASE_URL" | "SUPABASE_ANON_KEY",
 ): string | undefined {
   if (key === "SUPABASE_URL") {
     return (
-      (typeof process !== "undefined" && process.env?.VITE_SUPABASE_URL) ||
       (typeof import.meta !== "undefined" && import.meta.env?.VITE_SUPABASE_URL) ||
+      (typeof window !== "undefined" && window.__PUBLIC_ENV__?.VITE_SUPABASE_URL) ||
+      (typeof process !== "undefined" && process.env?.VITE_SUPABASE_URL) ||
       undefined
     );
   }
   if (key === "SUPABASE_ANON_KEY") {
     return (
-      (typeof process !== "undefined" && process.env?.VITE_SUPABASE_ANON_KEY) ||
       (typeof import.meta !== "undefined" && import.meta.env?.VITE_SUPABASE_ANON_KEY) ||
+      (typeof window !== "undefined" && window.__PUBLIC_ENV__?.VITE_SUPABASE_ANON_KEY) ||
+      (typeof process !== "undefined" && process.env?.VITE_SUPABASE_ANON_KEY) ||
       undefined
     );
   }
