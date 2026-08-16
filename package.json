@@ -14,7 +14,7 @@
     "typecheck:v2": "tsc -p tsconfig.v2.json",
     "lint:v2": "eslint \"src/**/*.{ts,tsx}\"",
     "security:scan": "node scripts/scan-secrets.mjs",
-    "test:v2": "vitest run --exclude \"src/**/*.browser.test.tsx\" && npm run test:browser",
+    "test:v2": "vitest run && npm run test:browser",
     "test:browser": "vitest run --config vitest.browser.config.ts",
     "start": "vite preview",
     "lint": "next lint"

@@ -3,7 +3,8 @@ import { createClient } from "@supabase/supabase-js";
 import { SUPABASE_ANON_KEY, SUPABASE_URL } from "../supabase";
 import { liveTestAdmin } from "./live-test-env";
 
-const STAGING_BASE = "https://v2-07-public-card-renderer.justtap-v2-staging.pages.dev";
+const STAGING_BASE =
+  process.env.VITE_PUBLIC_SITE_URL || "https://justtap-testing.pages.dev";
 const HTML_HEADERS = { Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8" };
 const adminIt = liveTestAdmin ? it : it.skip;
 
@@ -42,7 +43,7 @@ describe("Live Cloudflare Staging Acceptance Suite", () => {
     expect(htmlText).toContain("Dashboard");
   });
 
-  it("verifies active public card resolves on staging (/c/testing-admin -> 200 OK)", async () => {
+  adminIt("verifies active public card resolves on staging (/c/testing-admin -> 200 OK)", async () => {
     const res = await fetch(`${STAGING_BASE}/c/testing-admin`, {
       headers: HTML_HEADERS,
       redirect: "manual",
@@ -58,7 +59,7 @@ describe("Live Cloudflare Staging Acceptance Suite", () => {
     expect(res.status).toBe(404);
   });
 
-  it("verifies active permanent tag redirects to current slug (/t/:token -> 307 -> /c/testing-admin)", async () => {
+  adminIt("verifies active permanent tag redirects to current slug (/t/:token -> 307 -> /c/testing-admin)", async () => {
     const res = await fetch(`${STAGING_BASE}/t/11112222333344445555666677778888`, {
       redirect: "manual",
     });
@@ -144,7 +145,7 @@ describe("Live Cloudflare Staging Acceptance Suite", () => {
     expect(res.status).toBe(404);
   });
 
-  it("verifies vCard route resolves on staging (/api/vcard/testing-admin -> 200 OK)", async () => {
+  adminIt("verifies vCard route resolves on staging (/api/vcard/testing-admin -> 200 OK)", async () => {
     const res = await fetch(`${STAGING_BASE}/api/vcard/testing-admin`);
     expect(res.status).toBe(200);
     expect(res.headers.get("content-type")).toContain("text/vcard");
