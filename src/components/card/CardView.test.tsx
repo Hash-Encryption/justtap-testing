@@ -108,4 +108,101 @@ describe("CardView action isolation", () => {
     expect(html).toContain("Powered by");
     expect(html).not.toMatch(/opacity-(?:50|75|80|85|90)/);
   });
+
+  it("renders all four Pro presets correctly in preview and public modes", () => {
+    const presets = [
+      {
+        id: "executive_navy",
+        bg_color: "#07111F",
+        surface_color: "#0D1A2B",
+        accent_color: "#2E6FDB",
+        champagne_accent: "#E6D5AC",
+        text_color: "#F8FAFC",
+      },
+      {
+        id: "emerald_noir",
+        bg_color: "#07130F",
+        surface_color: "#0D2119",
+        accent_color: "#1E8A63",
+        champagne_accent: "#E6D5AC",
+        text_color: "#F5F7F4",
+      },
+      {
+        id: "ivory_atelier",
+        bg_color: "#F4F0E8",
+        surface_color: "#FFFDF8",
+        accent_color: "#1E3A32",
+        champagne_accent: "#7A5A24",
+        text_color: "#161A18",
+      },
+      {
+        id: "rose_noir",
+        bg_color: "#21171B",
+        surface_color: "#2C2025",
+        accent_color: "#C98F9D",
+        champagne_accent: "#E7C9B6",
+        text_color: "#FFF7F4",
+      },
+    ];
+
+    for (const p of presets) {
+      const card: Card = {
+        ...actionCard,
+        design_mode: "custom",
+        ...p,
+      };
+
+      const previewHtml = renderToStaticMarkup(<CardView card={card} preview />);
+      expect(previewHtml).toContain(`data-card-design="custom"`);
+      expect(previewHtml).toContain(`background-color:${p.bg_color}`);
+
+      const publicHtml = renderToStaticMarkup(<CardView card={card} />);
+      expect(publicHtml).toContain(`data-card-design="custom"`);
+      expect(publicHtml).toContain(`background-color:${p.bg_color}`);
+    }
+  });
+
+  it("renders Ivory Atelier light palette with readable contrast and dark accent buttons", () => {
+    const ivoryCard: Card = {
+      ...actionCard,
+      design_mode: "custom",
+      bg_color: "#F4F0E8",
+      surface_color: "#FFFDF8",
+      accent_color: "#1E3A32",
+      champagne_accent: "#7A5A24",
+      text_color: "#161A18",
+    };
+
+    const design = resolveCardDesign(ivoryCard);
+    expect(design.mode).toBe("custom");
+    expect(design.onAccentColor).toBe("#FFFFFF");
+
+    const html = renderToStaticMarkup(<CardView card={ivoryCard} />);
+    expect(html).toContain(`data-card-design="custom"`);
+    expect(html).toContain(`background-color:#F4F0E8`);
+    expect(html).toContain(`color:#161A18`);
+    expect(html).toContain(`background-color:#1E3A32;color:#FFFFFF`);
+  });
+
+  it("enforces Classic V2 publicly when plan_tier is free even if custom fields exist", () => {
+    const freeWithCustom: Card = {
+      ...actionCard,
+      plan_tier: "free",
+      design_mode: "custom",
+      bg_color: "#07111F",
+      surface_color: "#0D1A2B",
+      accent_color: "#2E6FDB",
+      champagne_accent: "#E6D5AC",
+      text_color: "#F8FAFC",
+    };
+
+    const design = resolveCardDesign(freeWithCustom);
+    expect(design.mode).toBe("classic_v2");
+    expect(design.bgColor).toBe("#08080A");
+    expect(design.accentColor).toBe("#6B21A8");
+
+    const html = renderToStaticMarkup(<CardView card={freeWithCustom} />);
+    expect(html).toContain(`data-card-design="classic_v2"`);
+    expect(html).toContain(`background-color:#08080A`);
+  });
 });

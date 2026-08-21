@@ -1,10 +1,10 @@
 # JustTap V2 Status
 
-Last updated: 2026-08-13
+Last updated: 2026-08-21
 
 ## Current phase
 
-Phase 07 — Public Card Renderer + Custom Design Integration. Implementation, real Supabase acceptance, Cloudflare feature-branch staging, and responsive visual acceptance are complete on `v2/07-public-card-renderer` from approved Phase 06 checkpoint `ca0e754329a43bea67f34e26a89d08d2300aa4a4`. The Phase 07 worktree remains intentionally uncommitted and unpushed pending independent review and user authorization.
+Custom Creator Design Engine & Pro Preset Palettes. Fixed custom color resolver fallback behavior, replaced the 4 Pro preset palettes with Executive Navy, Emerald Noir, Ivory Atelier, and Rose Noir, and added inline contrast notices. All 100 unit tests, typechecks, linter, and production build passed.
 
 ## Completed
 

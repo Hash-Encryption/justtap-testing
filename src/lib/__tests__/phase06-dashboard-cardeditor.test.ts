@@ -13,12 +13,56 @@ import { validateSlug } from "../slug";
 describe("Phase 06 Dashboard & CardEditor Unit Suite", () => {
   it("verifies Custom Creator preset palettes definitions", () => {
     expect(DESIGN_PRESET_PALETTES.length).toBe(4);
-    const obsidian = DESIGN_PRESET_PALETTES.find((p) => p.id === "royal_obsidian");
-    expect(obsidian).toBeDefined();
-    expect(obsidian?.bg_color).toBe("#08080A");
-    expect(obsidian?.surface_color).toBe("#121216");
-    expect(obsidian?.accent_color).toBe("#6B21A8");
-    expect(obsidian?.champagne_accent).toBe("#E6D5AC");
+    expect(DESIGN_PRESET_PALETTES.map((p) => p.id)).toEqual([
+      "executive_navy",
+      "emerald_noir",
+      "ivory_atelier",
+      "rose_noir",
+    ]);
+
+    const executive = DESIGN_PRESET_PALETTES.find((p) => p.id === "executive_navy");
+    expect(executive).toEqual({
+      id: "executive_navy",
+      name: "Executive Navy",
+      bg_color: "#07111F",
+      surface_color: "#0D1A2B",
+      accent_color: "#2E6FDB",
+      champagne_accent: "#E6D5AC",
+      text_color: "#F8FAFC",
+    });
+
+    const emerald = DESIGN_PRESET_PALETTES.find((p) => p.id === "emerald_noir");
+    expect(emerald).toEqual({
+      id: "emerald_noir",
+      name: "Emerald Noir",
+      bg_color: "#07130F",
+      surface_color: "#0D2119",
+      accent_color: "#1E8A63",
+      champagne_accent: "#E6D5AC",
+      text_color: "#F5F7F4",
+    });
+
+    const ivory = DESIGN_PRESET_PALETTES.find((p) => p.id === "ivory_atelier");
+    expect(ivory).toEqual({
+      id: "ivory_atelier",
+      name: "Ivory Atelier",
+      bg_color: "#F4F0E8",
+      surface_color: "#FFFDF8",
+      accent_color: "#1E3A32",
+      champagne_accent: "#7A5A24",
+      text_color: "#161A18",
+    });
+
+    const rose = DESIGN_PRESET_PALETTES.find((p) => p.id === "rose_noir");
+    expect(rose).toEqual({
+      id: "rose_noir",
+      name: "Rose Noir",
+      bg_color: "#21171B",
+      surface_color: "#2C2025",
+      accent_color: "#C98F9D",
+      champagne_accent: "#E7C9B6",
+      text_color: "#FFF7F4",
+    });
   });
 
   it("verifies emptyCard defaults align with Classic V2 baseline", () => {

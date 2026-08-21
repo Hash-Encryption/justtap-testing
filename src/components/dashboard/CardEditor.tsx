@@ -1,5 +1,6 @@
 import { useEffect, useState, useRef, useMemo } from "react";
 import {
+  AlertTriangle,
   ArrowLeft,
   ArrowUp,
   Check,
@@ -14,6 +15,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { STORAGE_BUCKET, supabase } from "@/lib/supabase";
+import { getPaletteContrastWarnings } from "@/lib/card-design";
 import {
   DESIGN_PRESET_PALETTES,
   FINISHES,
@@ -681,20 +683,29 @@ export function CardEditor({
                       <span className="text-xs font-bold text-white block">{preset.name}</span>
                       <div className="flex items-center space-x-1.5">
                         <span
-                          className="w-4 h-4 rounded-full border border-white/20"
+                          className="w-4 h-4 rounded-full border border-white/25 shadow-xs"
                           style={{ backgroundColor: preset.bg_color }}
+                          title={`Background: ${preset.bg_color}`}
                         />
                         <span
-                          className="w-4 h-4 rounded-full border border-white/20"
+                          className="w-4 h-4 rounded-full border border-white/25 shadow-xs"
                           style={{ backgroundColor: preset.surface_color }}
+                          title={`Surface: ${preset.surface_color}`}
                         />
                         <span
-                          className="w-4 h-4 rounded-full border border-white/20"
+                          className="w-4 h-4 rounded-full border border-white/25 shadow-xs"
                           style={{ backgroundColor: preset.accent_color }}
+                          title={`Primary Accent: ${preset.accent_color}`}
                         />
                         <span
-                          className="w-4 h-4 rounded-full border border-white/20"
+                          className="w-4 h-4 rounded-full border border-white/25 shadow-xs"
                           style={{ backgroundColor: preset.champagne_accent }}
+                          title={`Secondary Accent: ${preset.champagne_accent}`}
+                        />
+                        <span
+                          className="w-4 h-4 rounded-full border border-white/25 shadow-xs"
+                          style={{ backgroundColor: preset.text_color }}
+                          title={`Text: ${preset.text_color}`}
                         />
                       </div>
                     </button>
@@ -778,6 +789,32 @@ export function CardEditor({
                     onChange={(v) => set("text_color", v)}
                   />
                 </div>
+
+                {/* Inline Contrast Quality Notice */}
+                {(() => {
+                  const contrastWarnings = getPaletteContrastWarnings({
+                    textColor: draft.text_color,
+                    bgColor: draft.bg_color,
+                    surfaceColor: draft.surface_color,
+                    accentColor: draft.accent_color,
+                    champagneAccent: draft.champagne_accent,
+                    surfaceFinish: draft.surface_finish,
+                  });
+                  if (contrastWarnings.length === 0) return null;
+                  return (
+                    <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-3 space-y-1.5 text-xs text-amber-200">
+                      <div className="flex items-center space-x-1.5 font-semibold text-amber-300">
+                        <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0" />
+                        <span>Contrast Notice</span>
+                      </div>
+                      <ul className="list-disc list-inside space-y-1 text-[11px] text-amber-200/90 pl-1">
+                        {contrastWarnings.map((w, idx) => (
+                          <li key={idx}>{w.message}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  );
+                })()}
               </div>
 
               {/* 5. CORNER STYLE & FONT */}

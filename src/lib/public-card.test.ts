@@ -64,4 +64,40 @@ describe("public card resolver", () => {
     expect(result).toMatchObject({ status: "service_error" });
     expect(onServiceError).toHaveBeenCalledOnce();
   });
+
+  it("resolves a Pro custom card with exact custom design fields preserved", async () => {
+    const customRow = makePublicCardRow({
+      design_mode: "custom",
+      bg_color: "#07111F",
+      surface_color: "#0D1A2B",
+      accent_color: "#2E6FDB",
+      champagne_accent: "#E6D5AC",
+      text_color: "#F8FAFC",
+      header_pattern: "arch",
+      surface_finish: "glassmorphism",
+      border_radius: "rounded",
+      font_family: "Space Grotesk",
+    });
+
+    const result = await resolvePublicCardBySlug("known-card", async () => ({
+      data: customRow,
+      error: null,
+    }));
+
+    expect(result.status).toBe("found");
+    if (result.status !== "found") return;
+
+    expect(result.card).toMatchObject({
+      design_mode: "custom",
+      bg_color: "#07111F",
+      surface_color: "#0D1A2B",
+      accent_color: "#2E6FDB",
+      champagne_accent: "#E6D5AC",
+      text_color: "#F8FAFC",
+      header_pattern: "arch",
+      surface_finish: "glassmorphism",
+      border_radius: "rounded",
+      font_family: "Space Grotesk",
+    });
+  });
 });

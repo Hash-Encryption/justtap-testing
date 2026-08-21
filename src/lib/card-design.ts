@@ -77,36 +77,64 @@ function composite(foreground: string, background: string, alpha: number) {
     .join("")}`;
 }
 
-function hasReadablePalette(
-  textColor: string,
-  bgColor: string,
-  surfaceColor: string,
-  accentColor: string,
-  champagneAccent: string,
-  finish: SurfaceFinish,
-) {
-  const bodyBackground =
-    finish === "glassmorphism" ? composite(surfaceColor, bgColor, 0xe6 / 255) : surfaceColor;
-  const contactBackground = composite(accentColor, bodyBackground, 0x24 / 255);
-  const socialBackground = composite(textColor, bodyBackground, 0x08 / 255);
-  const pdfBackground = composite(accentColor, bodyBackground, 0x14 / 255);
-  const primaryBackgrounds = [
-    bgColor,
-    bodyBackground,
-    contactBackground,
-    socialBackground,
-    pdfBackground,
-  ];
-  const champagneBackgrounds = [bodyBackground, contactBackground, socialBackground, pdfBackground];
+export type ContrastWarning = {
+  pair: string;
+  foreground: string;
+  background: string;
+  contrast: number;
+  message: string;
+};
 
-  return (
-    primaryBackgrounds.every(
-      (background) => colorContrast(textColor, background) >= MIN_TEXT_CONTRAST,
-    ) &&
-    champagneBackgrounds.every(
-      (background) => colorContrast(champagneAccent, background) >= MIN_TEXT_CONTRAST,
-    )
-  );
+export function getPaletteContrastWarnings(colors: {
+  textColor?: string;
+  bgColor?: string;
+  surfaceColor?: string;
+  accentColor?: string;
+  champagneAccent?: string;
+  surfaceFinish?: SurfaceFinish;
+}): ContrastWarning[] {
+  const warnings: ContrastWarning[] = [];
+  const text = colors.textColor || CLASSIC_V2_DESIGN.textColor;
+  const surface = colors.surfaceColor || CLASSIC_V2_DESIGN.surfaceColor;
+  const bg = colors.bgColor || CLASSIC_V2_DESIGN.bgColor;
+  const champagne = colors.champagneAccent || CLASSIC_V2_DESIGN.champagneAccent;
+  const finish = colors.surfaceFinish || "matte";
+
+  if (
+    !isValidHexColor(text) ||
+    !isValidHexColor(surface) ||
+    !isValidHexColor(bg) ||
+    !isValidHexColor(champagne)
+  ) {
+    return warnings;
+  }
+
+  const effectiveSurface =
+    finish === "glassmorphism" ? composite(surface, bg, 0xe6 / 255) : surface;
+
+  const textSurfaceContrast = colorContrast(text, effectiveSurface);
+  if (textSurfaceContrast < 4.5) {
+    warnings.push({
+      pair: "Text on Surface",
+      foreground: text,
+      background: effectiveSurface,
+      contrast: Number(textSurfaceContrast.toFixed(2)),
+      message: `Text color (${text}) has low contrast (${textSurfaceContrast.toFixed(1)}:1, recommended \u2265 4.5:1) on surface (${surface}).`,
+    });
+  }
+
+  const champagneSurfaceContrast = colorContrast(champagne, effectiveSurface);
+  if (champagneSurfaceContrast < 3.0) {
+    warnings.push({
+      pair: "Secondary Accent on Surface",
+      foreground: champagne,
+      background: effectiveSurface,
+      contrast: Number(champagneSurfaceContrast.toFixed(2)),
+      message: `Secondary accent (${champagne}) has low contrast (${champagneSurfaceContrast.toFixed(1)}:1, recommended \u2265 3.0:1) on surface (${surface}).`,
+    });
+  }
+
+  return warnings;
 }
 
 export function resolveCardDesign(card: DesignCard): CardDesign {
@@ -130,15 +158,7 @@ export function resolveCardDesign(card: DesignCard): CardDesign {
     !headerPattern ||
     !surfaceFinish ||
     !borderRadius ||
-    !fontFamily ||
-    !hasReadablePalette(
-      card.text_color!,
-      card.bg_color,
-      card.surface_color!,
-      card.accent_color,
-      card.champagne_accent!,
-      surfaceFinish,
-    )
+    !fontFamily
   ) {
     return CLASSIC_V2_DESIGN;
   }

@@ -1,6 +1,20 @@
 import { describe, expect, it } from "vitest";
-import { colorContrast, emptyCard, FINISHES, FONT_OPTIONS, PATTERNS, type Card } from "./card";
-import { CLASSIC_V2_DESIGN, cardFont, cardRadius, resolveCardDesign } from "./card-design";
+import {
+  colorContrast,
+  DESIGN_PRESET_PALETTES,
+  emptyCard,
+  FINISHES,
+  FONT_OPTIONS,
+  PATTERNS,
+  type Card,
+} from "./card";
+import {
+  CLASSIC_V2_DESIGN,
+  cardFont,
+  cardRadius,
+  getPaletteContrastWarnings,
+  resolveCardDesign,
+} from "./card-design";
 
 const customCard: Card = {
   ...emptyCard,
@@ -17,7 +31,7 @@ const customCard: Card = {
   font_family: "Space Grotesk",
 };
 
-describe("Phase 07 shared card design", () => {
+describe("Phase 07 shared card design & Custom Creator resolver", () => {
   it("locks Classic V2 even when stale custom values remain", () => {
     expect(resolveCardDesign({ ...customCard, design_mode: "classic_v2" })).toEqual(
       CLASSIC_V2_DESIGN,
@@ -57,52 +71,100 @@ describe("Phase 07 shared card design", () => {
     expect(cardFont(value)).toContain(`'${value}'`);
   });
 
-  it("falls back for invalid colors, enum values, and Free custom state", () => {
+  it("resolves all four Pro preset palettes as mode: custom", () => {
+    for (const preset of DESIGN_PRESET_PALETTES) {
+      const design = resolveCardDesign({
+        ...customCard,
+        bg_color: preset.bg_color,
+        surface_color: preset.surface_color,
+        accent_color: preset.accent_color,
+        champagne_accent: preset.champagne_accent,
+        text_color: preset.text_color,
+      });
+
+      expect(design.mode).toBe("custom");
+      if (design.mode === "custom") {
+        expect(design.bgColor).toBe(preset.bg_color);
+        expect(design.surfaceColor).toBe(preset.surface_color);
+        expect(design.accentColor).toBe(preset.accent_color);
+        expect(design.champagneAccent).toBe(preset.champagne_accent);
+        expect(design.textColor).toBe(preset.text_color);
+      }
+    }
+  });
+
+  it("resolves Ivory Atelier light palette correctly as mode: custom", () => {
+    const ivory = DESIGN_PRESET_PALETTES.find((p) => p.id === "ivory_atelier")!;
+    expect(ivory).toBeDefined();
+
+    const design = resolveCardDesign({
+      ...customCard,
+      bg_color: ivory.bg_color,
+      surface_color: ivory.surface_color,
+      accent_color: ivory.accent_color,
+      champagne_accent: ivory.champagne_accent,
+      text_color: ivory.text_color,
+    });
+
+    expect(design.mode).toBe("custom");
+    if (design.mode === "custom") {
+      expect(design.bgColor).toBe("#F4F0E8");
+      expect(design.surfaceColor).toBe("#FFFDF8");
+      expect(design.accentColor).toBe("#1E3A32");
+      expect(design.champagneAccent).toBe("#7A5A24");
+      expect(design.textColor).toBe("#161A18");
+      expect(design.onAccentColor).toBe("#FFFFFF"); // White text on dark green #1E3A32
+    }
+  });
+
+  it("falls back to Classic V2 for invalid colors, enum values, and Free custom state", () => {
     expect(resolveCardDesign({ ...customCard, bg_color: "url(javascript:alert(1))" })).toEqual(
       CLASSIC_V2_DESIGN,
     );
+    expect(resolveCardDesign({ ...customCard, surface_color: "#zzz" })).toEqual(CLASSIC_V2_DESIGN);
+    expect(resolveCardDesign({ ...customCard, accent_color: "blue" })).toEqual(CLASSIC_V2_DESIGN);
     expect(
       resolveCardDesign({ ...customCard, header_pattern: "unknown" as Card["header_pattern"] }),
+    ).toEqual(CLASSIC_V2_DESIGN);
+    expect(
+      resolveCardDesign({ ...customCard, surface_finish: "unknown" as Card["surface_finish"] }),
+    ).toEqual(CLASSIC_V2_DESIGN);
+    expect(
+      resolveCardDesign({ ...customCard, border_radius: "unknown" as Card["border_radius"] }),
+    ).toEqual(CLASSIC_V2_DESIGN);
+    expect(
+      resolveCardDesign({ ...customCard, font_family: "unknown" as Card["font_family"] }),
     ).toEqual(CLASSIC_V2_DESIGN);
     expect(resolveCardDesign({ ...customCard, plan_tier: "free" })).toEqual(CLASSIC_V2_DESIGN);
   });
 
-  it("falls back when primary text matches or barely differs from its backgrounds", () => {
-    expect(
-      resolveCardDesign({
-        ...customCard,
-        bg_color: "#121212",
-        surface_color: "#121212",
-        text_color: "#121212",
-      }),
-    ).toEqual(CLASSIC_V2_DESIGN);
-    expect(
-      resolveCardDesign({
-        ...customCard,
-        bg_color: "#101010",
-        surface_color: "#111111",
-        text_color: "#222222",
-      }),
-    ).toEqual(CLASSIC_V2_DESIGN);
-  });
+  it("preserves user custom colors in preview without silent fallback, and flags contrast via warnings helper", () => {
+    const lowContrastCard = {
+      ...customCard,
+      bg_color: "#121212",
+      surface_color: "#121212",
+      text_color: "#121212",
+      champagne_accent: "#131313",
+    };
 
-  it("accepts high contrast palettes and checks the composited glass surface", () => {
-    expect(resolveCardDesign(customCard).mode).toBe("custom");
-    expect(
-      resolveCardDesign({
-        ...customCard,
-        bg_color: "#FFFFFF",
-        surface_color: "#FFFFFF",
-        text_color: "#EEEEEE",
-        surface_finish: "glassmorphism",
-      }),
-    ).toEqual(CLASSIC_V2_DESIGN);
-  });
+    // Does not silently reset to Classic V2
+    const design = resolveCardDesign(lowContrastCard);
+    expect(design.mode).toBe("custom");
+    if (design.mode === "custom") {
+      expect(design.textColor).toBe("#121212");
+      expect(design.surfaceColor).toBe("#121212");
+    }
 
-  it("falls back when Champagne content is unreadable on the rendered surfaces", () => {
-    expect(resolveCardDesign({ ...customCard, champagne_accent: "#111213" })).toEqual(
-      CLASSIC_V2_DESIGN,
-    );
+    // Reports contrast warnings for editor feedback
+    const warnings = getPaletteContrastWarnings({
+      textColor: lowContrastCard.text_color,
+      bgColor: lowContrastCard.bg_color,
+      surfaceColor: lowContrastCard.surface_color,
+      accentColor: lowContrastCard.accent_color,
+      champagneAccent: lowContrastCard.champagne_accent,
+    });
+    expect(warnings.length).toBeGreaterThan(0);
+    expect(warnings.some((w) => w.pair === "Text on Surface")).toBe(true);
   });
 
   it("selects the higher-contrast black or white foreground for accent actions", () => {
