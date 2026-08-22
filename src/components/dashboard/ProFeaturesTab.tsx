@@ -16,13 +16,8 @@ import { toast } from "sonner";
 import { STORAGE_BUCKET, supabase } from "@/lib/supabase";
 import { defaultProFeatures, getEmbedVideoUrl, type Card, type ProFeatures } from "@/lib/card";
 import { sanitizeText, sanitizeUrl } from "@/lib/sanitization";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { isProEntitled } from "@/lib/card-design";
+import { ProUpgradeDialog, type ProUpgradeSource } from "./ProUpgradeDialog";
 
 type Props = {
   card: Card;
@@ -33,12 +28,12 @@ type Props = {
 export function ProFeaturesTab({ card, onChange, userId }: Props) {
   const [uploadingPdf, setUploadingPdf] = useState(false);
   const [upgradeOpen, setUpgradeOpen] = useState(false);
+  const [upgradeSource, setUpgradeSource] = useState<ProUpgradeSource>("pro_features");
   const [testingWebhook, setTestingWebhook] = useState(false);
   const [testingEmail, setTestingEmail] = useState(false);
   const [saving, setSaving] = useState(false);
 
-  const planTier = card?.plan_tier || "free";
-  const isPro = planTier === "pro" || planTier === "enterprise";
+  const isPro = isProEntitled(card);
   const pro: ProFeatures = {
     ...defaultProFeatures,
     ...(typeof card?.pro_features === "object" && card?.pro_features !== null
@@ -60,6 +55,12 @@ export function ProFeaturesTab({ card, onChange, userId }: Props) {
   async function saveProFeatures() {
     if (!card.id) {
       toast.error("Please publish your card first before saving special features.");
+      return;
+    }
+
+    if (!isPro) {
+      setUpgradeSource("pro_features_save");
+      setUpgradeOpen(true);
       return;
     }
 
@@ -94,6 +95,15 @@ export function ProFeaturesTab({ card, onChange, userId }: Props) {
       return;
     }
 
+    if (!isPro) {
+      setUpgradeSource("pro_features_action");
+      setUpgradeOpen(true);
+      toast.info(
+        "Instant email lead alerts require JustTap Pro. Upgrade to enable live email delivery.",
+      );
+      return;
+    }
+
     setTestingEmail(true);
     try {
       const res = await fetch("/api/lead-email", {
@@ -124,6 +134,15 @@ export function ProFeaturesTab({ card, onChange, userId }: Props) {
   async function sendTestWebhook() {
     if (!pro.webhook_url && !pro.notify_email) {
       toast.error("Please enter a Webhook URL or Notification Email first.");
+      return;
+    }
+
+    if (!isPro) {
+      setUpgradeSource("pro_features_action");
+      setUpgradeOpen(true);
+      toast.info(
+        "Webhook lead forwarding requires JustTap Pro. Upgrade to enable live webhook dispatch.",
+      );
       return;
     }
 
@@ -166,6 +185,15 @@ export function ProFeaturesTab({ card, onChange, userId }: Props) {
     }
     if (file.size > 10 * 1024 * 1024) {
       toast.error("PDF file size must be less than 10MB");
+      return;
+    }
+
+    if (!isPro) {
+      const objectUrl = URL.createObjectURL(file);
+      updatePro("pdf_url", objectUrl);
+      toast.info(
+        "📄 PDF document preview loaded for simulator. Upgrade to Pro to host and publish documents.",
+      );
       return;
     }
 
@@ -220,10 +248,13 @@ export function ProFeaturesTab({ card, onChange, userId }: Props) {
             {!isPro && (
               <button
                 type="button"
-                onClick={() => setUpgradeOpen(true)}
+                onClick={() => {
+                  setUpgradeSource("pro_features");
+                  setUpgradeOpen(true);
+                }}
                 className="flex items-center gap-1.5 rounded-full bg-primary px-4 py-2 text-xs font-semibold text-primary-foreground transition hover:opacity-90"
               >
-                <Sparkles className="h-3.5 w-3.5" /> Upgrade to Pro
+                <Sparkles className="h-3.5 w-3.5" /> Start 7-Day Free Trial
               </button>
             )}
           </div>
@@ -234,8 +265,8 @@ export function ProFeaturesTab({ card, onChange, userId }: Props) {
             <Lock className="h-4 w-4 shrink-0" />
             <span>
               You are currently on the <strong>Free Plan</strong>. You can customize these special
-              features below and preview them in the live simulator, but upgrade to Pro ($9.99/mo)
-              to make them live for public visitors.
+              features below and preview them in the live simulator, but start a free 7-day trial to
+              make them live for public visitors.
             </span>
           </div>
         )}
@@ -635,59 +666,13 @@ export function ProFeaturesTab({ card, onChange, userId }: Props) {
         </button>
       </div>
 
-      {/* UPGRADE DIALOG MODAL */}
-      <Dialog open={upgradeOpen} onOpenChange={setUpgradeOpen}>
-        <DialogContent className="max-w-md rounded-3xl p-6 text-center">
-          <DialogHeader>
-            <div className="mx-auto grid h-14 w-14 place-items-center rounded-2xl bg-gradient-to-tr from-primary to-accent text-primary-foreground shadow-lg mb-2">
-              <Sparkles className="h-7 w-7" />
-            </div>
-            <DialogTitle className="font-display text-xl font-bold">
-              Upgrade to JustTap Pro
-            </DialogTitle>
-            <DialogDescription className="text-xs text-muted-foreground">
-              Unlock video embeds, PDF downloads, Calendly appointment booking, Apple Wallet passes,
-              and custom branding for your physical NFC business cards.
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="my-4 space-y-2 rounded-2xl bg-secondary/50 p-4 text-left text-xs">
-            <div className="flex items-center gap-2 font-medium">
-              <CheckCircle2 className="h-4 w-4 text-emerald-400 shrink-0" />
-              Embedded YouTube, Loom, & Vimeo Video Intros
-            </div>
-            <div className="flex items-center gap-2 font-medium">
-              <CheckCircle2 className="h-4 w-4 text-emerald-400 shrink-0" />
-              PDF Document Uploader & Download Buttons
-            </div>
-            <div className="flex items-center gap-2 font-medium">
-              <CheckCircle2 className="h-4 w-4 text-emerald-400 shrink-0" />
-              Calendly & TidyCal Meeting Booking Embeds
-            </div>
-            <div className="flex items-center gap-2 font-medium">
-              <CheckCircle2 className="h-4 w-4 text-emerald-400 shrink-0" />
-              Remove &quot;Powered by JustTap&quot; Branding
-            </div>
-          </div>
-
-          <div className="flex flex-col gap-2">
-            <button
-              type="button"
-              onClick={() => setUpgradeOpen(false)}
-              className="h-12 w-full rounded-2xl bg-primary text-sm font-bold text-primary-foreground hover:opacity-90 transition-opacity"
-            >
-              Close
-            </button>
-            <button
-              type="button"
-              onClick={() => setUpgradeOpen(false)}
-              className="h-10 w-full rounded-2xl text-xs font-medium text-muted-foreground hover:text-foreground"
-            >
-              Maybe Later
-            </button>
-          </div>
-        </DialogContent>
-      </Dialog>
+      {/* SHARED PRO UPGRADE DIALOG */}
+      <ProUpgradeDialog
+        open={upgradeOpen}
+        onOpenChange={setUpgradeOpen}
+        source={upgradeSource}
+        draft={card}
+      />
     </div>
   );
 }

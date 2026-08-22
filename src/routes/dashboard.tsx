@@ -123,7 +123,7 @@ type Tab = "cards" | "analytics" | "qr" | "leads" | "pro";
 function Dashboard() {
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const { user, loading } = useAuth();
+  const { user, session, loading } = useAuth();
   const isAdmin = useIsAdmin(user?.id);
   const userId = user?.id;
   const userEmailRef = React.useRef(user?.email);
@@ -602,6 +602,7 @@ function Dashboard() {
                 draft={draft || emptyCard}
                 setDraft={setDraft}
                 userId={user?.id ?? "guest"}
+                session={session}
                 isNew={!cards.some((c) => c.id === draft?.id)}
                 savedSlug={selectedCard?.slug}
                 publishedCard={selectedCard}

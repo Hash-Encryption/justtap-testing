@@ -15,7 +15,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { STORAGE_BUCKET, supabase } from "@/lib/supabase";
-import { getPaletteContrastWarnings } from "@/lib/card-design";
+import { getPaletteContrastWarnings, isProEntitled } from "@/lib/card-design";
 import {
   DESIGN_PRESET_PALETTES,
   FINISHES,
@@ -49,6 +49,8 @@ import {
   writeCardDraft,
 } from "@/lib/card-draft";
 import { useTranslation } from "@/lib/i18n";
+import { ProUpgradeDialog, type ProUpgradeSource } from "./ProUpgradeDialog";
+import type { Session } from "@supabase/supabase-js";
 
 async function uploadDataUrlIfNeeded(
   dataUrl: string | null | undefined,
@@ -82,6 +84,7 @@ type Props = {
   draft: Card;
   setDraft: (c: Card) => void;
   userId: string;
+  session?: Session | null;
   isNew: boolean;
   savedSlug?: string;
   publishedCard?: Card | null;
@@ -93,6 +96,7 @@ export function CardEditor({
   draft,
   setDraft,
   userId,
+  session,
   isNew,
   savedSlug,
   publishedCard,
@@ -107,6 +111,8 @@ export function CardEditor({
   const [draftRestored, setDraftRestored] = useState(false);
   const [lastAutoSaved, setLastAutoSaved] = useState<string | null>(null);
   const [hydratedDraftKey, setHydratedDraftKey] = useState<string | null>(null);
+  const [upgradeModalOpen, setUpgradeModalOpen] = useState(false);
+  const [upgradeSource, setUpgradeSource] = useState<ProUpgradeSource>("publish_attempt");
 
   // Dual-mode memory state preservation
   const [customDraftState, setCustomDraftState] = useState<Partial<Card>>({
@@ -121,7 +127,7 @@ export function CardEditor({
     font_family: draft.font_family || "Outfit",
   });
 
-  const isPro = draft.plan_tier === "pro" || draft.plan_tier === "enterprise";
+  const isPro = isProEntitled(draft);
 
   const isDirty = useMemo(() => {
     if (!publishedCard) return true;
@@ -273,11 +279,6 @@ export function CardEditor({
 
   // Mode switcher handler with working draft state preservation
   const handleModeSwitch = (mode: DesignMode) => {
-    if (mode === "custom" && !isPro) {
-      toast.error("Custom Creator is a PRO feature. Upgrade to unlock full custom design!");
-      return;
-    }
-
     if (mode === "classic_v2") {
       // Save current custom settings into customDraftState memory before switching to Classic
       setCustomDraftState({
@@ -325,10 +326,6 @@ export function CardEditor({
   };
 
   const applyPreset = (presetId: string) => {
-    if (!isPro) {
-      toast.error("Preset Palettes require a Pro subscription");
-      return;
-    }
     const preset = DESIGN_PRESET_PALETTES.find((p) => p.id === presetId);
     if (!preset) return;
 
@@ -378,23 +375,24 @@ export function CardEditor({
     );
   };
 
-  async function publishChanges(): Promise<void> {
-    if (!draft.full_name.trim()) {
+  async function publishChanges(draftOverride?: typeof draft): Promise<void> {
+    const d = draftOverride ?? draft;
+    if (!d.full_name.trim()) {
       toast.error("Full name is required");
       return;
     }
-    if (!draft.phone.trim()) {
+    if (!d.phone.trim()) {
       toast.error("Phone number is required");
       return;
     }
 
     // Validate 5 color controls against 6-digit hex format
     const colorsToValidate = [
-      { name: "Background", val: draft.bg_color || "#08080A" },
-      { name: "Surface", val: draft.surface_color || "#121216" },
-      { name: "Primary Accent", val: draft.accent_color || "#6B21A8" },
-      { name: "Champagne Accent", val: draft.champagne_accent || "#E6D5AC" },
-      { name: "Text Color", val: draft.text_color || "#FAFAFA" },
+      { name: "Background", val: d.bg_color || "#08080A" },
+      { name: "Surface", val: d.surface_color || "#121216" },
+      { name: "Primary Accent", val: d.accent_color || "#6B21A8" },
+      { name: "Champagne Accent", val: d.champagne_accent || "#E6D5AC" },
+      { name: "Text Color", val: d.text_color || "#FAFAFA" },
     ];
 
     for (const c of colorsToValidate) {
@@ -404,74 +402,81 @@ export function CardEditor({
       }
     }
 
-    const slugResult = validateSlug(draft.slug || draft.full_name);
+    const slugResult = validateSlug(d.slug || d.full_name);
     if (!slugResult.valid) {
       toast.error(slugValidationMessage(slugResult));
       return;
     }
     const slug = slugResult.slug;
 
+    // Intercept client-side: Free users previewing Custom Creator cannot persist Pro styling to Supabase
+    if (d.design_mode === "custom" && !isProEntitled(d)) {
+      setUpgradeSource("publish_attempt");
+      setUpgradeModalOpen(true);
+      return;
+    }
+
     if (userId === "guest") {
       try {
-        writeCardDraft(window.localStorage, userId, { ...draft, slug });
+        writeCardDraft(window.localStorage, userId, { ...d, slug });
       } catch {
         /* ignore */
       }
-      onSaved({ ...draft, slug });
+      onSaved({ ...d, slug });
       return;
     }
 
     setSaving(true);
-    const avatar_url = await uploadDataUrlIfNeeded(draft.avatar_url, userId, "avatar");
-    const logo_url = await uploadDataUrlIfNeeded(draft.logo_url, userId, "logo");
+    const avatar_url = await uploadDataUrlIfNeeded(d.avatar_url, userId, "avatar");
+    const logo_url = await uploadDataUrlIfNeeded(d.logo_url, userId, "logo");
 
     const sanitizedSocialLinks = {
-      linkedin: sanitizeUrl(draft.social_links?.linkedin) || "",
-      instagram: sanitizeUrl(draft.social_links?.instagram) || "",
-      twitter: sanitizeUrl(draft.social_links?.twitter) || "",
-      website: sanitizeUrl(draft.social_links?.website) || "",
+      linkedin: sanitizeUrl(d.social_links?.linkedin) || "",
+      instagram: sanitizeUrl(d.social_links?.instagram) || "",
+      twitter: sanitizeUrl(d.social_links?.twitter) || "",
+      website: sanitizeUrl(d.social_links?.website) || "",
     };
 
     const payload = {
       user_id: userId,
       slug,
-      full_name: sanitizeText(draft.full_name, 100),
-      phone: sanitizePhone(draft.phone),
-      email: draft.email ? sanitizeText(draft.email, 100) : null,
-      title: draft.title ? sanitizeText(draft.title, 100) : null,
-      company: draft.company ? sanitizeText(draft.company, 100) : null,
-      bio: draft.bio ? sanitizeText(draft.bio, 1000) : null,
+      full_name: sanitizeText(d.full_name, 100),
+      phone: sanitizePhone(d.phone),
+      email: d.email ? sanitizeText(d.email, 100) : null,
+      title: d.title ? sanitizeText(d.title, 100) : null,
+      company: d.company ? sanitizeText(d.company, 100) : null,
+      bio: d.bio ? sanitizeText(d.bio, 1000) : null,
       avatar_url: avatar_url ? sanitizeUrl(avatar_url) : null,
       logo_url: logo_url ? sanitizeUrl(logo_url) : null,
-      show_logo_badge: draft.show_logo_badge,
-      design_mode: draft.design_mode || "classic_v2",
-      header_pattern: draft.header_pattern || "wave",
-      accent_color: draft.accent_color || "#6B21A8",
-      bg_color: draft.bg_color || "#08080A",
-      surface_color: draft.surface_color || "#121216",
-      champagne_accent: draft.champagne_accent || "#E6D5AC",
-      text_color: draft.text_color || "#FAFAFA",
-      surface_finish: draft.surface_finish || "matte",
-      border_radius: draft.border_radius || "minimal",
-      font_family: draft.font_family || "Outfit",
-      whatsapp_phone: draft.whatsapp_phone ? sanitizePhone(draft.whatsapp_phone) : null,
-      whatsapp_message: draft.whatsapp_message ? sanitizeText(draft.whatsapp_message, 250) : null,
-      enable_arabic: draft.enable_arabic,
-      full_name_ar: draft.full_name_ar ? sanitizeText(draft.full_name_ar, 100) : null,
-      title_ar: draft.title_ar ? sanitizeText(draft.title_ar, 100) : null,
-      bio_ar: draft.bio_ar ? sanitizeText(draft.bio_ar, 1000) : null,
+      show_logo_badge: d.show_logo_badge,
+      design_mode: d.design_mode || "classic_v2",
+      header_pattern: d.header_pattern || "wave",
+      accent_color: d.accent_color || "#6B21A8",
+      bg_color: d.bg_color || "#08080A",
+      surface_color: d.surface_color || "#121216",
+      champagne_accent: d.champagne_accent || "#E6D5AC",
+      text_color: d.text_color || "#FAFAFA",
+      surface_finish: d.surface_finish || "matte",
+      border_radius: d.border_radius || "minimal",
+      font_family: d.font_family || "Outfit",
+      whatsapp_phone: d.whatsapp_phone ? sanitizePhone(d.whatsapp_phone) : null,
+      whatsapp_message: d.whatsapp_message ? sanitizeText(d.whatsapp_message, 250) : null,
+      enable_arabic: d.enable_arabic,
+      full_name_ar: d.full_name_ar ? sanitizeText(d.full_name_ar, 100) : null,
+      title_ar: d.title_ar ? sanitizeText(d.title_ar, 100) : null,
+      bio_ar: d.bio_ar ? sanitizeText(d.bio_ar, 1000) : null,
       social_links: sanitizedSocialLinks,
-      pro_features: draft.pro_features ?? {},
+      pro_features: d.pro_features ?? {},
     };
 
-    if (!isNew && !draft.id) {
+    if (!isNew && !d.id) {
       setSaving(false);
       toast.error("This card cannot be updated because its identifier is missing.");
       return;
     }
 
     const result = await saveCardRecord<Card>(
-      { isNew, cardId: draft.id, userId, payload },
+      { isNew, cardId: d.id, userId, payload },
       {
         async insert(cardPayload) {
           const { data, error } = await supabase
@@ -647,9 +652,41 @@ export function CardEditor({
             >
               <Sparkles className="w-3.5 h-3.5" />
               <span>Custom Creator</span>
-              {!isPro && <Lock className="w-3 h-3 text-amber-400" />}
             </button>
           </div>
+
+          {/* PERSISTENT CTA BELOW PHONE PREVIEW FOR FREE USERS */}
+          {draft.design_mode === "custom" && !isPro && (
+            <div
+              data-testid="preview-dock-cta"
+              className="justtap-glass rounded-2xl p-3.5 space-y-2 border border-amber-500/30 bg-amber-500/5 max-w-[340px] mx-auto text-center"
+            >
+              <div className="flex items-center justify-center">
+                <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-amber-400/20 text-amber-300 border border-amber-400/30">
+                  PRO PREVIEW
+                </span>
+              </div>
+              <p className="text-xs font-semibold text-white">
+                Your custom design is visible only to you.
+              </p>
+              <p className="text-[11px] text-slate-400">
+                Start a free 7-day trial to publish this design.
+              </p>
+              <div className="flex items-center justify-center gap-2 pt-1">
+                <button
+                  type="button"
+                  data-testid="dock-upgrade-cta"
+                  onClick={() => {
+                    setUpgradeSource("preview_dock");
+                    setUpgradeModalOpen(true);
+                  }}
+                  className="flex-1 py-1.5 px-3 rounded-xl bg-gradient-to-r from-purple-600 to-amber-500 hover:opacity-95 text-white font-bold text-xs shadow-md shadow-purple-700/20 transition-all"
+                >
+                  Start 7-Day Free Trial
+                </button>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* RIGHT COLUMN: Editors & Controls */}
@@ -657,16 +694,44 @@ export function CardEditor({
           {/* CUSTOM CREATOR ENGINE CONTROLS */}
           {draft.design_mode === "custom" && (
             <div className="justtap-glass rounded-3xl p-6 space-y-6 border border-amber-500/20 relative">
-              <div className="flex items-center justify-between border-b border-slate-800 pb-4">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-b border-slate-800 pb-4">
                 <div className="flex items-center space-x-2">
                   <Sparkles className="w-5 h-5 text-amber-400" />
-                  <h3 className="text-base font-bold text-white font-display">
-                    Custom Creator Engine
-                  </h3>
+                  <div>
+                    <h3 className="text-base font-bold text-white font-display">
+                      Custom Creator Engine
+                    </h3>
+                    {!isPro && (
+                      <p className="text-[11px] text-slate-400">
+                        You&apos;re previewing a Pro design
+                      </p>
+                    )}
+                  </div>
                 </div>
-                <span className="text-[10px] font-extrabold px-2.5 py-1 rounded-full bg-amber-400/10 text-amber-300 border border-amber-400/20">
-                  PRO ONLY
-                </span>
+                <div className="flex items-center space-x-2">
+                  {isPro ? (
+                    <span className="text-[10px] font-extrabold px-2.5 py-1 rounded-full bg-emerald-400/10 text-emerald-300 border border-emerald-400/20">
+                      PRO ACTIVE
+                    </span>
+                  ) : (
+                    <div className="flex items-center space-x-2">
+                      <span className="text-[10px] font-extrabold px-2.5 py-1 rounded-full bg-amber-400/10 text-amber-300 border border-amber-400/20">
+                        PRO PREVIEW
+                      </span>
+                      <button
+                        type="button"
+                        data-testid="header-upgrade-cta"
+                        onClick={() => {
+                          setUpgradeSource("custom_creator_header");
+                          setUpgradeModalOpen(true);
+                        }}
+                        className="px-2.5 py-1 rounded-full bg-purple-700 hover:bg-purple-600 text-white font-bold text-[10px] transition-all shadow-xs"
+                      >
+                        Start Free Trial
+                      </button>
+                    </div>
+                  )}
+                </div>
               </div>
 
               {/* 1. PRESET PALETTES */}
@@ -1032,6 +1097,48 @@ export function CardEditor({
           </div>
         </div>
       )}
+
+      {/* TRIAL STATUS BADGE — shown when account is actively trialing */}
+      {draft.plan_tier === "trialing" &&
+        draft.trial_ends_at &&
+        (() => {
+          const daysLeft = Math.ceil(
+            (new Date(draft.trial_ends_at).getTime() - Date.now()) / 86_400_000,
+          );
+          if (daysLeft <= 0) return null;
+          return (
+            <div
+              data-testid="trial-status-badge"
+              className="fixed bottom-4 right-4 z-50 flex items-center gap-1.5 rounded-full border border-emerald-400/30 bg-emerald-400/10 px-3 py-1.5 text-[11px] font-bold text-emerald-300 shadow-lg backdrop-blur-sm"
+            >
+              <Sparkles className="h-3 w-3" />
+              Pro Trial · {daysLeft} day{daysLeft !== 1 ? "s" : ""} remaining
+            </div>
+          );
+        })()}
+
+      {/* SHARED PRO UPGRADE DIALOG */}
+      <ProUpgradeDialog
+        open={upgradeModalOpen}
+        onOpenChange={setUpgradeModalOpen}
+        source={upgradeSource}
+        draft={draft}
+        session={session}
+        onTrialStarted={(trialEndsAt) => {
+          // Backend confirmed trial — build the updated draft with trialing entitlement.
+          // Pass it directly to publishChanges() to avoid the stale-closure bug:
+          // setDraft() is async; publishChanges() would close over the old draft
+          // and see isPro=false, re-opening the upgrade modal.
+          const updatedDraft = {
+            ...draft,
+            plan_tier: "trialing" as const,
+            trial_ends_at: trialEndsAt.toISOString(),
+          };
+          setDraft(updatedDraft);
+          setUpgradeModalOpen(false);
+          void publishChanges(updatedDraft);
+        }}
+      />
     </div>
   );
 }

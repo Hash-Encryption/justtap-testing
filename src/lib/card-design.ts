@@ -56,7 +56,31 @@ type DesignCard = Pick<
   | "border_radius"
   | "font_family"
 > &
-  Partial<Pick<Card, "plan_tier">>;
+  Partial<Pick<Card, "plan_tier" | "trial_ends_at">>;
+
+/**
+ * Returns true when the card has effective Pro entitlement.
+ *
+ * Rules (client-side, for UI gating only):
+ *   pro | enterprise  → always entitled
+ *   trialing          → entitled while trial_ends_at is in the future
+ *   free / missing    → not entitled
+ *
+ * Authoritative enforcement is in the SQL RPC (server-time check). This
+ * helper is used for rendering decisions; a stale client cannot grant itself
+ * Pro access because the public card data comes from get_public_card_by_slug
+ * which enforces expiry server-side.
+ */
+export function isProEntitled(card: {
+  plan_tier?: Card["plan_tier"];
+  trial_ends_at?: string | null;
+}): boolean {
+  if (card.plan_tier === "pro" || card.plan_tier === "enterprise") return true;
+  if (card.plan_tier === "trialing" && card.trial_ends_at) {
+    return new Date(card.trial_ends_at) > new Date();
+  }
+  return false;
+}
 
 const MIN_TEXT_CONTRAST = 4.5;
 
@@ -137,9 +161,12 @@ export function getPaletteContrastWarnings(colors: {
   return warnings;
 }
 
-export function resolveCardDesign(card: DesignCard): CardDesign {
+export function resolveCardDesign(
+  card: DesignCard,
+  options?: { previewProDesign?: boolean },
+): CardDesign {
   const entitled =
-    !("plan_tier" in card) || card.plan_tier === "pro" || card.plan_tier === "enterprise";
+    Boolean(options?.previewProDesign) || !("plan_tier" in card) || isProEntitled(card);
   if (card.design_mode !== "custom" || !entitled) return CLASSIC_V2_DESIGN;
 
   const colors = [

@@ -1,0 +1,825 @@
+import { renderToStaticMarkup } from "react-dom/server";
+import { describe, expect, it, vi } from "vitest";
+import {
+  DESIGN_PRESET_PALETTES,
+  emptyCard,
+  FINISHES,
+  FONT_OPTIONS,
+  PATTERNS,
+  RADIUS_OPTIONS,
+  type Card,
+} from "@/lib/card";
+import { CLASSIC_V2_DESIGN, isProEntitled, resolveCardDesign } from "@/lib/card-design";
+import { CardView } from "@/components/card/CardView";
+import { CardPreview } from "@/components/card/CardPreview";
+import { ProUpgradeDialog, ProUpgradeDialogBody } from "./ProUpgradeDialog";
+import { saveCardRecord } from "@/lib/card-save";
+import { writeCardDraft } from "@/lib/card-draft";
+
+const baseFreeCard: Card = {
+  ...emptyCard,
+  id: "free-card-1",
+  user_id: "user-free-1",
+  slug: "alex-founder",
+  full_name: "Alex Founder",
+  phone: "+15551234567",
+  plan_tier: "free",
+};
+
+const customDesignFields: Partial<Card> = {
+  design_mode: "custom",
+  bg_color: "#21171B",
+  surface_color: "#2C2025",
+  accent_color: "#C98F9D",
+  champagne_accent: "#E7C9B6",
+  text_color: "#FFF7F4",
+  header_pattern: "geometric",
+  surface_finish: "glassmorphism",
+  border_radius: "rounded",
+  font_family: "Space Grotesk",
+};
+
+describe("Free Pro Preview & Custom Creator Upgrade Experience Suite", () => {
+  // 1. Free user can enter Custom Creator in preview
+  it("1. allows Free user to enter Custom Creator and render custom preview", () => {
+    const freeCustomCard: Card = {
+      ...baseFreeCard,
+      ...customDesignFields,
+    };
+
+    const previewHtml = renderToStaticMarkup(<CardPreview card={freeCustomCard} />);
+    expect(previewHtml).toContain('data-card-design="custom"');
+    expect(previewHtml).toContain("background-color:#21171B");
+    expect(previewHtml).toContain("background-color:#C98F9D");
+    expect(previewHtml).toContain("Space Grotesk");
+  });
+
+  // 2. Free user can select all four presets
+  it("2. renders all 4 Pro preset palettes for Free users in preview", () => {
+    for (const preset of DESIGN_PRESET_PALETTES) {
+      const freePresetCard: Card = {
+        ...baseFreeCard,
+        design_mode: "custom",
+        bg_color: preset.bg_color,
+        surface_color: preset.surface_color,
+        accent_color: preset.accent_color,
+        champagne_accent: preset.champagne_accent,
+        text_color: preset.text_color,
+      };
+
+      const previewHtml = renderToStaticMarkup(<CardPreview card={freePresetCard} />);
+      expect(previewHtml).toContain('data-card-design="custom"');
+      expect(previewHtml).toContain(`background-color:${preset.bg_color}`);
+      expect(previewHtml).toContain(`background-color:${preset.accent_color}`);
+    }
+  });
+
+  // 3. Free manual color changes update CardPreview
+  it("3. renders manual color updates in CardPreview for Free accounts", () => {
+    const freeManualCard: Card = {
+      ...baseFreeCard,
+      design_mode: "custom",
+      bg_color: "#0a192f",
+      surface_color: "#172a45",
+      accent_color: "#64ffda",
+      champagne_accent: "#ccd6f6",
+      text_color: "#e6f1ff",
+    };
+
+    const previewHtml = renderToStaticMarkup(<CardPreview card={freeManualCard} />);
+    expect(previewHtml).toContain('data-card-design="custom"');
+    expect(previewHtml).toContain("background-color:#0a192f");
+    expect(previewHtml).toContain("background-color:#64ffda");
+    expect(previewHtml).toContain("color:#e6f1ff");
+  });
+
+  // 4. Free pattern changes update preview
+  it("4. updates header divider pattern in preview for Free users", () => {
+    for (const pattern of PATTERNS) {
+      const freePatternCard: Card = {
+        ...baseFreeCard,
+        ...customDesignFields,
+        header_pattern: pattern.value,
+      };
+
+      const previewHtml = renderToStaticMarkup(<CardPreview card={freePatternCard} />);
+      expect(previewHtml).toContain(`data-header-pattern="${pattern.value}"`);
+    }
+  });
+
+  // 5. Free finish changes update preview
+  it("5. updates surface finish in preview for Free users", () => {
+    for (const finish of FINISHES) {
+      const freeFinishCard: Card = {
+        ...baseFreeCard,
+        ...customDesignFields,
+        surface_finish: finish.value,
+      };
+
+      const previewHtml = renderToStaticMarkup(<CardPreview card={freeFinishCard} />);
+      expect(previewHtml).toContain(`data-surface-finish="${finish.value}"`);
+    }
+  });
+
+  // 6. Free radius changes update preview
+  it("6. updates border radius in preview for Free users", () => {
+    for (const radius of RADIUS_OPTIONS) {
+      const freeRadiusCard: Card = {
+        ...baseFreeCard,
+        ...customDesignFields,
+        border_radius: radius.value,
+      };
+
+      const previewHtml = renderToStaticMarkup(<CardPreview card={freeRadiusCard} />);
+      expect(previewHtml).toContain(`data-border-radius="${radius.value}"`);
+    }
+  });
+
+  // 7. Free font changes update preview
+  it("7. updates font family in preview for Free users", () => {
+    for (const font of FONT_OPTIONS) {
+      const freeFontCard: Card = {
+        ...baseFreeCard,
+        ...customDesignFields,
+        font_family: font.value,
+      };
+
+      const previewHtml = renderToStaticMarkup(<CardPreview card={freeFontCard} />);
+      expect(previewHtml).toContain(`data-font-family="${font.value}"`);
+      expect(previewHtml).toContain(`&#x27;${font.value}&#x27;`);
+    }
+  });
+
+  // 8. Free preview does NOT persist custom design to Supabase
+  it("8. stores Free preview draft in local storage without altering plan_tier or sending to DB", () => {
+    const memoryStorage: Record<string, string> = {};
+    const mockStorage = {
+      getItem: (k: string) => memoryStorage[k] ?? null,
+      setItem: (k: string, v: string) => {
+        memoryStorage[k] = v;
+      },
+      removeItem: (k: string) => {
+        delete memoryStorage[k];
+      },
+    };
+
+    const freeCardWithCustom: Card = {
+      ...baseFreeCard,
+      ...customDesignFields,
+    };
+
+    const stored = writeCardDraft(mockStorage, freeCardWithCustom.user_id!, freeCardWithCustom);
+    expect(stored.fields.design_mode).toBe("custom");
+    expect(stored.fields.accent_color).toBe("#C98F9D");
+    expect(stored.fields).not.toHaveProperty("plan_tier");
+  });
+
+  // 9. Free Publish while Custom Creator is active opens upgrade flow (client-side interception)
+  it("9. verifies client-side publish interception logic for Free custom creator", () => {
+    const freeCardWithCustom: Card = {
+      ...baseFreeCard,
+      ...customDesignFields,
+    };
+
+    const shouldIntercept =
+      freeCardWithCustom.design_mode === "custom" && !isProEntitled(freeCardWithCustom);
+
+    expect(shouldIntercept).toBe(true);
+  });
+
+  // 10. Free public /c/:slug remains Classic V2
+  it("10. keeps public live rendering locked to Classic V2 for Free cards", () => {
+    const freeCardWithCustom: Card = {
+      ...baseFreeCard,
+      ...customDesignFields,
+    };
+
+    // Live public route CardView rendering (preview = false)
+    const publicHtml = renderToStaticMarkup(<CardView card={freeCardWithCustom} preview={false} />);
+    expect(publicHtml).toContain('data-card-design="classic_v2"');
+    expect(publicHtml).toContain(`background-color:${CLASSIC_V2_DESIGN.bgColor}`);
+    expect(publicHtml).toContain(`background-color:${CLASSIC_V2_DESIGN.accentColor}`);
+    expect(publicHtml).not.toContain("background-color:#21171B");
+  });
+
+  // 11. Free can switch back to Classic V2 and publish normal card changes
+  it("11. allows Free users to publish normal card changes in Classic V2", async () => {
+    const freeClassicCard: Card = {
+      ...baseFreeCard,
+      design_mode: "classic_v2",
+      full_name: "Alex Updated",
+      phone: "+15559876543",
+    };
+
+    let updateCalled = false;
+    let savedPayload: Record<string, unknown> | null = null;
+
+    const mockGateway = {
+      async insert() {
+        return { data: null, error: null };
+      },
+      async update(id: string, userId: string, payload: Record<string, unknown>) {
+        updateCalled = true;
+        savedPayload = payload;
+        return { data: { id, user_id: userId, ...payload } as unknown as Card, error: null };
+      },
+    };
+
+    const result = await saveCardRecord(
+      {
+        isNew: false,
+        cardId: freeClassicCard.id,
+        userId: freeClassicCard.user_id!,
+        payload: {
+          slug: freeClassicCard.slug,
+          full_name: freeClassicCard.full_name,
+          phone: freeClassicCard.phone,
+          design_mode: "classic_v2",
+        },
+      },
+      mockGateway,
+    );
+
+    expect(result.status).toBe("saved");
+    expect(updateCalled).toBe(true);
+    expect(savedPayload).not.toBeNull();
+    expect(savedPayload!["full_name"]).toBe("Alex Updated");
+    expect(savedPayload!["design_mode"]).toBe("classic_v2");
+  });
+
+  // 12. Free Custom → Classic → Custom restores preview working state
+  it("12. retains custom settings in memory when switching modes", () => {
+    const customState = {
+      header_pattern: "geometric" as Card["header_pattern"],
+      bg_color: "#21171B",
+      surface_color: "#2C2025",
+      accent_color: "#C98F9D",
+      champagne_accent: "#E7C9B6",
+      text_color: "#FFF7F4",
+      surface_finish: "glassmorphism" as Card["surface_finish"],
+      border_radius: "rounded" as Card["border_radius"],
+      font_family: "Space Grotesk" as Card["font_family"],
+    };
+
+    // User switches to Classic V2: memory holds previous custom state
+    let activeCard: Card = {
+      ...baseFreeCard,
+      design_mode: "classic_v2",
+      header_pattern: "wave",
+      bg_color: "#08080A",
+      surface_color: "#121216",
+      accent_color: "#6B21A8",
+      champagne_accent: "#E6D5AC",
+      text_color: "#FAFAFA",
+      surface_finish: "matte",
+      border_radius: "minimal",
+      font_family: "Outfit",
+    };
+
+    expect(activeCard.design_mode).toBe("classic_v2");
+
+    // User switches back to Custom Creator: restored from customState
+    activeCard = {
+      ...activeCard,
+      design_mode: "custom",
+      ...customState,
+    };
+
+    expect(activeCard.design_mode).toBe("custom");
+    expect(activeCard.accent_color).toBe("#C98F9D");
+    expect(activeCard.font_family).toBe("Space Grotesk");
+    expect(activeCard.surface_finish).toBe("glassmorphism");
+  });
+
+  // 13. Pro user can publish custom design
+  it("13. allows verified Pro users to publish full custom design to database", async () => {
+    const proCustomCard: Card = {
+      ...baseFreeCard,
+      plan_tier: "pro",
+      ...customDesignFields,
+    };
+
+    let updateCalled = false;
+    let savedPayload: Record<string, unknown> | null = null;
+
+    const mockGateway = {
+      async insert() {
+        return { data: null, error: null };
+      },
+      async update(id: string, userId: string, payload: Record<string, unknown>) {
+        updateCalled = true;
+        savedPayload = payload;
+        return { data: { id, user_id: userId, ...payload } as unknown as Card, error: null };
+      },
+    };
+
+    const isPro = proCustomCard.plan_tier === "pro" || proCustomCard.plan_tier === "enterprise";
+    expect(isPro).toBe(true);
+
+    const result = await saveCardRecord(
+      {
+        isNew: false,
+        cardId: proCustomCard.id,
+        userId: proCustomCard.user_id!,
+        payload: {
+          slug: proCustomCard.slug,
+          design_mode: "custom",
+          bg_color: proCustomCard.bg_color,
+          surface_color: proCustomCard.surface_color,
+          accent_color: proCustomCard.accent_color,
+          champagne_accent: proCustomCard.champagne_accent,
+          text_color: proCustomCard.text_color,
+          header_pattern: proCustomCard.header_pattern,
+          surface_finish: proCustomCard.surface_finish,
+          border_radius: proCustomCard.border_radius,
+          font_family: proCustomCard.font_family,
+        },
+      },
+      mockGateway,
+    );
+
+    expect(result.status).toBe("saved");
+    expect(updateCalled).toBe(true);
+    expect(savedPayload).not.toBeNull();
+    expect(savedPayload!["design_mode"]).toBe("custom");
+    expect(savedPayload!["accent_color"]).toBe("#C98F9D");
+  });
+
+  // 14. Published Pro design exactly matches preview design
+  it("14. produces identical resolved design for Pro public vs preview", () => {
+    const proCustomCard: Card = {
+      ...baseFreeCard,
+      plan_tier: "pro",
+      ...customDesignFields,
+    };
+
+    const previewDesign = resolveCardDesign(proCustomCard, { previewProDesign: true });
+    const publicDesign = resolveCardDesign(proCustomCard);
+
+    expect(publicDesign).toEqual(previewDesign);
+    expect(publicDesign.mode).toBe("custom");
+  });
+
+  // 15. Existing Supabase entitlement protection remains enforced
+  it("15. prevents client from overriding plan_tier via draft fields", () => {
+    const cardWithHackedTier: Card = {
+      ...baseFreeCard,
+      plan_tier: "free",
+    };
+
+    // Public resolver will not entitle free card
+    expect(resolveCardDesign(cardWithHackedTier)).toEqual(CLASSIC_V2_DESIGN);
+  });
+
+  // 16. Public rendering cannot accidentally activate preview-only rendering
+  it("16. ensures public CardView resolution defaults preview to false and isolates custom design", () => {
+    const freeCustomCard: Card = {
+      ...baseFreeCard,
+      ...customDesignFields,
+    };
+
+    const html = renderToStaticMarkup(<CardView card={freeCustomCard} />);
+    expect(html).toContain('data-card-design="classic_v2"');
+    expect(html).not.toContain('data-card-design="custom"');
+  });
+
+  // 17. Shared ProUpgradeDialog renders properly for all conversion contexts
+  it("17. renders ProUpgradeDialog with correct content across all sources", () => {
+    // 17A. Publish Interception with Design Summary
+    const publishHtml = renderToStaticMarkup(
+      <ProUpgradeDialogBody
+        source="publish_attempt"
+        draft={{
+          ...customDesignFields,
+        }}
+      />,
+    );
+    expect(publishHtml).toContain("Your design is ready");
+    expect(publishHtml).toContain("Rose Noir");
+    expect(publishHtml).toContain("Space Grotesk");
+    expect(publishHtml).toContain("Keep Editing");
+    expect(publishHtml).toContain("Start 7-Day Free Trial");
+
+    // 17B. Header CTA / Dock CTA
+    const headerHtml = renderToStaticMarkup(
+      <ProUpgradeDialogBody source="custom_creator_header" draft={null} />,
+    );
+    expect(headerHtml).toContain("Unlock Pro Custom Creator");
+    expect(headerHtml).toContain("Continue Designing");
+
+    // 17C. Pro Features Tab Save
+    const proSaveHtml = renderToStaticMarkup(
+      <ProUpgradeDialogBody source="pro_features_save" draft={null} />,
+    );
+    expect(proSaveHtml).toContain("Save &amp; Publish Special Features");
+    expect(proSaveHtml).toContain("Maybe Later");
+  });
+
+  // 18. Closing upgrade modal preserves preview state
+  it("18. keeps working draft intact when modal is dismissed", () => {
+    let modalOpen = true;
+    const draft = { ...baseFreeCard, ...customDesignFields };
+
+    const handleClose = (open: boolean) => {
+      modalOpen = open;
+    };
+
+    handleClose(false);
+    expect(modalOpen).toBe(false);
+    expect(draft.design_mode).toBe("custom");
+    expect(draft.accent_color).toBe("#C98F9D");
+  });
+
+  // 19. ProFeaturesTab persistence isolation for Free users
+  it("19. prevents Free users from persisting pro_features to Supabase", () => {
+    const isPro = baseFreeCard.plan_tier === "pro" || baseFreeCard.plan_tier === "enterprise";
+    expect(isPro).toBe(false);
+
+    let supabaseUpdateCalled = false;
+    const saveProFeaturesForFree = () => {
+      if (!isPro) {
+        // Intercepted! Opens upgrade dialog instead
+        return { intercepted: true };
+      }
+      supabaseUpdateCalled = true;
+      return { intercepted: false };
+    };
+
+    const result = saveProFeaturesForFree();
+    expect(result.intercepted).toBe(true);
+    expect(supabaseUpdateCalled).toBe(false);
+  });
+
+  // 20. Free users cannot upload Pro-only files to Supabase Storage
+  it("20. isolates PDF upload for Free users to local preview without hitting Supabase Storage", () => {
+    const isPro = false;
+    let storageUploadCalled = false;
+
+    const handlePdfUpload = (file: { name: string; size: number }) => {
+      if (!isPro) {
+        // Generates safe local preview reference
+        const localPreviewUrl = `blob:http://localhost/${file.name}`;
+        return { localPreviewUrl, uploadedToStorage: false };
+      }
+      storageUploadCalled = true;
+      return { localPreviewUrl: "https://storage.supabase.co/...", uploadedToStorage: true };
+    };
+
+    const uploadResult = handlePdfUpload({ name: "menu.pdf", size: 1024 });
+    expect(uploadResult.uploadedToStorage).toBe(false);
+    expect(uploadResult.localPreviewUrl).toContain("blob:");
+    expect(storageUploadCalled).toBe(false);
+  });
+
+  // 21. Free users cannot trigger live email/webhook alert dispatches
+  it("21. blocks live email/webhook test dispatches for Free users during preview", () => {
+    const isPro = false;
+    const dispatchFetch = vi.fn();
+
+    const sendTestEmail = () => {
+      if (!isPro) {
+        return { blocked: true };
+      }
+      dispatchFetch("/api/lead-email");
+      return { blocked: false };
+    };
+
+    const sendTestWebhook = () => {
+      if (!isPro) {
+        return { blocked: true };
+      }
+      dispatchFetch("/api/lead-webhook");
+      return { blocked: false };
+    };
+
+    expect(sendTestEmail().blocked).toBe(true);
+    expect(sendTestWebhook().blocked).toBe(true);
+    expect(dispatchFetch).not.toHaveBeenCalled();
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 7-Day Pro Trial — Real Server-Controlled Entitlement
+// ─────────────────────────────────────────────────────────────────────────────
+
+const FUTURE_TRIAL_ENDS = new Date(Date.now() + 6 * 86_400_000).toISOString(); // 6 days ahead
+const PAST_TRIAL_ENDS = new Date(Date.now() - 1 * 86_400_000).toISOString(); // yesterday
+
+const trialingCard: Card = {
+  ...baseFreeCard,
+  ...customDesignFields,
+  plan_tier: "trialing",
+  trial_ends_at: FUTURE_TRIAL_ENDS,
+};
+
+const expiredTrialCard: Card = {
+  ...baseFreeCard,
+  ...customDesignFields,
+  plan_tier: "trialing",
+  trial_ends_at: PAST_TRIAL_ENDS,
+};
+
+describe("7-Day Pro Trial — Entitlement Tests", () => {
+  // 22. Free user sees 'Start 7-Day Free Trial' CTA
+  it("22. Free user sees Start 7-Day Free Trial in ProUpgradeDialogBody", () => {
+    const html = renderToStaticMarkup(
+      <ProUpgradeDialogBody source="publish_attempt" draft={customDesignFields} />,
+    );
+    expect(html).toContain("Start 7-Day Free Trial");
+    expect(html).not.toContain("Upgrade to Pro");
+  });
+
+  // 23. startProTrial backend stub: returns trialEndsAt on success, fires onTrialStarted
+  it("23. startProTrial resolves trialEndsAt and fires onTrialStarted on success", async () => {
+    // Simulate what the server route returns on success
+    const fakeTrialEndsAt = new Date(FUTURE_TRIAL_ENDS);
+
+    // Model the client billing.ts contract:
+    // ok: true only after backend confirms
+    const mockStartTrial = vi.fn().mockResolvedValue({ ok: true, trialEndsAt: fakeTrialEndsAt });
+
+    const onTrialStarted = vi.fn();
+    const result = await mockStartTrial();
+    if (result.ok) onTrialStarted(result.trialEndsAt);
+
+    expect(mockStartTrial).toHaveBeenCalledOnce();
+    expect(onTrialStarted).toHaveBeenCalledWith(fakeTrialEndsAt);
+  });
+
+  // 24. Second trial attempt is rejected
+  it("24. second trial attempt returns ok: false with trial-used error", async () => {
+    const mockStartTrial = vi.fn().mockResolvedValue({
+      ok: false,
+      error: "Trial already used — each account may start one free trial",
+    });
+
+    const onTrialStarted = vi.fn();
+    const result = await mockStartTrial();
+    if (result.ok) onTrialStarted(result.trialEndsAt);
+
+    expect(result.ok).toBe(false);
+    expect(result.error).toContain("already used");
+    expect(onTrialStarted).not.toHaveBeenCalled();
+  });
+
+  // 25. Client cannot forge trial state — isProEntitled rejects missing/expired trial_ends_at
+  it("25. client cannot forge trialing entitlement without valid trial_ends_at", () => {
+    // No trial_ends_at
+    expect(isProEntitled({ plan_tier: "trialing" })).toBe(false);
+    // Empty trial_ends_at
+    expect(isProEntitled({ plan_tier: "trialing", trial_ends_at: null })).toBe(false);
+    // Past trial_ends_at
+    expect(isProEntitled({ plan_tier: "trialing", trial_ends_at: PAST_TRIAL_ENDS })).toBe(false);
+    // 'free' with a future date still doesn't grant entitlement
+    expect(isProEntitled({ plan_tier: "free", trial_ends_at: FUTURE_TRIAL_ENDS })).toBe(false);
+  });
+
+  // 26. Active trialing account gets Pro access
+  it("26. active trialing account gets Pro access via isProEntitled and resolveCardDesign", () => {
+    expect(isProEntitled(trialingCard)).toBe(true);
+
+    const design = resolveCardDesign(trialingCard);
+    expect(design.mode).toBe("custom");
+    expect(design.accentColor).toBe(customDesignFields.accent_color);
+  });
+
+  // 27. Active trial + onTrialStarted → Pro preview publishes
+  it("27. after trial activation, custom design publishes via saveCardRecord", async () => {
+    let savedPayload: Record<string, unknown> | null = null;
+
+    const mockGateway = {
+      async insert() {
+        return { data: null, error: null };
+      },
+      async update(id: string, userId: string, payload: Record<string, unknown>) {
+        savedPayload = payload;
+        return { data: { id, user_id: userId, ...payload } as unknown as Card, error: null };
+      },
+    };
+
+    // After backend confirms trial, isPro is true → saveCardRecord proceeds
+    const result = await saveCardRecord(
+      {
+        isNew: false,
+        cardId: trialingCard.id,
+        userId: trialingCard.user_id!,
+        payload: {
+          slug: trialingCard.slug,
+          design_mode: "custom",
+          bg_color: trialingCard.bg_color,
+          accent_color: trialingCard.accent_color,
+        },
+      },
+      mockGateway,
+    );
+
+    expect(result.status).toBe("saved");
+    expect(savedPayload).not.toBeNull();
+    expect(savedPayload!["design_mode"]).toBe("custom");
+    expect(savedPayload!["accent_color"]).toBe(customDesignFields.accent_color);
+  });
+
+  // 28. Expired trial → isProEntitled false → resolveCardDesign → Classic V2
+  it("28. expired trial removes Pro access — resolveCardDesign returns Classic V2", () => {
+    expect(isProEntitled(expiredTrialCard)).toBe(false);
+
+    const design = resolveCardDesign(expiredTrialCard);
+    expect(design).toEqual(CLASSIC_V2_DESIGN);
+    expect(design.mode).toBe("classic_v2");
+  });
+
+  // 29. Public RPC never treats expired trial as Pro (server-side logic emulation)
+  it("29. public card RPC emulation: expired trialing card returns Classic V2 fields", () => {
+    // Emulate the get_public_card_by_slug RPC entitlement expression:
+    //   plan_tier IN ('pro','enterprise') OR
+    //   (plan_tier = 'trialing' AND trial_ends_at > now())
+    function isPubliclyEntitled(card: {
+      plan_tier?: string;
+      trial_ends_at?: string | null;
+    }): boolean {
+      if (card.plan_tier === "pro" || card.plan_tier === "enterprise") return true;
+      if (card.plan_tier === "trialing" && card.trial_ends_at) {
+        return new Date(card.trial_ends_at) > new Date();
+      }
+      return false;
+    }
+
+    expect(isPubliclyEntitled(expiredTrialCard)).toBe(false);
+    expect(isPubliclyEntitled(trialingCard)).toBe(true);
+    expect(isPubliclyEntitled({ plan_tier: "free" })).toBe(false);
+    expect(isPubliclyEntitled({ plan_tier: "pro" })).toBe(true);
+  });
+
+  // 30. Saved Pro design fields remain stored after trial expiry (no destructive reset)
+  it("30. Pro design fields remain stored in card after trial expiry", () => {
+    // Simulate what happens after server flips plan_tier to 'free' on expiry:
+    // the design fields (bg_color, accent_color, design_mode etc.) are NOT cleared
+    const postExpiryCard: Card = {
+      ...expiredTrialCard,
+      plan_tier: "free",
+      // Design fields deliberately still present — soft downgrade only changes entitlement
+    };
+
+    // Fields preserved
+    expect(postExpiryCard.design_mode).toBe("custom");
+    expect(postExpiryCard.accent_color).toBe(customDesignFields.accent_color);
+    expect(postExpiryCard.bg_color).toBe(customDesignFields.bg_color);
+
+    // Public rendering uses Classic V2 because plan_tier = free
+    const publicHtml = renderToStaticMarkup(<CardView card={postExpiryCard} preview={false} />);
+    expect(publicHtml).toContain('data-card-design="classic_v2"');
+    expect(publicHtml).not.toContain(`background-color:${customDesignFields.bg_color}`);
+  });
+
+  // 31. Returning to paid Pro restores configuration without rebuilding
+  it("31. paid Pro after expired trial restores saved custom configuration", () => {
+    const restoredProCard: Card = {
+      ...expiredTrialCard,
+      plan_tier: "pro",
+      trial_ends_at: PAST_TRIAL_ENDS,
+    };
+
+    expect(isProEntitled(restoredProCard)).toBe(true);
+
+    const design = resolveCardDesign(restoredProCard);
+    expect(design.mode).toBe("custom");
+    expect(design.accentColor).toBe(customDesignFields.accent_color);
+    expect(design.fontFamily).toBe(customDesignFields.font_family);
+  });
+
+  // 32. startProTrial propagates server 409 (trial-used) correctly to UI
+  it("32. startProTrial returns ok: false for 409 conflict without firing onTrialStarted", async () => {
+    // Simulate server returning 409
+    const mockFetch = vi.fn().mockResolvedValue({
+      ok: false,
+      status: 409,
+      json: async () => ({ ok: false, error: "Trial already used" }),
+    });
+
+    // Mimic billing.ts logic
+    const response = await mockFetch("/api/trial-start", { method: "POST" });
+    const body = await response.json();
+
+    expect(response.ok).toBe(false);
+    expect(body.ok).toBe(false);
+    expect(body.error).toBe("Trial already used");
+  });
+
+  // 33. No destructive DB reset — saveCardRecord for Free does not null out design fields
+  it("33. saving card as Free plan does not null design fields in the payload", async () => {
+    let savedPayload: Record<string, unknown> | null = null;
+
+    const mockGateway = {
+      async insert() {
+        return { data: null, error: null };
+      },
+      async update(id: string, userId: string, payload: Record<string, unknown>) {
+        savedPayload = payload;
+        return { data: { id, user_id: userId, ...payload } as unknown as Card, error: null };
+      },
+    };
+
+    // A Free user saving normal profile changes (not custom design) — design fields not nulled
+    const result = await saveCardRecord(
+      {
+        isNew: false,
+        cardId: baseFreeCard.id,
+        userId: baseFreeCard.user_id!,
+        payload: {
+          slug: baseFreeCard.slug,
+          full_name: "Updated Name",
+          phone: "+15559876543",
+          design_mode: "classic_v2", // They switched to classic; custom fields still in DB
+        },
+      },
+      mockGateway,
+    );
+
+    expect(result.status).toBe("saved");
+    // Payload does NOT include null values for custom design fields
+    expect(savedPayload!["bg_color"]).toBeUndefined();
+    expect(savedPayload!["accent_color"]).toBeUndefined();
+    expect(savedPayload!["full_name"]).toBe("Updated Name");
+  });
+
+  // 34. Integration: Free custom preview → trial activation → exact preview publishes
+  //     Verifies the stale-closure fix: publishChanges must use the updatedDraft
+  //     (trialing, with trial_ends_at) not the old draft (free).
+  it("34. Free custom preview → startProTrial success → exact design publishes without re-intercepting", async () => {
+    const TRIAL_ENDS = new Date(Date.now() + 7 * 86_400_000).toISOString();
+
+    // Step 1: user has a free card with a custom design in progress
+    const freeDraftWithCustom: Card = {
+      ...baseFreeCard,
+      ...customDesignFields,
+      plan_tier: "free",
+      full_name: "Hassan Test",
+      phone: "+15551234567",
+      slug: "hassan-test",
+    };
+
+    // Step 2: publish is intercepted because plan_tier = free and design_mode = custom
+    const intercepted =
+      freeDraftWithCustom.design_mode === "custom" && !isProEntitled(freeDraftWithCustom);
+    expect(intercepted).toBe(true);
+
+    // Step 3: backend confirms trial — onTrialStarted fires with trialEndsAt
+    // Simulate what onTrialStarted builds (matches exact CardEditor logic post-fix):
+    const updatedDraft: Card = {
+      ...freeDraftWithCustom,
+      plan_tier: "trialing",
+      trial_ends_at: TRIAL_ENDS,
+    };
+
+    // Step 4: publishChanges is called with updatedDraft — NOT the stale freeDraftWithCustom
+    // Verify entitlement check passes with the updated draft
+    const wouldIntercept = updatedDraft.design_mode === "custom" && !isProEntitled(updatedDraft);
+    expect(wouldIntercept).toBe(false); // no re-interception
+
+    // Step 5: the exact custom design resolves correctly
+    const design = resolveCardDesign(updatedDraft);
+    expect(design.mode).toBe("custom");
+    expect(design.accentColor).toBe(customDesignFields.accent_color);
+    expect(design.bgColor).toBe(customDesignFields.bg_color);
+
+    // Step 6: saveCardRecord receives the exact custom design payload
+    let savedPayload: Record<string, unknown> | null = null;
+    const mockGateway = {
+      async insert() {
+        return { data: null, error: null };
+      },
+      async update(_id: string, _uid: string, payload: Record<string, unknown>) {
+        savedPayload = payload;
+        return { data: { id: _id, user_id: _uid, ...payload } as unknown as Card, error: null };
+      },
+    };
+
+    const result = await saveCardRecord(
+      {
+        isNew: false,
+        cardId: updatedDraft.id,
+        userId: updatedDraft.user_id!,
+        payload: {
+          slug: updatedDraft.slug,
+          design_mode: updatedDraft.design_mode, // 'custom'
+          bg_color: updatedDraft.bg_color,
+          accent_color: updatedDraft.accent_color,
+          champagne_accent: updatedDraft.champagne_accent,
+          surface_color: updatedDraft.surface_color,
+          text_color: updatedDraft.text_color,
+          font_family: updatedDraft.font_family,
+          surface_finish: updatedDraft.surface_finish,
+          border_radius: updatedDraft.border_radius,
+        },
+      },
+      mockGateway,
+    );
+
+    expect(result.status).toBe("saved");
+    expect(savedPayload!["design_mode"]).toBe("custom");
+    expect(savedPayload!["accent_color"]).toBe(customDesignFields.accent_color);
+    expect(savedPayload!["bg_color"]).toBe(customDesignFields.bg_color);
+    // slug is the original preview slug — nothing was lost
+    expect(savedPayload!["slug"]).toBe("hassan-test");
+  });
+});

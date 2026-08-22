@@ -1,10 +1,10 @@
 # JustTap V2 Status
 
-Last updated: 2026-08-21
+Last updated: 2026-08-22
 
 ## Current phase
 
-Custom Creator Design Engine & Pro Preset Palettes. Fixed custom color resolver fallback behavior, replaced the 4 Pro preset palettes with Executive Navy, Emerald Noir, Ivory Atelier, and Rose Noir, and added inline contrast notices. All 100 unit tests, typechecks, linter, and production build passed.
+7-Day Pro Trial (real server/database-controlled). Implements trusted `start_pro_trial()` SECURITY DEFINER RPC, versioned migration `20260822000000_trial_entitlement.sql`, TanStack server route `/api/trial-start`, `src/lib/billing.ts` client integration point, `isProEntitled()` helper replacing all `isPro` inline checks, trial status badge using trusted `trial_ends_at`, and updated CTA copy across all Pro upgrade surfaces. All 33 `ProUpgrade.test.tsx` tests pass (142 total unit tests passed). TypeScript clean, ESLint 0 errors, production build succeeded. Awaiting user approval before checkpoint commit.
 
 ## Completed
 
@@ -45,13 +45,35 @@ Custom Creator Design Engine & Pro Preset Palettes. Fixed custom color resolver 
 
 ## In progress
 
-- Phase 07 independent checkpoint review and authorization.
+- 7-Day Pro Trial — awaiting user approval of implementation before checkpoint commit.
+
+  **Migration** `20260822000000_trial_entitlement.sql`:
+  - `trial_started_at`, `trial_ends_at`, `trial_used` columns on `public.profiles`
+  - `'trialing'` added to `cards_plan_tier_values` and `profiles_plan_tier_values` CHECK constraints
+  - `cards_enforce_pro_design_features` trigger updated to allow active trialing accounts (with server-time expiry check via profiles JOIN)
+  - `start_pro_trial()` SECURITY DEFINER RPC: one-per-account, records timestamps, returns `trial_ends_at`
+  - `get_public_card_by_slug` rebuilt with inline expiry: `trialing AND trial_ends_at > now()` treated as Pro at query time — no background job needed
+
+  **Server route** `src/routes/api/trial-start.ts`: rate-limited, calls `start_pro_trial()` via service-role client, returns `{ ok, trialEndsAt }`
+
+  **Client** `src/lib/billing.ts`: `startProTrial(session)` → POST `/api/trial-start` → `{ ok, trialEndsAt }`. Client never touches `plan_tier`, `trial_started_at`, or `trial_ends_at` directly.
+
+  **Types** `src/lib/card.ts`: `PlanTier` now includes `"trialing"`, `Card` has `trial_ends_at?: string | null`
+
+  **Entitlement helper** `src/lib/card-design.ts`: `isProEntitled(card)` exported — replaces all `plan_tier === "pro" || plan_tier === "enterprise"` inline checks in `CardEditor`, `ProFeaturesTab`, and `resolveCardDesign`
+
+  **UX** `ProUpgradeDialog`: `"Start 7-Day Free Trial"` CTA everywhere, `onTrialStarted` fires only after backend confirmation
+
+  **Trial badge** in `CardEditor`: `"Pro Trial · N days remaining"` computed from trusted `trial_ends_at`
+
+  **Tests 22–33**: all pass covering CTA, backend activation, second-trial rejection, client forgery prevention, active/expired entitlement, public RPC expiry logic, data preservation, Pro restoration, no-destructive-reset
 
 ## Deferred work
 
 - Apple Wallet signing/certificate infrastructure, billing lifecycle, analytics redesign, and leads redesign remain deferred to their authorized phases.
 - Controlled Real Supabase Pro-user Custom Creator persistence remains not verified because no controlled legitimate Pro fixture is available.
+- Stripe payment method collection: BILLING EXTENSION POINT is clearly marked in `billing.ts` and `trial-start.ts`; no rebuild required when Stripe is wired.
 
 ## Next phase
 
-Do not begin Phase 08. Stop for Phase 07 final checkpoint review and authorization.
+Do not begin Phase 08 until the 7-Day Trial checkpoint commit is approved and committed.

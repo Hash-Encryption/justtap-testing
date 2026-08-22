@@ -13,7 +13,7 @@ export type SurfaceFinish = "flat" | "matte" | "glassmorphism" | "carbon_grain";
 export type BorderRadius = "sharp" | "minimal" | "rounded";
 export type FontFamily = "Outfit" | "Space Grotesk" | "Plus Jakarta Sans";
 
-export type PlanTier = "free" | "pro" | "enterprise";
+export type PlanTier = "free" | "trialing" | "pro" | "enterprise";
 
 export type ProFeatures = {
   video_url?: string | null;
@@ -61,6 +61,7 @@ export type Card = {
   bio_ar: string | null;
   social_links: SocialLinks | null;
   plan_tier?: PlanTier;
+  trial_ends_at?: string | null;
   pro_features?: ProFeatures | null;
   is_active?: boolean;
   created_at?: string;
