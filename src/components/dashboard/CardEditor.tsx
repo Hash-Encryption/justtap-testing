@@ -551,8 +551,8 @@ export function CardEditor({
               onClick={onBackToDashboard}
               className="flex items-center space-x-1.5 text-xs text-slate-400 hover:text-white px-3 py-1.5 rounded-xl border border-slate-800 bg-slate-900/60 transition-colors"
             >
-              <ArrowLeft className="w-3.5 h-3.5" />
-              <span>Back to Cards</span>
+              <ArrowLeft className="w-3.5 h-3.5 rtl:rotate-180" />
+              <span>{t("backToCards")}</span>
             </button>
           )}
 
@@ -564,7 +564,7 @@ export function CardEditor({
               }`}
             />
             <span className="text-xs font-semibold text-slate-300">
-              {isDirty ? (lastAutoSaved ? "Draft saved locally" : "Unsaved Changes") : "Saved"}
+              {isDirty ? (lastAutoSaved ? t("draftSavedLocally") : t("unsavedChanges")) : t("saved")}
             </span>
           </div>
         </div>
@@ -579,7 +579,7 @@ export function CardEditor({
             >
               <PowerOff className="w-3.5 h-3.5" />
               <span>
-                {(draft.is_active ?? true) ? "Disable Public Profile" : "Enable Public Profile"}
+                {(draft.is_active ?? true) ? t("disablePublicProfile") : t("enablePublicProfile")}
               </span>
             </button>
           )}
@@ -591,14 +591,14 @@ export function CardEditor({
             className="px-5 py-2.5 rounded-xl bg-purple-700 hover:bg-purple-600 text-white font-bold text-xs shadow-lg shadow-purple-700/30 flex items-center space-x-2 transition-all disabled:opacity-60"
           >
             {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-            <span>Publish Changes</span>
+            <span>{t("publishChanges")}</span>
           </button>
         </div>
       </div>
 
       {draftRestored && (
         <div className="flex items-center justify-between rounded-xl bg-purple-950/40 border border-purple-800/40 px-4 py-2.5 text-xs text-purple-200">
-          <span>Loaded your working draft from browser storage.</span>
+          <span>{t("loadedDraftStorage")}</span>
           <button
             type="button"
             onClick={() => {
@@ -612,7 +612,7 @@ export function CardEditor({
             }}
             className="underline opacity-80 hover:opacity-100"
           >
-            Clear draft
+            {t("clearDraft")}
           </button>
         </div>
       )}
@@ -628,7 +628,7 @@ export function CardEditor({
           </div>
 
           {/* MODE SWITCHER: Placed directly below phone preview */}
-          <div className="justtap-glass rounded-2xl p-2 flex items-center justify-between border border-slate-800 max-w-[340px] mx-auto">
+          <div className="justtap-glass rounded-2xl p-2 flex items-center justify-between border border-slate-800 max-w-[340px] mx-auto gap-1.5">
             <button
               type="button"
               onClick={() => handleModeSwitch("classic_v2")}
@@ -638,20 +638,30 @@ export function CardEditor({
                   : "text-slate-400 hover:text-white"
               }`}
             >
-              <span>Classic V2</span>
+              <span>{t("modeClassicV2")}</span>
             </button>
 
             <button
               type="button"
               onClick={() => handleModeSwitch("custom")}
-              className={`flex-1 py-2 px-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center space-x-1.5 ${
+              className={`flex-1 py-2 px-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center space-x-1.5 gap-1 ${
                 draft.design_mode === "custom"
                   ? "bg-gradient-to-r from-amber-500 to-amber-600 text-slate-950 shadow-md shadow-amber-500/20"
                   : "text-slate-400 hover:text-white"
               }`}
             >
               <Sparkles className="w-3.5 h-3.5" />
-              <span>Custom Creator</span>
+              <span>{t("modeCustomCreator")}</span>
+              <span
+                data-testid="custom-creator-pro-marker"
+                className={`text-[9px] font-extrabold px-1.5 py-0.5 rounded-md leading-none uppercase tracking-wider ${
+                  draft.design_mode === "custom"
+                    ? "bg-slate-950/20 text-slate-950 border border-slate-950/20"
+                    : "bg-amber-400/15 text-amber-300 border border-amber-400/30"
+                }`}
+              >
+                {t("proMarker")}
+              </span>
             </button>
           </div>
 
@@ -663,14 +673,14 @@ export function CardEditor({
             >
               <div className="flex items-center justify-center">
                 <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-amber-400/20 text-amber-300 border border-amber-400/30">
-                  PRO PREVIEW
+                  {t("proPreviewBadge")}
                 </span>
               </div>
               <p className="text-xs font-semibold text-white">
-                Your custom design is visible only to you.
+                {t("proPreviewOnlyYou")}
               </p>
               <p className="text-[11px] text-slate-400">
-                Start a free 7-day trial to publish this design.
+                {t("proPreviewTrialHint")}
               </p>
               <div className="flex items-center justify-center gap-2 pt-1">
                 <button
@@ -682,7 +692,7 @@ export function CardEditor({
                   }}
                   className="flex-1 py-1.5 px-3 rounded-xl bg-gradient-to-r from-purple-600 to-amber-500 hover:opacity-95 text-white font-bold text-xs shadow-md shadow-purple-700/20 transition-all"
                 >
-                  Start 7-Day Free Trial
+                  {t("upgradeToPublish")}
                 </button>
               </div>
             </div>
@@ -699,11 +709,11 @@ export function CardEditor({
                   <Sparkles className="w-5 h-5 text-amber-400" />
                   <div>
                     <h3 className="text-base font-bold text-white font-display">
-                      Custom Creator Engine
+                      {t("customCreatorEngine")}
                     </h3>
                     {!isPro && (
                       <p className="text-[11px] text-slate-400">
-                        You&apos;re previewing a Pro design
+                        {t("proPreviewSubtitle")}
                       </p>
                     )}
                   </div>
@@ -711,12 +721,12 @@ export function CardEditor({
                 <div className="flex items-center space-x-2">
                   {isPro ? (
                     <span className="text-[10px] font-extrabold px-2.5 py-1 rounded-full bg-emerald-400/10 text-emerald-300 border border-emerald-400/20">
-                      PRO ACTIVE
+                      {t("proActiveBadge")}
                     </span>
                   ) : (
                     <div className="flex items-center space-x-2">
                       <span className="text-[10px] font-extrabold px-2.5 py-1 rounded-full bg-amber-400/10 text-amber-300 border border-amber-400/20">
-                        PRO PREVIEW
+                        {t("proPreviewBadge")}
                       </span>
                       <button
                         type="button"
@@ -727,7 +737,7 @@ export function CardEditor({
                         }}
                         className="px-2.5 py-1 rounded-full bg-purple-700 hover:bg-purple-600 text-white font-bold text-[10px] transition-all shadow-xs"
                       >
-                        Start Free Trial
+                        {t("upgradeToPublish")}
                       </button>
                     </div>
                   )}
@@ -1120,7 +1130,7 @@ export function CardEditor({
               className="fixed bottom-4 right-4 z-50 flex items-center gap-1.5 rounded-full border border-emerald-400/30 bg-emerald-400/10 px-3 py-1.5 text-[11px] font-bold text-emerald-300 shadow-lg backdrop-blur-sm"
             >
               <Sparkles className="h-3 w-3" />
-              Pro Trial · {daysLeft} day{daysLeft !== 1 ? "s" : ""} remaining
+              {t("proTrialBadgePrefix")} · {daysLeft} {daysLeft !== 1 ? t("daysRemaining") : t("dayRemaining")}
             </div>
           );
         })()}
@@ -1133,18 +1143,17 @@ export function CardEditor({
         draft={draft}
         session={session}
         onTrialStarted={(trialEndsAt) => {
-          // Backend confirmed trial — build the updated draft with trialing entitlement.
-          // Pass it directly to publishChanges() to avoid the stale-closure bug:
-          // setDraft() is async; publishChanges() would close over the old draft
-          // and see isPro=false, re-opening the upgrade modal.
+          // Backend confirmed trial — update the working draft with trialing entitlement.
+          // Do NOT automatically publish the card. The exact working draft remains intact,
+          // the editor now recognizes legitimate trial entitlement, and the user explicitly
+          // presses Publish when ready.
           const updatedDraft = {
             ...draft,
             plan_tier: "trialing" as const,
             trial_ends_at: trialEndsAt.toISOString(),
           };
-          setDraft(updatedDraft);
+          updateDraft(updatedDraft);
           setUpgradeModalOpen(false);
-          void publishChanges(updatedDraft);
         }}
       />
     </div>

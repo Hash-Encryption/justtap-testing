@@ -196,6 +196,45 @@ const translations = {
     upgradeNowBtn: "Upgrade to PRO Now",
     maybeLater: "Maybe Later",
 
+    // Phase 2 Pro Preview & Upgrades
+    proMarker: "PRO",
+    proPreviewBadge: "PRO PREVIEW",
+    proActiveBadge: "PRO ACTIVE",
+    proPreviewOnlyYou: "Your custom design is visible only to you.",
+    proPreviewTrialHint: "Start a free 7-day trial to publish this design.",
+    upgradeToPublish: "Upgrade to Publish",
+    proPreviewSubtitle: "You're previewing a Pro design",
+    proTrialBadgePrefix: "Pro Trial",
+    dayRemaining: "day remaining",
+    daysRemaining: "days remaining",
+    signInToStartTrial: "Please sign in to start your free trial.",
+    trialAlreadyUsedError: "You've already used your free trial. Upgrade to Pro to continue.",
+    trialActiveSuccess: "Your 7-day Pro trial is active!",
+    upgradeDialogTitlePublish: "Your design is ready",
+    upgradeDialogTitleCreator: "Unlock Pro Custom Creator",
+    upgradeDialogTitleProSave: "Save & Publish Special Features",
+    upgradeDialogTitleDefault: "Start Your Free Trial",
+    upgradeDialogDescPublish:
+      "Start your 7-day JustTap Pro trial to publish this design and unlock all Pro features.",
+    upgradeDialogDescCreator:
+      "Start a free 7-day trial to publish your custom palettes, bespoke fonts, and premium finishes live to the world.",
+    upgradeDialogDescProSave:
+      "You're previewing Pro blocks. Start your 7-day trial to activate video intros, PDF menus, and live appointment booking on your public card.",
+    upgradeDialogDescDefault:
+      "Unlock video embeds, PDF downloads, Calendly appointment booking, Apple Wallet passes, and custom branding for your digital card.",
+    designSummaryTitle: "Design Summary",
+    fiveColorPalette: "5-Color Palette",
+    fontLabel: "Font",
+    finishLabel: "Finish",
+    upgradeFeatureCustomCreator: "Full Custom Creator Engine & Bespoke Palettes",
+    upgradeFeatureVideo: "Embedded YouTube, Loom & Vimeo Video Intros",
+    upgradeFeaturePdfCalendly: "PDF Document Uploads & Live Calendly Booking",
+    upgradeFeatureRemoveBranding: 'Remove "Powered by JustTap" Branding',
+    start7DayTrialBtn: "Start 7-Day Free Trial",
+    startingTrialBtn: "Starting trial…",
+    keepEditing: "Keep Editing",
+    continueDesigning: "Continue Designing",
+
     // Pro Features Tab
     proBlocksBadge: "Special Features & Pro Blocks",
     proBlocksTitle: "Elevate Your Profile with Interactive Blocks",
@@ -563,6 +602,45 @@ const translations = {
     upgradeNowBtn: "الترقية إلى PRO الآن",
     maybeLater: "ربما لاحقاً",
 
+    // Phase 2 Pro Preview & Upgrades
+    proMarker: "PRO",
+    proPreviewBadge: "معاينة PRO",
+    proActiveBadge: "PRO مفعّل",
+    proPreviewOnlyYou: "تصميمك المخصص مرئي لك فقط.",
+    proPreviewTrialHint: "ابدأ تجربة مجانية لمدة 7 أيام لنشر هذا التصميم.",
+    upgradeToPublish: "الترقية للنشر",
+    proPreviewSubtitle: "أنت الآن تعاين تصميماً احترافياً (Pro)",
+    proTrialBadgePrefix: "تجربة Pro",
+    dayRemaining: "يوم متبقٍ",
+    daysRemaining: "أيام متبقية",
+    signInToStartTrial: "يرجى تسجيل الدخول لبدء التجربة المجانية.",
+    trialAlreadyUsedError: "لقد استخدمت تجربتك المجانية بالفعل. قم بالترقية إلى Pro للمتابعة.",
+    trialActiveSuccess: "تم تفعيل تجربة Pro المجانية لمدة 7 أيام!",
+    upgradeDialogTitlePublish: "تصميمك جاهز للنشر",
+    upgradeDialogTitleCreator: "افتح المصمم المخصص الاحترافي",
+    upgradeDialogTitleProSave: "حفظ ونشر الميزات الخاصة",
+    upgradeDialogTitleDefault: "ابدأ تجربتك المجانية",
+    upgradeDialogDescPublish:
+      "ابدأ تجربة JustTap Pro المجانية لمدة 7 أيام لنشر هذا التصميم وفتح جميع ميزات Pro.",
+    upgradeDialogDescCreator:
+      "ابدأ تجربة مجانية لمدة 7 أيام لنشر لوحات الألوان والخطوط والمظهر المخصص للعامة.",
+    upgradeDialogDescProSave:
+      "أنت تعاين ميزات Pro. ابدأ تجربتك لمدة 7 أيام لتفعيل مقاطع الفيديو وملفات PDF وحجز المواعيد على بطاقتك العامة.",
+    upgradeDialogDescDefault:
+      "افتح تضمين الفيديو، وتحميل ملفات PDF، وحجز مواعيد Calendly، وبطاقات Apple Wallet، والهوية المخصصة لبطاقتك الرقمية.",
+    designSummaryTitle: "ملخص التصميم",
+    fiveColorPalette: "لوحة ألوان من 5 درجات",
+    fontLabel: "الخط",
+    finishLabel: "المظهر",
+    upgradeFeatureCustomCreator: "محرك المصمم المخصص ولوحات ألوان متكاملة",
+    upgradeFeatureVideo: "تضمين فيديو تعريفي من YouTube و Loom و Vimeo",
+    upgradeFeaturePdfCalendly: "رفع مستندات PDF وحجز مواعيد Calendly مباشر",
+    upgradeFeatureRemoveBranding: 'إزالة شعار "Powered by JustTap"',
+    start7DayTrialBtn: "ابدأ تجربة مجانية لمدة 7 أيام",
+    startingTrialBtn: "جاري تفعيل التجربة…",
+    keepEditing: "متابعة التعديل",
+    continueDesigning: "متابعة التصميم",
+
     // Pro Features Tab
     proBlocksBadge: "الميزات المتقدمة وتكاملات Pro",
     proBlocksTitle: "ارتقِ بملفك الشخصي بمكونات تفاعلية",
@@ -745,8 +823,15 @@ interface LanguageContextType {
 
 const LanguageContext = createContext<LanguageContextType | null>(null);
 
-export function LanguageProvider({ children }: { children: React.ReactNode }) {
+export function LanguageProvider({
+  children,
+  defaultLang,
+}: {
+  children: React.ReactNode;
+  defaultLang?: Language;
+}) {
   const [lang, setLangState] = useState<Language>(() => {
+    if (defaultLang === "en" || defaultLang === "ar") return defaultLang;
     try {
       if (typeof window !== "undefined" && window.localStorage) {
         const saved = window.localStorage.getItem("justtap_app_lang") as Language;
@@ -796,7 +881,13 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
 export function useTranslation() {
   const ctx = useContext(LanguageContext);
   if (!ctx) {
-    throw new Error("useTranslation must be used within LanguageProvider");
+    return {
+      lang: "en" as Language,
+      setLang: () => {},
+      toggleLang: () => {},
+      t: (key: keyof Translations): string => translations.en[key] || String(key),
+      dir: "ltr" as const,
+    };
   }
   return ctx;
 }

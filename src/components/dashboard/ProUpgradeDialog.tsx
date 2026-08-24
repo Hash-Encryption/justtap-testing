@@ -6,6 +6,8 @@ import { DESIGN_PRESET_PALETTES, type Card } from "@/lib/card";
 import { startProTrial } from "@/lib/billing";
 import type { Session } from "@supabase/supabase-js";
 
+import { useTranslation } from "@/lib/i18n";
+
 export type ProUpgradeSource =
   | "publish_attempt"
   | "custom_creator_header"
@@ -36,6 +38,7 @@ export function ProUpgradeDialogBody({
   onTrialStarted?: (trialEndsAt: Date) => void;
   onClose?: () => void;
 }) {
+  const { t } = useTranslation();
   const [loading, setLoading] = useState(false);
 
   const isPublish = source === "publish_attempt";
@@ -58,7 +61,7 @@ export function ProUpgradeDialogBody({
 
   async function handleTrialClick() {
     if (!session) {
-      toast.error("Please sign in to start your free trial.");
+      toast.error(t("signInToStartTrial"));
       return;
     }
 
@@ -71,13 +74,13 @@ export function ProUpgradeDialogBody({
         result.error.includes("already used") || result.error.includes("already on");
       toast.error(
         alreadyUsed
-          ? "You've already used your free trial. Upgrade to Pro to continue."
+          ? t("trialAlreadyUsedError")
           : result.error,
       );
       return;
     }
 
-    toast.success("Your 7-day Pro trial is active!");
+    toast.success(t("trialActiveSuccess"));
     onTrialStarted?.(result.trialEndsAt);
     onClose?.();
   }
@@ -91,22 +94,22 @@ export function ProUpgradeDialogBody({
 
         <h2 className="font-display text-xl font-bold text-white">
           {isPublish
-            ? "Your design is ready"
+            ? t("upgradeDialogTitlePublish")
             : isCreatorHeader
-              ? "Unlock Pro Custom Creator"
+              ? t("upgradeDialogTitleCreator")
               : isProFeaturesSave
-                ? "Save & Publish Special Features"
-                : "Start Your Free Trial"}
+                ? t("upgradeDialogTitleProSave")
+                : t("upgradeDialogTitleDefault")}
         </h2>
 
         <p className="text-xs text-slate-400">
           {isPublish
-            ? "Start your 7-day JustTap Pro trial to publish this design and unlock all Pro features."
+            ? t("upgradeDialogDescPublish")
             : isCreatorHeader
-              ? "Start a free 7-day trial to publish your custom palettes, bespoke fonts, and premium finishes live to the world."
+              ? t("upgradeDialogDescCreator")
               : isProFeaturesSave
-                ? "You're previewing Pro blocks. Start your 7-day trial to activate video intros, PDF menus, and live appointment booking on your public card."
-                : "Unlock video embeds, PDF downloads, Calendly appointment booking, Apple Wallet passes, and custom branding for your digital card."}
+                ? t("upgradeDialogDescProSave")
+                : t("upgradeDialogDescDefault")}
         </p>
       </DialogHeader>
 
@@ -114,11 +117,11 @@ export function ProUpgradeDialogBody({
       {isPublish && draft && (
         <div
           data-testid="design-summary"
-          className="my-3 space-y-3 rounded-2xl border border-slate-800 bg-slate-950/60 p-4 text-left"
+          className="my-3 space-y-3 rounded-2xl border border-slate-800 bg-slate-950/60 p-4 text-left rtl:text-right"
         >
           <div className="flex items-center justify-between">
             <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">
-              Design Summary
+              {t("designSummaryTitle")}
             </span>
             <span className="rounded-full border border-amber-400/30 bg-amber-400/10 px-2 py-0.5 text-[10px] font-bold text-amber-300">
               {paletteName}
@@ -127,7 +130,7 @@ export function ProUpgradeDialogBody({
 
           {/* 5 Swatches */}
           <div className="flex items-center gap-2 pt-1">
-            <div className="flex items-center space-x-1.5">
+            <div className="flex items-center space-x-1.5 rtl:space-x-reverse">
               <span
                 className="h-5 w-5 rounded-full border border-white/20 shadow-xs"
                 style={{ backgroundColor: draft.bg_color || "#08080A" }}
@@ -154,16 +157,16 @@ export function ProUpgradeDialogBody({
                 title={`Text: ${draft.text_color || "#FAFAFA"}`}
               />
             </div>
-            <span className="text-[11px] text-slate-400">5-Color Palette</span>
+            <span className="text-[11px] text-slate-400">{t("fiveColorPalette")}</span>
           </div>
 
           <div className="grid grid-cols-2 gap-2 text-[11px] text-slate-300 pt-1 border-t border-slate-800/80">
             <div>
-              <span className="text-slate-500 block text-[10px]">Font</span>
+              <span className="text-slate-500 block text-[10px]">{t("fontLabel")}</span>
               <span className="font-semibold">{draft.font_family || "Outfit"}</span>
             </div>
             <div>
-              <span className="text-slate-500 block text-[10px]">Finish</span>
+              <span className="text-slate-500 block text-[10px]">{t("finishLabel")}</span>
               <span className="font-semibold capitalize">
                 {(draft.surface_finish || "matte").replace("_", " ")}
               </span>
@@ -174,22 +177,22 @@ export function ProUpgradeDialogBody({
 
       {/* Feature List if not publish attempt */}
       {!isPublish && (
-        <div className="my-3 space-y-2 rounded-2xl border border-slate-800 bg-slate-950/50 p-4 text-left text-xs text-slate-300">
+        <div className="my-3 space-y-2 rounded-2xl border border-slate-800 bg-slate-950/50 p-4 text-left rtl:text-right text-xs text-slate-300">
           <div className="flex items-center gap-2 font-medium">
             <CheckCircle2 className="h-4 w-4 text-emerald-400 shrink-0" />
-            Full Custom Creator Engine &amp; Bespoke Palettes
+            {t("upgradeFeatureCustomCreator")}
           </div>
           <div className="flex items-center gap-2 font-medium">
             <CheckCircle2 className="h-4 w-4 text-emerald-400 shrink-0" />
-            Embedded YouTube, Loom &amp; Vimeo Video Intros
+            {t("upgradeFeatureVideo")}
           </div>
           <div className="flex items-center gap-2 font-medium">
             <CheckCircle2 className="h-4 w-4 text-emerald-400 shrink-0" />
-            PDF Document Uploads &amp; Live Calendly Booking
+            {t("upgradeFeaturePdfCalendly")}
           </div>
           <div className="flex items-center gap-2 font-medium">
             <CheckCircle2 className="h-4 w-4 text-emerald-400 shrink-0" />
-            Remove &quot;Powered by JustTap&quot; Branding
+            {t("upgradeFeatureRemoveBranding")}
           </div>
         </div>
       )}
@@ -204,7 +207,7 @@ export function ProUpgradeDialogBody({
           className="flex h-12 w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-purple-600 via-purple-700 to-amber-500 text-sm font-bold text-white shadow-lg shadow-purple-700/30 transition-all hover:opacity-95 active:scale-[0.99] disabled:opacity-60"
         >
           <Sparkles className="h-4 w-4" />
-          <span>{loading ? "Starting trial…" : "Start 7-Day Free Trial"}</span>
+          <span>{loading ? t("startingTrialBtn") : t("start7DayTrialBtn")}</span>
         </button>
 
         <button
@@ -214,7 +217,7 @@ export function ProUpgradeDialogBody({
           disabled={loading}
           className="h-10 w-full rounded-2xl text-xs font-medium text-slate-400 hover:text-white transition-colors disabled:opacity-60"
         >
-          {isPublish ? "Keep Editing" : isCreatorHeader ? "Continue Designing" : "Maybe Later"}
+          {isPublish ? t("keepEditing") : isCreatorHeader ? t("continueDesigning") : t("maybeLater")}
         </button>
       </div>
     </>

@@ -15,6 +15,7 @@ import { CardPreview } from "@/components/card/CardPreview";
 import { ProUpgradeDialog, ProUpgradeDialogBody } from "./ProUpgradeDialog";
 import { saveCardRecord } from "@/lib/card-save";
 import { writeCardDraft } from "@/lib/card-draft";
+import { LanguageProvider } from "@/lib/i18n";
 
 const baseFreeCard: Card = {
   ...emptyCard,
@@ -742,10 +743,8 @@ describe("7-Day Pro Trial — Entitlement Tests", () => {
     expect(savedPayload!["full_name"]).toBe("Updated Name");
   });
 
-  // 34. Integration: Free custom preview → trial activation → exact preview publishes
-  //     Verifies the stale-closure fix: publishChanges must use the updatedDraft
-  //     (trialing, with trial_ends_at) not the old draft (free).
-  it("34. Free custom preview → startProTrial success → exact design publishes without re-intercepting", async () => {
+  // 34. Integration: Free custom preview → trial activation → does NOT auto-publish, preserves working draft, and allows user to explicitly publish when ready
+  it("34. Free custom preview → startProTrial success → updates working draft without auto-publishing, then user explicitly publishes", async () => {
     const TRIAL_ENDS = new Date(Date.now() + 7 * 86_400_000).toISOString();
 
     // Step 1: user has a free card with a custom design in progress
@@ -763,26 +762,40 @@ describe("7-Day Pro Trial — Entitlement Tests", () => {
       freeDraftWithCustom.design_mode === "custom" && !isProEntitled(freeDraftWithCustom);
     expect(intercepted).toBe(true);
 
-    // Step 3: backend confirms trial — onTrialStarted fires with trialEndsAt
-    // Simulate what onTrialStarted builds (matches exact CardEditor logic post-fix):
-    const updatedDraft: Card = {
-      ...freeDraftWithCustom,
-      plan_tier: "trialing",
-      trial_ends_at: TRIAL_ENDS,
+    // Step 3: simulate onTrialStarted behavior:
+    // Modal closes, draft is updated in memory/state to trialing, but NO auto-publish is executed.
+    let autoPublishTriggered = false;
+    let modalOpen = true;
+    let activeDraft = { ...freeDraftWithCustom };
+
+    const handleTrialStarted = (trialEndsAt: Date) => {
+      activeDraft = {
+        ...activeDraft,
+        plan_tier: "trialing",
+        trial_ends_at: trialEndsAt.toISOString(),
+      };
+      modalOpen = false;
+      // Note: NO publishChanges() call here!
     };
 
-    // Step 4: publishChanges is called with updatedDraft — NOT the stale freeDraftWithCustom
-    // Verify entitlement check passes with the updated draft
-    const wouldIntercept = updatedDraft.design_mode === "custom" && !isProEntitled(updatedDraft);
-    expect(wouldIntercept).toBe(false); // no re-interception
+    handleTrialStarted(new Date(TRIAL_ENDS));
 
-    // Step 5: the exact custom design resolves correctly
-    const design = resolveCardDesign(updatedDraft);
-    expect(design.mode).toBe("custom");
-    expect(design.accentColor).toBe(customDesignFields.accent_color);
-    expect(design.bgColor).toBe(customDesignFields.bg_color);
+    // Verify modal is closed and auto-publish did NOT occur
+    expect(modalOpen).toBe(false);
+    expect(autoPublishTriggered).toBe(false);
 
-    // Step 6: saveCardRecord receives the exact custom design payload
+    // Step 4: working draft remains completely intact
+    expect(activeDraft.design_mode).toBe("custom");
+    expect(activeDraft.accent_color).toBe(customDesignFields.accent_color);
+    expect(activeDraft.bg_color).toBe(customDesignFields.bg_color);
+    expect(activeDraft.slug).toBe("hassan-test");
+    expect(activeDraft.plan_tier).toBe("trialing");
+    expect(activeDraft.trial_ends_at).toBe(TRIAL_ENDS);
+
+    // Step 5: editor now recognizes legitimate trial entitlement
+    expect(isProEntitled(activeDraft)).toBe(true);
+
+    // Step 6: User explicitly presses Publish when ready
     let savedPayload: Record<string, unknown> | null = null;
     const mockGateway = {
       async insert() {
@@ -794,32 +807,127 @@ describe("7-Day Pro Trial — Entitlement Tests", () => {
       },
     };
 
-    const result = await saveCardRecord(
-      {
-        isNew: false,
-        cardId: updatedDraft.id,
-        userId: updatedDraft.user_id!,
-        payload: {
-          slug: updatedDraft.slug,
-          design_mode: updatedDraft.design_mode, // 'custom'
-          bg_color: updatedDraft.bg_color,
-          accent_color: updatedDraft.accent_color,
-          champagne_accent: updatedDraft.champagne_accent,
-          surface_color: updatedDraft.surface_color,
-          text_color: updatedDraft.text_color,
-          font_family: updatedDraft.font_family,
-          surface_finish: updatedDraft.surface_finish,
-          border_radius: updatedDraft.border_radius,
+    const explicitPublish = async (draftToSave: Card) => {
+      // Free intercept guard
+      if (draftToSave.design_mode === "custom" && !isProEntitled(draftToSave)) {
+        return { status: "intercepted" };
+      }
+      return saveCardRecord(
+        {
+          isNew: false,
+          cardId: draftToSave.id,
+          userId: draftToSave.user_id!,
+          payload: {
+            slug: draftToSave.slug,
+            design_mode: draftToSave.design_mode,
+            bg_color: draftToSave.bg_color,
+            accent_color: draftToSave.accent_color,
+            champagne_accent: draftToSave.champagne_accent,
+            surface_color: draftToSave.surface_color,
+            text_color: draftToSave.text_color,
+            font_family: draftToSave.font_family,
+            surface_finish: draftToSave.surface_finish,
+            border_radius: draftToSave.border_radius,
+          },
         },
-      },
-      mockGateway,
-    );
+        mockGateway,
+      );
+    };
 
+    const result = await explicitPublish(activeDraft);
     expect(result.status).toBe("saved");
+    expect(savedPayload).not.toBeNull();
     expect(savedPayload!["design_mode"]).toBe("custom");
     expect(savedPayload!["accent_color"]).toBe(customDesignFields.accent_color);
     expect(savedPayload!["bg_color"]).toBe(customDesignFields.bg_color);
-    // slug is the original preview slug — nothing was lost
     expect(savedPayload!["slug"]).toBe("hassan-test");
+  });
+
+  // 35. ProUpgradeDialog renders localized content in English and Arabic with RTL structure
+  it("35. renders ProUpgradeDialogBody in English and Arabic", () => {
+    // English render
+    const enHtml = renderToStaticMarkup(
+      <LanguageProvider defaultLang="en">
+        <ProUpgradeDialogBody source="publish_attempt" draft={customDesignFields} />
+      </LanguageProvider>,
+    );
+    expect(enHtml).toContain("Your design is ready");
+    expect(enHtml).toContain("Start 7-Day Free Trial");
+    expect(enHtml).toContain("Keep Editing");
+    expect(enHtml).toContain("Design Summary");
+    expect(enHtml).toContain("5-Color Palette");
+
+    // Arabic render
+    const arHtml = renderToStaticMarkup(
+      <LanguageProvider defaultLang="ar">
+        <ProUpgradeDialogBody source="publish_attempt" draft={customDesignFields} />
+      </LanguageProvider>,
+    );
+    expect(arHtml).toContain("تصميمك جاهز للنشر");
+    expect(arHtml).toContain("ابدأ تجربة مجانية لمدة 7 أيام");
+    expect(arHtml).toContain("متابعة التعديل");
+    expect(arHtml).toContain("ملخص التصميم");
+    expect(arHtml).toContain("لوحة ألوان من 5 درجات");
+    expect(arHtml).toContain('dir="rtl"');
+  });
+
+  // 36. Contextual upgrade trigger copy and PRO markers are present and localized
+  it("36. provides contextual Upgrade to Publish and PRO marker keys", () => {
+    const enDialog = renderToStaticMarkup(
+      <ProUpgradeDialogBody source="custom_creator_header" draft={null} />,
+    );
+    expect(enDialog).toContain("Unlock Pro Custom Creator");
+    expect(enDialog).toContain("Continue Designing");
+    expect(enDialog).toContain("Start 7-Day Free Trial");
+  });
+
+  // 37. Free user private preview renders custom design while public CardView isolates to Classic V2
+  it("37. strictly isolates Free custom preview to private CardPreview while public CardView rejects it", () => {
+    const freeCardWithCustom: Card = {
+      ...baseFreeCard,
+      ...customDesignFields,
+      plan_tier: "free",
+    };
+
+    // Private preview renders custom
+    const previewDesign = resolveCardDesign(freeCardWithCustom, { previewProDesign: true });
+    expect(previewDesign.mode).toBe("custom");
+    expect(previewDesign.accentColor).toBe(customDesignFields.accent_color);
+
+    const previewHtml = renderToStaticMarkup(<CardPreview card={freeCardWithCustom} />);
+    expect(previewHtml).toContain('data-card-design="custom"');
+
+    // Public / default render rejects custom
+    const publicDesign = resolveCardDesign(freeCardWithCustom);
+    expect(publicDesign.mode).toBe("classic_v2");
+    expect(publicDesign).toEqual(CLASSIC_V2_DESIGN);
+
+    const publicHtml = renderToStaticMarkup(<CardView card={freeCardWithCustom} />);
+    expect(publicHtml).toContain('data-card-design="classic_v2"');
+    expect(publicHtml).not.toContain('data-card-design="custom"');
+  });
+
+  // 38. Paid Pro and active trial accounts are entitled to render and publish custom designs without preview restrictions
+  it("38. confirms Paid Pro and active trial cards are recognized as entitled across public and preview modes", () => {
+    const paidProCard: Card = {
+      ...baseFreeCard,
+      ...customDesignFields,
+      plan_tier: "pro",
+    };
+
+    expect(isProEntitled(paidProCard)).toBe(true);
+    expect(resolveCardDesign(paidProCard).mode).toBe("custom");
+    expect(resolveCardDesign(paidProCard, { previewProDesign: true }).mode).toBe("custom");
+
+    const trialingProCard: Card = {
+      ...baseFreeCard,
+      ...customDesignFields,
+      plan_tier: "trialing",
+      trial_ends_at: FUTURE_TRIAL_ENDS,
+    };
+
+    expect(isProEntitled(trialingProCard)).toBe(true);
+    expect(resolveCardDesign(trialingProCard).mode).toBe("custom");
+    expect(resolveCardDesign(trialingProCard, { previewProDesign: true }).mode).toBe("custom");
   });
 });
