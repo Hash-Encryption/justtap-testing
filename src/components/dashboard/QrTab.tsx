@@ -1,34 +1,29 @@
 import { useEffect, useRef, useState } from "react";
 import QRCode from "qrcode";
-import {
-  CheckCircle2,
-  Crown,
-  Download,
-  Lock,
-  QrCode,
-  Smartphone,
-  Sparkles,
-  Zap,
-} from "lucide-react";
+import { Crown, Download, Lock, QrCode, Smartphone, Sparkles, Zap } from "lucide-react";
 import { toast } from "sonner";
 import { buildVCard, type Card } from "@/lib/card";
 import { supabase } from "@/lib/supabase";
 import { useTranslation } from "@/lib/i18n";
 import { isProEntitled } from "@/lib/card-design";
+import type { Session } from "@supabase/supabase-js";
+import { ProUpgradeDialog } from "./ProUpgradeDialog";
 
 interface QrTabProps {
   card: Card;
+  session?: Session | null;
+  onTrialStarted?: (trialEndsAt: Date) => void;
   onUpgradeRequest?: () => void;
 }
 
-export function QrTab({ card, onUpgradeRequest }: QrTabProps) {
+export function QrTab({ card, session, onTrialStarted, onUpgradeRequest }: QrTabProps) {
   const { t, lang } = useTranslation();
   const [profileQrUrl, setProfileQrUrl] = useState<string>("");
   const [offlineQrUrl, setOfflineQrUrl] = useState<string>("");
   const [permanentQrUrl, setPermanentQrUrl] = useState<string>("");
   const [permanentToken, setPermanentToken] = useState<string | null>(null);
   const [activeQr, setActiveQr] = useState<"profile" | "offline" | "permanent">("profile");
-  const [showUpgradeModal, setShowUpgradeModal] = useState<boolean>(false);
+  const [upgradeOpen, setUpgradeOpen] = useState<boolean>(false);
 
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
@@ -85,7 +80,8 @@ export function QrTab({ card, onUpgradeRequest }: QrTabProps) {
 
   const handleDownloadHighResQr = async (type: "profile" | "offline" | "permanent") => {
     if (!isPro) {
-      setShowUpgradeModal(true);
+      setUpgradeOpen(true);
+      onUpgradeRequest?.();
       return;
     }
     const dataToEncode =
@@ -109,7 +105,8 @@ export function QrTab({ card, onUpgradeRequest }: QrTabProps) {
   // Lockscreen Wallpaper Canvas Export (1080x1920)
   const handleGenerateWallpaper = async () => {
     if (!isPro) {
-      setShowUpgradeModal(true);
+      setUpgradeOpen(true);
+      onUpgradeRequest?.();
       return;
     }
 
@@ -222,7 +219,8 @@ export function QrTab({ card, onUpgradeRequest }: QrTabProps) {
 
   const handleDownloadWalletPass = async (passType: "digital" | "contact" = "digital") => {
     if (!isPro) {
-      setShowUpgradeModal(true);
+      setUpgradeOpen(true);
+      onUpgradeRequest?.();
       return;
     }
     try {
@@ -274,11 +272,14 @@ export function QrTab({ card, onUpgradeRequest }: QrTabProps) {
         {!isPro && (
           <button
             type="button"
-            onClick={() => setShowUpgradeModal(true)}
+            onClick={() => {
+              setUpgradeOpen(true);
+              onUpgradeRequest?.();
+            }}
             className="py-2 px-4 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-slate-950 font-extrabold text-xs rounded-xl shadow-lg flex items-center space-x-1.5 rtl:space-x-reverse transition-all self-start sm:self-auto"
           >
             <Crown className="w-4 h-4 fill-slate-950" />
-            <span>{t("upgradeToPro")}</span>
+            <span>{t("upgradeToExport")}</span>
           </button>
         )}
       </div>
@@ -461,56 +462,14 @@ export function QrTab({ card, onUpgradeRequest }: QrTabProps) {
       <canvas ref={canvasRef} className="hidden" />
 
       {/* PRO UPGRADE MODAL */}
-      {showUpgradeModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-4">
-          <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 sm:p-8 max-w-md w-full shadow-2xl text-center space-y-6 relative overflow-hidden">
-            <div className="w-16 h-16 bg-amber-500/10 border border-amber-500/20 text-amber-400 rounded-3xl flex items-center justify-center mx-auto">
-              <Crown className="w-8 h-8 fill-amber-400" />
-            </div>
-
-            <div className="space-y-2">
-              <h3 className="text-2xl font-extrabold text-white">{t("upgradeModalTitle")}</h3>
-              <p className="text-xs text-slate-400 leading-relaxed">{t("upgradeModalDesc")}</p>
-            </div>
-
-            <div className="bg-slate-950/60 p-4 rounded-2xl border border-slate-800 text-start space-y-2 text-xs text-slate-300">
-              <div className="flex items-center space-x-2 rtl:space-x-reverse">
-                <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
-                <span>{t("upgradeFeature1")}</span>
-              </div>
-              <div className="flex items-center space-x-2 rtl:space-x-reverse">
-                <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
-                <span>{t("upgradeFeature2")}</span>
-              </div>
-              <div className="flex items-center space-x-2 rtl:space-x-reverse">
-                <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
-                <span>{t("upgradeFeature3")}</span>
-              </div>
-            </div>
-
-            <div className="space-y-3 pt-2">
-              <button
-                type="button"
-                onClick={() => {
-                  setShowUpgradeModal(false);
-                  if (onUpgradeRequest) onUpgradeRequest();
-                }}
-                className="w-full py-3.5 px-6 bg-gradient-to-r from-amber-500 to-amber-600 text-slate-950 font-extrabold rounded-2xl shadow-xl text-sm transition-all"
-              >
-                {t("upgradeNowBtn")}
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setShowUpgradeModal(false)}
-                className="w-full py-2 text-xs text-slate-400 hover:text-white"
-              >
-                {t("maybeLater")}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <ProUpgradeDialog
+        open={upgradeOpen}
+        onOpenChange={setUpgradeOpen}
+        source="qr_export"
+        draft={card}
+        session={session}
+        onTrialStarted={onTrialStarted}
+      />
     </div>
   );
 }

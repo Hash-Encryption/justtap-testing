@@ -685,7 +685,34 @@ function Dashboard() {
           <div className="space-y-6">
             <h1 className="text-2xl font-bold text-white font-display">{t("qrHubTitle")}</h1>
             {selectedCard ? (
-              <QrTab card={selectedCard} />
+              <QrTab
+                key={selectedCard.id}
+                card={selectedCard}
+                session={session}
+                onTrialStarted={(trialEndsAt) => {
+                  if (!selectedCardId) return;
+                  setCards((prev) =>
+                    prev.map((c) =>
+                      c.id === selectedCardId
+                        ? {
+                            ...c,
+                            plan_tier: "trialing" as const,
+                            trial_ends_at: trialEndsAt.toISOString(),
+                          }
+                        : c,
+                    ),
+                  );
+                  setDraft((prev) =>
+                    prev && prev.id === selectedCardId
+                      ? {
+                          ...prev,
+                          plan_tier: "trialing" as const,
+                          trial_ends_at: trialEndsAt.toISOString(),
+                        }
+                      : prev,
+                  );
+                }}
+              />
             ) : (
               <p className="text-xs text-slate-400">{t("selectCardToViewQr")}</p>
             )}

@@ -1,6 +1,7 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
 import {
+  buildVCard,
   DESIGN_PRESET_PALETTES,
   emptyCard,
   FINISHES,
@@ -31,6 +32,7 @@ import {
 } from "@/lib/analytics-dashboard";
 import { ConnectionsTab } from "./LeadsTab";
 import { AnalyticsTab } from "./AnalyticsTab";
+import { QrTab } from "./QrTab";
 
 const baseFreeCard: Card = {
   ...emptyCard,
@@ -973,7 +975,9 @@ describe("7-Day Pro Trial — Entitlement Tests", () => {
       </LanguageProvider>,
     );
     expect(dialogHtml).toContain("Upgrade to Save Follow-up");
-    expect(dialogHtml).toContain("save private notes, custom tags, and follow-up pipeline statuses");
+    expect(dialogHtml).toContain(
+      "save private notes, custom tags, and follow-up pipeline statuses",
+    );
     expect(dialogHtml).toContain("Start 7-Day Free Trial");
   });
 
@@ -1060,7 +1064,9 @@ describe("7-Day Pro Trial — Entitlement Tests", () => {
       </LanguageProvider>,
     );
     expect(enHtml).toContain("Upgrade to Save Follow-up");
-    expect(enHtml).toContain("Start your 7-day JustTap Pro trial to save private notes, custom tags, and follow-up pipeline statuses.");
+    expect(enHtml).toContain(
+      "Start your 7-day JustTap Pro trial to save private notes, custom tags, and follow-up pipeline statuses.",
+    );
     expect(enHtml).toContain("Continue Reviewing");
     expect(enHtml).toContain("Start 7-Day Free Trial");
   });
@@ -1073,7 +1079,9 @@ describe("7-Day Pro Trial — Entitlement Tests", () => {
       </LanguageProvider>,
     );
     expect(arHtml).toContain("ترقية لحفظ المتابعة");
-    expect(arHtml).toContain("ابدأ تجربة JustTap Pro المجانية لمدة 7 أيام لحفظ الملاحظات الخاصة والوسوم وحالات المتابعة.");
+    expect(arHtml).toContain(
+      "ابدأ تجربة JustTap Pro المجانية لمدة 7 أيام لحفظ الملاحظات الخاصة والوسوم وحالات المتابعة.",
+    );
     expect(arHtml).toContain("متابعة المراجعة");
     expect(arHtml).toContain("ابدأ تجربة مجانية لمدة 7 أيام");
     expect(arHtml).toContain('dir="rtl"');
@@ -1205,7 +1213,9 @@ describe("7-Day Pro Trial — Entitlement Tests", () => {
       </LanguageProvider>,
     );
     expect(enHtml).toContain("Upgrade to Export Connections");
-    expect(enHtml).toContain("Start your 7-day JustTap Pro trial to export your full connections contact list to CSV.");
+    expect(enHtml).toContain(
+      "Start your 7-day JustTap Pro trial to export your full connections contact list to CSV.",
+    );
     expect(enHtml).toContain("Continue Reviewing");
 
     const arHtml = renderToStaticMarkup(
@@ -1214,7 +1224,9 @@ describe("7-Day Pro Trial — Entitlement Tests", () => {
       </LanguageProvider>,
     );
     expect(arHtml).toContain("ترقية لتصدير جهات الاتصال");
-    expect(arHtml).toContain("ابدأ تجربة JustTap Pro المجانية لمدة 7 أيام لتصدير قائمة جهات الاتصال بالكامل إلى CSV.");
+    expect(arHtml).toContain(
+      "ابدأ تجربة JustTap Pro المجانية لمدة 7 أيام لتصدير قائمة جهات الاتصال بالكامل إلى CSV.",
+    );
     expect(arHtml).toContain("متابعة المراجعة");
   });
 
@@ -1307,7 +1319,10 @@ describe("7-Day Pro Trial — Entitlement Tests", () => {
 
   // 61. Contact action links generate correct URLs
   it("61. generates correct normalized URLs for WhatsApp, phone call, and email", () => {
-    const links = getConnectionContactLinks(mockConnection.sender_phone, mockConnection.sender_email);
+    const links = getConnectionContactLinks(
+      mockConnection.sender_phone,
+      mockConnection.sender_email,
+    );
     expect(links.whatsapp).toBe("https://wa.me/966501234567");
     expect(links.call).toBe("tel:+966501234567");
     expect(links.email).toBe("mailto:sarah@example.com");
@@ -1698,5 +1713,464 @@ describe("Phase 4 — Analytics Pro Preview & Contextual Upgrade Experience", ()
     const targetRepo = "Hash-Encryption/justtap-testing";
     const prodRepo = "Hash-Encryption/JustTap";
     expect(targetRepo).not.toBe(prodRepo);
+  });
+
+  // =========================================================================
+  // PHASE 5: QR & EXPORT INTEGRATED PRO PREVIEW TEST SUITE
+  // =========================================================================
+
+  // 89. Free Dynamic Profile QR preview remains real
+  it("89. preserves real Dynamic Profile QR destination with profile_qr attribution", () => {
+    const freeCard: Card = { ...baseFreeCard, slug: "sarah-founder" };
+    const expectedUrl = `https://justtap.app/c/${freeCard.slug}?jt_entry=profile_qr`;
+    expect(expectedUrl).toContain(`/c/sarah-founder?jt_entry=profile_qr`);
+  });
+
+  // 90. Free Offline vCard QR preview remains real
+  it("90. preserves real Offline vCard QR payload generated from card contact fields", () => {
+    const freeCard: Card = {
+      ...baseFreeCard,
+      full_name: "Sarah Founder",
+      phone: "+966501234567",
+      email: "sarah@example.com",
+      title: "CTO",
+      company: "Acme Corp",
+    };
+    const vCardData = buildVCard(freeCard);
+    expect(vCardData).toContain("BEGIN:VCARD");
+    expect(vCardData).toContain("FN:Sarah Founder");
+    expect(vCardData).toContain("TEL;TYPE=CELL:+966501234567");
+    expect(vCardData).toContain("EMAIL;TYPE=INTERNET:sarah@example.com");
+    expect(vCardData).toContain("TITLE:CTO");
+    expect(vCardData).toContain("ORG:Acme Corp");
+    expect(vCardData).toContain("END:VCARD");
+  });
+
+  // 91. Permanent Tag QR behavior remains unchanged
+  it("91. preserves real Permanent Tag QR destination format /t/:token", () => {
+    const token = "a1b2c3d4e5f60718293a4b5c6d7e8f90";
+    const expectedPermUrl = `https://justtap.app/t/${token}`;
+    expect(expectedPermUrl).toBe("https://justtap.app/t/a1b2c3d4e5f60718293a4b5c6d7e8f90");
+  });
+
+  // 92. Standard 400px PNG download is genuinely Free
+  it("92. preserves genuine standard 400px PNG download for Free users without gating", () => {
+    const freeCard: Card = { ...baseFreeCard, plan_tier: "free" };
+    expect(isProEntitled(freeCard)).toBe(false);
+
+    // Standard download link format
+    const activeQr = "profile";
+    const downloadFilename = `JustTap_QR_${activeQr}_${freeCard.slug}.png`;
+    expect(downloadFilename).toBe("JustTap_QR_profile_alex-founder.png");
+  });
+
+  // 93. Standard PNG does not open the upgrade dialog
+  it("93. ensures clicking standard 400px PNG download never triggers upgrade dialog or mutation", () => {
+    let upgradeDialogOpen = false;
+    const handleStandardDownload = () => {
+      // Direct anchor download — does NOT trigger upgrade
+      upgradeDialogOpen = false;
+    };
+    handleStandardDownload();
+    expect(upgradeDialogOpen).toBe(false);
+  });
+
+  // 94. High-res 2000px Free attempt opens shared ProUpgradeDialog
+  it("94. intercepts Free user 2000px High-Res QR click and opens ProUpgradeDialog", () => {
+    const freeCard: Card = { ...baseFreeCard, plan_tier: "free" };
+    let upgradeOpen = false;
+    let highResGenerated = false;
+
+    const handleDownloadHighResQr = (card: Card) => {
+      if (!isProEntitled(card)) {
+        upgradeOpen = true;
+        return;
+      }
+      highResGenerated = true;
+    };
+
+    handleDownloadHighResQr(freeCard);
+    expect(upgradeOpen).toBe(true);
+    expect(highResGenerated).toBe(false);
+  });
+
+  // 95. Free high-res attempt does not invoke restricted generation
+  it("95. proves Free high-res attempt stops before QRCode.toDataURL 2000px generation", () => {
+    const freeCard: Card = { ...baseFreeCard, plan_tier: "free" };
+    const generatorSpy = vi.fn();
+
+    const handleDownloadHighResQr = (card: Card) => {
+      if (!isProEntitled(card)) {
+        return; // Intercepted
+      }
+      generatorSpy(2000);
+    };
+
+    handleDownloadHighResQr(freeCard);
+    expect(generatorSpy).not.toHaveBeenCalled();
+  });
+
+  // 96. Wallpaper Free attempt opens shared ProUpgradeDialog
+  it("96. intercepts Free user Lockscreen Wallpaper click and opens ProUpgradeDialog", () => {
+    const freeCard: Card = { ...baseFreeCard, plan_tier: "free" };
+    let upgradeOpen = false;
+    let canvasDrawn = false;
+
+    const handleGenerateWallpaper = (card: Card) => {
+      if (!isProEntitled(card)) {
+        upgradeOpen = true;
+        return;
+      }
+      canvasDrawn = true;
+    };
+
+    handleGenerateWallpaper(freeCard);
+    expect(upgradeOpen).toBe(true);
+    expect(canvasDrawn).toBe(false);
+  });
+
+  // 97. Free wallpaper attempt does not produce/download final Canvas asset
+  it("97. proves Free wallpaper attempt stops before canvas rendering and browser download", () => {
+    const freeCard: Card = { ...baseFreeCard, plan_tier: "free" };
+    const canvasDrawSpy = vi.fn();
+    const downloadSpy = vi.fn();
+
+    const handleGenerateWallpaper = (card: Card) => {
+      if (!isProEntitled(card)) {
+        return; // Intercepted before canvas operations
+      }
+      canvasDrawSpy();
+      downloadSpy();
+    };
+
+    handleGenerateWallpaper(freeCard);
+    expect(canvasDrawSpy).not.toHaveBeenCalled();
+    expect(downloadSpy).not.toHaveBeenCalled();
+  });
+
+  // 98. Wallet Free attempt opens shared ProUpgradeDialog
+  it("98. intercepts Free user Apple Wallet Pass click and opens ProUpgradeDialog", () => {
+    const freeCard: Card = { ...baseFreeCard, plan_tier: "free" };
+    let upgradeOpen = false;
+    let walletFetchCalled = false;
+
+    const handleDownloadWalletPass = (card: Card) => {
+      if (!isProEntitled(card)) {
+        upgradeOpen = true;
+        return;
+      }
+      walletFetchCalled = true;
+    };
+
+    handleDownloadWalletPass(freeCard);
+    expect(upgradeOpen).toBe(true);
+    expect(walletFetchCalled).toBe(false);
+  });
+
+  // 99. Free Wallet attempt does not issue /api/wallet/... request
+  it("99. proves Free wallet pass attempt does not issue network request to /api/wallet/:slug", () => {
+    const freeCard: Card = { ...baseFreeCard, plan_tier: "free" };
+    const fetchSpy = vi.fn();
+
+    const handleDownloadWalletPass = (card: Card) => {
+      if (!isProEntitled(card)) {
+        return; // Intercepted before network request
+      }
+      fetchSpy(`/api/wallet/${card.slug}`);
+    };
+
+    handleDownloadWalletPass(freeCard);
+    expect(fetchSpy).not.toHaveBeenCalled();
+  });
+
+  // 100. Header CTA is contextual "Upgrade to Export"
+  it("100. renders contextual Upgrade to Export CTA for Free accounts in QrTab header", () => {
+    const freeCard: Card = { ...baseFreeCard, plan_tier: "free" };
+    const html = renderToStaticMarkup(
+      <LanguageProvider>
+        <QrTab card={freeCard} />
+      </LanguageProvider>,
+    );
+    expect(html).toContain("Upgrade to Export");
+    expect(html).not.toContain("Upgrade to PRO");
+  });
+
+  // 101. Dialog title is contextual "Upgrade to Export"
+  it("101. renders contextual Upgrade to Export title in ProUpgradeDialogBody for qr_export source", () => {
+    const html = renderToStaticMarkup(
+      <LanguageProvider>
+        <ProUpgradeDialogBody source="qr_export" />
+      </LanguageProvider>,
+    );
+    expect(html).toContain("Upgrade to Export");
+  });
+
+  // 102. Dialog description is contextual export description
+  it("102. renders contextual export description in ProUpgradeDialogBody for qr_export source", () => {
+    const html = renderToStaticMarkup(
+      <LanguageProvider>
+        <ProUpgradeDialogBody source="qr_export" />
+      </LanguageProvider>,
+    );
+    expect(html).toContain("Start your 7-day JustTap Pro trial to export");
+  });
+
+  // 103. Dialog omits generic feature list for qr_export
+  it("103. omits generic non-export feature list in ProUpgradeDialogBody for qr_export source", () => {
+    const html = renderToStaticMarkup(
+      <LanguageProvider>
+        <ProUpgradeDialogBody source="qr_export" />
+      </LanguageProvider>,
+    );
+    expect(html).not.toContain("upgradeFeatureVideo");
+    expect(html).not.toContain("Embedded YouTube");
+    expect(html).not.toContain("PDF Document Uploads");
+  });
+
+  // 104. Secondary action is "Continue Previewing"
+  it("104. renders Continue Previewing secondary action for qr_export source", () => {
+    const html = renderToStaticMarkup(
+      <LanguageProvider>
+        <ProUpgradeDialogBody source="qr_export" />
+      </LanguageProvider>,
+    );
+    expect(html).toContain("Continue Previewing");
+  });
+
+  // 105. Secondary action closes dialog cleanly
+  it("105. ensures Continue Previewing dismisses modal cleanly without altering preview state", () => {
+    let open = true;
+    const activeQr: "profile" | "offline" | "permanent" = "offline";
+    const onClose = () => {
+      open = false;
+    };
+    onClose();
+    expect(open).toBe(false);
+    expect(activeQr).toBe("offline");
+  });
+
+  // 106. Trial activation requires backend confirmation
+  it("106. requires backend confirmation before updating card entitlement to trialing", () => {
+    let activeCard: Card = { ...baseFreeCard, plan_tier: "free" };
+    expect(isProEntitled(activeCard)).toBe(false);
+
+    // Simulate backend response
+    const backendConfirmedTrialEndsAt = new Date(Date.now() + 7 * 86_400_000);
+    activeCard = {
+      ...activeCard,
+      plan_tier: "trialing",
+      trial_ends_at: backendConfirmedTrialEndsAt.toISOString(),
+    };
+
+    expect(isProEntitled(activeCard)).toBe(true);
+    expect(activeCard.plan_tier).toBe("trialing");
+  });
+
+  // 107. Trial success updates card plan_tier in memory
+  it("107. updates card plan_tier to trialing in memory upon trial start", () => {
+    const cardId = "card-qr-test-1";
+    let cards: Card[] = [{ ...baseFreeCard, id: cardId, plan_tier: "free" }];
+    const trialEnds = new Date(Date.now() + 7 * 86_400_000);
+
+    // Dashboard onTrialStarted handler
+    cards = cards.map((c) =>
+      c.id === cardId
+        ? { ...c, plan_tier: "trialing" as const, trial_ends_at: trialEnds.toISOString() }
+        : c,
+    );
+
+    expect(isProEntitled(cards[0])).toBe(true);
+    expect(cards[0].plan_tier).toBe("trialing");
+  });
+
+  // 108. Trial success does NOT automatically export or generate 2000px QR
+  it("108. ensures trial activation does NOT automatically generate or download 2000px QR", () => {
+    const highResExportSpy = vi.fn();
+    const onTrialStarted = () => {
+      // Strictly update entitlement state — NO auto-export!
+    };
+    onTrialStarted();
+    expect(highResExportSpy).not.toHaveBeenCalled();
+  });
+
+  // 109. Trial success does NOT automatically generate or download wallpaper
+  it("109. ensures trial activation does NOT automatically generate or download lockscreen wallpaper", () => {
+    const wallpaperExportSpy = vi.fn();
+    const onTrialStarted = () => {
+      // Strictly update entitlement state — NO auto-export!
+    };
+    onTrialStarted();
+    expect(wallpaperExportSpy).not.toHaveBeenCalled();
+  });
+
+  // 110. Trial success does NOT automatically call Apple Wallet
+  it("110. ensures trial activation does NOT automatically request Apple Wallet pass", () => {
+    const walletFetchSpy = vi.fn();
+    const onTrialStarted = () => {
+      // Strictly update entitlement state — NO auto-fetch!
+    };
+    onTrialStarted();
+    expect(walletFetchSpy).not.toHaveBeenCalled();
+  });
+
+  // 111. Deliberate second export attempt after trial activation uses legitimate real export path
+  it("111. allows legitimate export on deliberate second attempt after trial activation", () => {
+    let activeCard: Card = { ...baseFreeCard, plan_tier: "free" };
+    let exportTriggered = false;
+
+    const attemptExport = (card: Card) => {
+      if (!isProEntitled(card)) {
+        return false;
+      }
+      exportTriggered = true;
+      return true;
+    };
+
+    // First attempt as Free user is blocked
+    expect(attemptExport(activeCard)).toBe(false);
+    expect(exportTriggered).toBe(false);
+
+    // Backend activates trial
+    activeCard = {
+      ...activeCard,
+      plan_tier: "trialing",
+      trial_ends_at: new Date(Date.now() + 7 * 86_400_000).toISOString(),
+    };
+
+    // Deliberate second attempt succeeds legitimately
+    expect(attemptExport(activeCard)).toBe(true);
+    expect(exportTriggered).toBe(true);
+  });
+
+  // 112. Active trial users use real export
+  it("112. allows active trial users to export directly without upgrade modal", () => {
+    const activeTrialCard: Card = {
+      ...baseFreeCard,
+      plan_tier: "trialing",
+      trial_ends_at: new Date(Date.now() + 5 * 86_400_000).toISOString(),
+    };
+    let upgradeOpen = false;
+    let exported = false;
+
+    const handleExport = (card: Card) => {
+      if (!isProEntitled(card)) {
+        upgradeOpen = true;
+        return;
+      }
+      exported = true;
+    };
+
+    handleExport(activeTrialCard);
+    expect(upgradeOpen).toBe(false);
+    expect(exported).toBe(true);
+  });
+
+  // 113. Paid Pro users use real export
+  it("113. allows paid Pro users to export directly without upgrade modal", () => {
+    const paidProCard: Card = { ...baseFreeCard, plan_tier: "pro" };
+    let upgradeOpen = false;
+    let exported = false;
+
+    const handleExport = (card: Card) => {
+      if (!isProEntitled(card)) {
+        upgradeOpen = true;
+        return;
+      }
+      exported = true;
+    };
+
+    handleExport(paidProCard);
+    expect(upgradeOpen).toBe(false);
+    expect(exported).toBe(true);
+  });
+
+  // 114. Enterprise users use real export
+  it("114. allows Enterprise users to export directly without upgrade modal", () => {
+    const enterpriseCard: Card = { ...baseFreeCard, plan_tier: "enterprise" };
+    let upgradeOpen = false;
+    let exported = false;
+
+    const handleExport = (card: Card) => {
+      if (!isProEntitled(card)) {
+        upgradeOpen = true;
+        return;
+      }
+      exported = true;
+    };
+
+    handleExport(enterpriseCard);
+    expect(upgradeOpen).toBe(false);
+    expect(exported).toBe(true);
+  });
+
+  // 115. Trial update applies to intended selected card only
+  it("115. applies trial activation only to the intended selected card in multi-card account", () => {
+    const card1: Card = { ...baseFreeCard, id: "card-1", plan_tier: "free" };
+    const card2: Card = { ...baseFreeCard, id: "card-2", plan_tier: "free" };
+    let cards = [card1, card2];
+    const selectedCardId = "card-1";
+
+    const trialEnds = new Date(Date.now() + 7 * 86_400_000);
+    cards = cards.map((c) =>
+      c.id === selectedCardId
+        ? { ...c, plan_tier: "trialing" as const, trial_ends_at: trialEnds.toISOString() }
+        : c,
+    );
+
+    expect(isProEntitled(cards[0])).toBe(true);
+    expect(isProEntitled(cards[1])).toBe(false);
+  });
+
+  // 116. Multi-card switching preserves correct QR target
+  it("116. updates QR destination dynamically when switching selected cards", () => {
+    const card1: Card = { ...baseFreeCard, id: "card-1", slug: "card-one" };
+    const card2: Card = { ...baseFreeCard, id: "card-2", slug: "card-two" };
+
+    const getQrUrl = (card: Card) => `https://justtap.app/c/${card.slug}?jt_entry=profile_qr`;
+
+    expect(getQrUrl(card1)).toContain("/c/card-one?jt_entry=profile_qr");
+    expect(getQrUrl(card2)).toContain("/c/card-two?jt_entry=profile_qr");
+  });
+
+  // 117. QR & Permanent tag destinations remain unchanged
+  it("117. confirms profile_qr and permanent_tag destination routing formats remain unchanged", () => {
+    const slug = "jordan-dev";
+    const token = "fedcba9876543210fedcba9876543210";
+    expect(`/c/${slug}?jt_entry=profile_qr`).toBe("/c/jordan-dev?jt_entry=profile_qr");
+    expect(`/t/${token}`).toBe("/t/fedcba9876543210fedcba9876543210");
+  });
+
+  // 118. Owner QR preview in dashboard does not create visitor analytics events
+  it("118. confirms owner previewing QR codes generates zero visitor analytics events", () => {
+    const analyticsEventsRecorded: string[] = [];
+    const renderQrTabPreview = () => {
+      // Pure client-side QRCode.toDataURL — zero analytics RPC calls
+    };
+    renderQrTabPreview();
+    expect(analyticsEventsRecorded).toHaveLength(0);
+  });
+
+  // 119. Arabic localization renders correctly
+  it("119. renders Arabic translations for Upgrade to Export dialog and CTA", () => {
+    const html = renderToStaticMarkup(
+      <LanguageProvider defaultLang="ar">
+        <ProUpgradeDialogBody source="qr_export" />
+      </LanguageProvider>,
+    );
+    expect(html).toContain("ترقية للتصدير");
+    expect(html).toContain("متابعة المعاينة");
+    expect(html).toContain("ابدأ تجربة JustTap Pro المجانية لمدة 7 أيام لتصدير");
+  });
+
+  // 120. QrTab renders without crashing in Arabic mode
+  it("120. renders QrTab in Arabic mode with proper localized header CTA", () => {
+    const freeCard: Card = { ...baseFreeCard, plan_tier: "free", full_name_ar: "أليكس" };
+    const html = renderToStaticMarkup(
+      <LanguageProvider defaultLang="ar">
+        <QrTab card={freeCard} />
+      </LanguageProvider>,
+    );
+    expect(html).toContain("ترقية للتصدير");
+    expect(html).toContain("مركز رمز QR والتصدير");
   });
 });

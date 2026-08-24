@@ -243,6 +243,10 @@ const translations = {
     upgradeDialogDescConnectionsExport:
       "Start your 7-day JustTap Pro trial to export your full connections contact list to CSV.",
     continuePreviewing: "Continue Previewing",
+    upgradeToExport: "Upgrade to Export",
+    upgradeDialogTitleExport: "Upgrade to Export",
+    upgradeDialogDescExport:
+      "Start your 7-day JustTap Pro trial to export high-resolution QR codes, custom wallpapers, and Apple Wallet passes while keeping your preview.",
     unlockAnalytics: "Unlock Your Analytics",
     upgradeDialogTitleAnalytics: "Unlock Your Analytics",
     upgradeDialogDescAnalytics:
@@ -665,6 +669,10 @@ const translations = {
     upgradeDialogDescConnectionsExport:
       "ابدأ تجربة JustTap Pro المجانية لمدة 7 أيام لتصدير قائمة جهات الاتصال بالكامل إلى CSV.",
     continuePreviewing: "متابعة المعاينة",
+    upgradeToExport: "ترقية للتصدير",
+    upgradeDialogTitleExport: "ترقية للتصدير",
+    upgradeDialogDescExport:
+      "ابدأ تجربة JustTap Pro المجانية لمدة 7 أيام لتصدير رموز QR عالية الدقة وخلفيات الشاشة وبطاقات Apple Wallet مع الاحتفاظ بالمعاينة.",
     unlockAnalytics: "فتح إحصائياتك",
     upgradeDialogTitleAnalytics: "فتح إحصائياتك",
     upgradeDialogDescAnalytics:
