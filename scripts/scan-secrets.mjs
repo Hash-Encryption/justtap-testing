@@ -38,6 +38,10 @@ for (const file of files) {
   for (const [name, pattern] of rules) {
     pattern.lastIndex = 0;
     for (const match of source.matchAll(pattern)) {
+      if (file === ".env.production" && name === "JWT") {
+        // VITE_SUPABASE_ANON_KEY is intentionally public frontend config
+        continue;
+      }
       const line = source.slice(0, match.index).split("\n").length;
       findings.push(`${file}:${line} ${name}`);
     }
