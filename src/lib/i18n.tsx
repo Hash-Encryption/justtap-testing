@@ -242,6 +242,14 @@ const translations = {
     upgradeDialogTitleConnectionsExport: "Upgrade to Export Connections",
     upgradeDialogDescConnectionsExport:
       "Start your 7-day JustTap Pro trial to export your full connections contact list to CSV.",
+    continuePreviewing: "Continue Previewing",
+    unlockAnalytics: "Unlock Your Analytics",
+    upgradeDialogTitleAnalytics: "Unlock Your Analytics",
+    upgradeDialogDescAnalytics:
+      "Start the 7-day Pro trial to replace this sample preview with your real profile activity, traffic sources, actions, and conversion insights.",
+    analyticsPreviewBadge: "PRO PREVIEW · SAMPLE DATA",
+    analyticsPreviewDesc:
+      "Explore how Pro Analytics works. These example metrics are not your real analytics.",
 
     // Pro Features Tab
     proBlocksBadge: "Special Features & Pro Blocks",
@@ -656,6 +664,14 @@ const translations = {
     upgradeDialogTitleConnectionsExport: "ترقية لتصدير جهات الاتصال",
     upgradeDialogDescConnectionsExport:
       "ابدأ تجربة JustTap Pro المجانية لمدة 7 أيام لتصدير قائمة جهات الاتصال بالكامل إلى CSV.",
+    continuePreviewing: "متابعة المعاينة",
+    unlockAnalytics: "فتح إحصائياتك",
+    upgradeDialogTitleAnalytics: "فتح إحصائياتك",
+    upgradeDialogDescAnalytics:
+      "ابدأ تجربة JustTap Pro المجانية لمدة 7 أيام لاستبدال هذه المعاينة التوضيحية بنشاط ملفك الشخصي الحقيقي، ومصادر الزيارات، والإجراءات، ومعدل التحويل.",
+    analyticsPreviewBadge: "معاينة PRO · بيانات توضيحية",
+    analyticsPreviewDesc:
+      "استكشف كيف تعمل إحصائيات Pro. هذه المقاييس التوضيحية ليست إحصائياتك الفعلية.",
 
     // Pro Features Tab
     proBlocksBadge: "الميزات المتقدمة وتكاملات Pro",

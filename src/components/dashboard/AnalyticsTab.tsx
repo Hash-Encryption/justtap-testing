@@ -14,6 +14,7 @@ import {
   Percent,
   QrCode,
   RefreshCw,
+  Sparkles,
   TrendingUp,
   UserRound,
 } from "lucide-react";
@@ -21,6 +22,7 @@ import { Cell, Line, LineChart, Pie, PieChart, ResponsiveContainer, XAxis, YAxis
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
 import {
   ANALYTICS_RANGES,
+  getSampleAnalyticsData,
   isAnalyticsDashboardData,
   type AnalyticsDashboardData,
   type AnalyticsRange,
@@ -34,6 +36,8 @@ import {
   type Translations,
 } from "@/lib/i18n";
 import type { Connection, ConnectionStatus } from "@/lib/connections";
+import type { Session } from "@supabase/supabase-js";
+import { ProUpgradeDialog } from "./ProUpgradeDialog";
 
 const DISPLAY_RANGE_LABELS: Record<AnalyticsRange, string> = {
   "7d": "7D",
@@ -86,23 +90,30 @@ export function AnalyticsTab({
   cards,
   onSelectCardId,
   onNavigateToConnections,
+  session,
+  onTrialStarted,
 }: {
   cardId: string;
   isPro: boolean;
   cards?: { id: string; full_name?: string | null; slug?: string | null }[];
   onSelectCardId?: (id: string) => void;
   onNavigateToConnections?: () => void;
+  session?: Session | null;
+  onTrialStarted?: (trialEndsAt: Date) => void;
 }) {
   const { t } = useTranslation();
   const [range, setRange] = useState<AnalyticsRange>("7d");
-  const [data, setData] = useState<AnalyticsDashboardData | null>(null);
+  const [data, setData] = useState<AnalyticsDashboardData | null>(() =>
+    !isPro ? getSampleAnalyticsData("7d") : null,
+  );
   const [loading, setLoading] = useState(isPro);
   const [error, setError] = useState(false);
   const [reload, setReload] = useState(0);
+  const [upgradeOpen, setUpgradeOpen] = useState(false);
 
   useEffect(() => {
     if (!isPro) {
-      setData(null);
+      setData(getSampleAnalyticsData(range));
       setLoading(false);
       setError(false);
       return;
@@ -130,22 +141,38 @@ export function AnalyticsTab({
     };
   }, [cardId, isPro, range, reload]);
 
-  if (!isPro) {
-    return (
-      <section className="justtap-glass rounded-3xl border border-slate-800 p-8 text-center sm:p-12">
-        <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-purple-500/10 border border-purple-500/20 text-purple-400">
-          <LockKeyhole className="h-7 w-7" />
-        </div>
-        <h2 className="mt-4 font-display text-lg font-bold text-white">{t("analyticsProTitle")}</h2>
-        <p className="mx-auto mt-2 max-w-md text-sm leading-relaxed text-slate-400">
-          {t("analyticsProDesc")}
-        </p>
-      </section>
-    );
-  }
-
   return (
     <div className="space-y-6">
+      {/* PRO PREVIEW · SAMPLE DATA BANNER */}
+      {!isPro && (
+        <div
+          data-testid="analytics-pro-preview-banner"
+          className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-2xl border border-amber-500/30 bg-amber-500/10 p-4"
+        >
+          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-3">
+            <span
+              data-testid="analytics-pro-preview-badge"
+              className="shrink-0 rounded-full border border-amber-400/30 bg-amber-400/20 px-2.5 py-0.5 text-[10px] font-extrabold uppercase tracking-wider text-amber-300"
+            >
+              {t("analyticsPreviewBadge")}
+            </span>
+            <p className="text-xs text-amber-200/90 leading-relaxed">
+              {t("analyticsPreviewDesc")}
+            </p>
+          </div>
+
+          <button
+            type="button"
+            data-testid="analytics-unlock-cta"
+            onClick={() => setUpgradeOpen(true)}
+            className="inline-flex min-h-9 items-center justify-center gap-2 self-start sm:self-auto shrink-0 rounded-xl bg-gradient-to-r from-purple-600 via-purple-700 to-amber-500 px-4 text-xs font-bold text-white shadow-md shadow-purple-900/30 transition-all hover:opacity-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-400 cursor-pointer"
+          >
+            <Sparkles className="h-3.5 w-3.5" />
+            <span>{t("unlockAnalytics")}</span>
+          </button>
+        </div>
+      )}
+
       {/* HEADER CONTROLS */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
@@ -233,6 +260,15 @@ export function AnalyticsTab({
           onNavigateToConnections={onNavigateToConnections}
         />
       )}
+
+      {/* SHARED PRO UPGRADE DIALOG */}
+      <ProUpgradeDialog
+        open={upgradeOpen}
+        onOpenChange={setUpgradeOpen}
+        source="analytics_unlock"
+        session={session}
+        onTrialStarted={onTrialStarted}
+      />
     </div>
   );
 }

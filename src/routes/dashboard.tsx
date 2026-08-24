@@ -643,12 +643,36 @@ function Dashboard() {
                 cardId={selectedCard.id}
                 isPro={isProEntitled(selectedCard)}
                 cards={cards}
+                session={session}
                 onSelectCardId={(id) => {
                   setSelectedCardId(id);
                   const target = cards.find((c) => c.id === id);
                   if (target) setDraft(target);
                 }}
                 onNavigateToConnections={() => setTab("leads")}
+                onTrialStarted={(trialEndsAt) => {
+                  if (!selectedCardId) return;
+                  setCards((prev) =>
+                    prev.map((c) =>
+                      c.id === selectedCardId
+                        ? {
+                            ...c,
+                            plan_tier: "trialing" as const,
+                            trial_ends_at: trialEndsAt.toISOString(),
+                          }
+                        : c,
+                    ),
+                  );
+                  setDraft((prev) =>
+                    prev && prev.id === selectedCardId
+                      ? {
+                          ...prev,
+                          plan_tier: "trialing" as const,
+                          trial_ends_at: trialEndsAt.toISOString(),
+                        }
+                      : prev,
+                  );
+                }}
               />
             ) : (
               <p className="text-xs text-slate-400">{t("selectCardToViewAnalytics")}</p>

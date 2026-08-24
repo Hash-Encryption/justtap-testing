@@ -4,6 +4,7 @@ import {
   ANALYTICS_ACTION_LABELS,
   ANALYTICS_RANGES,
   ANALYTICS_SOURCE_LABELS,
+  getSampleAnalyticsData,
   isAnalyticsDashboardData,
 } from "./analytics-dashboard";
 
@@ -109,5 +110,27 @@ describe("owner analytics dashboard", () => {
     expect(ui).toContain("aria-pressed={range === value}");
     expect(dashboard).toContain("key={selectedCard.id}");
     expect(dashboard).toContain("isPro={isProEntitled(selectedCard)}");
+  });
+
+  it("provides valid, deterministic, and immutable sample analytics data for Pro Preview", () => {
+    for (const range of ANALYTICS_RANGES) {
+      const data1 = getSampleAnalyticsData(range);
+      const data2 = getSampleAnalyticsData(range);
+
+      expect(isAnalyticsDashboardData(data1)).toBe(true);
+      expect(data1.range).toBe(range);
+      expect(data1).toEqual(data2); // Genuinely deterministic
+
+      // Check math consistency
+      const expectedViews = data1.trend.reduce((s, p) => s + p.profile_views, 0);
+      const expectedSaves = data1.trend.reduce((s, p) => s + p.contact_saves, 0);
+      const expectedConnections = data1.trend.reduce((s, p) => s + p.connections, 0);
+
+      expect(data1.metrics.profile_views).toBe(expectedViews);
+      expect(data1.metrics.contact_saves).toBe(expectedSaves);
+      expect(data1.metrics.connections).toBe(expectedConnections);
+      expect(data1.top_actions.find((a) => a.action === "vcard_download")?.count).toBe(expectedSaves);
+      expect(data1.top_actions.find((a) => a.action === "connection_submit")?.count).toBe(expectedConnections);
+    }
   });
 });

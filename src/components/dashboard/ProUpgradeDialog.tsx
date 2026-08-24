@@ -16,7 +16,8 @@ export type ProUpgradeSource =
   | "pro_features_save"
   | "pro_features_action"
   | "connections_save"
-  | "connections_export";
+  | "connections_export"
+  | "analytics_unlock";
 
 export type ProUpgradeDialogProps = {
   open: boolean;
@@ -48,6 +49,7 @@ export function ProUpgradeDialogBody({
   const isProFeaturesSave = source === "pro_features_save";
   const isConnectionsSave = source === "connections_save";
   const isConnectionsExport = source === "connections_export";
+  const isAnalyticsUnlock = source === "analytics_unlock";
 
   // Identify matching preset name if any
   const matchedPreset = draft
@@ -107,7 +109,9 @@ export function ProUpgradeDialogBody({
                   ? t("upgradeDialogTitleConnectionsSave")
                   : isConnectionsExport
                     ? t("upgradeDialogTitleConnectionsExport")
-                    : t("upgradeDialogTitleDefault")}
+                    : isAnalyticsUnlock
+                      ? t("upgradeDialogTitleAnalytics")
+                      : t("upgradeDialogTitleDefault")}
         </h2>
 
         <p className="text-xs text-slate-400">
@@ -121,7 +125,9 @@ export function ProUpgradeDialogBody({
                   ? t("upgradeDialogDescConnectionsSave")
                   : isConnectionsExport
                     ? t("upgradeDialogDescConnectionsExport")
-                    : t("upgradeDialogDescDefault")}
+                    : isAnalyticsUnlock
+                      ? t("upgradeDialogDescAnalytics")
+                      : t("upgradeDialogDescDefault")}
         </p>
       </DialogHeader>
 
@@ -235,7 +241,9 @@ export function ProUpgradeDialogBody({
               ? t("continueDesigning")
               : isConnectionsSave || isConnectionsExport
                 ? t("continueReviewing")
-                : t("maybeLater")}
+                : isAnalyticsUnlock
+                  ? t("continuePreviewing")
+                  : t("maybeLater")}
         </button>
       </div>
     </>
