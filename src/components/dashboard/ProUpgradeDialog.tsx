@@ -18,7 +18,8 @@ export type ProUpgradeSource =
   | "connections_save"
   | "connections_export"
   | "analytics_unlock"
-  | "qr_export";
+  | "qr_export"
+  | "wallet_add";
 
 export type ProUpgradeDialogProps = {
   open: boolean;
@@ -52,6 +53,7 @@ export function ProUpgradeDialogBody({
   const isConnectionsExport = source === "connections_export";
   const isAnalyticsUnlock = source === "analytics_unlock";
   const isQrExport = source === "qr_export";
+  const isWalletAdd = source === "wallet_add";
 
   // Identify matching preset name if any
   const matchedPreset = draft
@@ -111,7 +113,9 @@ export function ProUpgradeDialogBody({
                       ? t("upgradeDialogTitleAnalytics")
                       : isQrExport
                         ? t("upgradeDialogTitleExport")
-                        : t("upgradeDialogTitleDefault")}
+                        : isWalletAdd
+                          ? t("upgradeDialogTitleWallet")
+                          : t("upgradeDialogTitleDefault")}
         </h2>
 
         <p className="text-xs text-slate-400">
@@ -129,7 +133,9 @@ export function ProUpgradeDialogBody({
                       ? t("upgradeDialogDescAnalytics")
                       : isQrExport
                         ? t("upgradeDialogDescExport")
-                        : t("upgradeDialogDescDefault")}
+                        : isWalletAdd
+                          ? t("upgradeDialogDescWallet")
+                          : t("upgradeDialogDescDefault")}
         </p>
       </DialogHeader>
 
@@ -195,8 +201,8 @@ export function ProUpgradeDialogBody({
         </div>
       )}
 
-      {/* Feature List if not publish attempt or qr_export */}
-      {!isPublish && !isQrExport && (
+      {/* Feature List if not publish attempt, qr_export, or wallet_add */}
+      {!isPublish && !isQrExport && !isWalletAdd && (
         <div className="my-3 space-y-2 rounded-2xl border border-slate-800 bg-slate-950/50 p-4 text-left rtl:text-right text-xs text-slate-300">
           <div className="flex items-center gap-2 font-medium">
             <CheckCircle2 className="h-4 w-4 text-emerald-400 shrink-0" />
@@ -243,7 +249,7 @@ export function ProUpgradeDialogBody({
               ? t("continueDesigning")
               : isConnectionsSave || isConnectionsExport
                 ? t("continueReviewing")
-                : isAnalyticsUnlock || isQrExport
+                : isAnalyticsUnlock || isQrExport || isWalletAdd
                   ? t("continuePreviewing")
                   : t("maybeLater")}
         </button>

@@ -247,6 +247,16 @@ const translations = {
     upgradeDialogTitleExport: "Upgrade to Export",
     upgradeDialogDescExport:
       "Start your 7-day JustTap Pro trial to export high-resolution QR codes, custom wallpapers, and Apple Wallet passes while keeping your preview.",
+    upgradeToAddWallet: "Upgrade to Add to Wallet",
+    upgradeDialogTitleWallet: "Upgrade to Add to Wallet",
+    upgradeDialogDescWallet:
+      "Start the 7-day JustTap Pro trial to create your real Wallet pass while keeping the Wallet preview you are viewing.",
+    walletPassPreviewTitle: "Apple Wallet Pass Preview",
+    walletPassPreviewDesc:
+      "Preview how your digital business card appears in Apple Wallet.",
+    walletPassDigitalType: "Digital Card",
+    walletPassContactType: "Contact Card",
+    walletPassDownloadBtn: "Download Wallet Pass (.pkpass)",
     unlockAnalytics: "Unlock Your Analytics",
     upgradeDialogTitleAnalytics: "Unlock Your Analytics",
     upgradeDialogDescAnalytics:
@@ -673,6 +683,16 @@ const translations = {
     upgradeDialogTitleExport: "ترقية للتصدير",
     upgradeDialogDescExport:
       "ابدأ تجربة JustTap Pro المجانية لمدة 7 أيام لتصدير رموز QR عالية الدقة وخلفيات الشاشة وبطاقات Apple Wallet مع الاحتفاظ بالمعاينة.",
+    upgradeToAddWallet: "ترقية للإضافة إلى المحفظة",
+    upgradeDialogTitleWallet: "ترقية للإضافة إلى المحفظة",
+    upgradeDialogDescWallet:
+      "ابدأ تجربة JustTap Pro المجانية لمدة 7 أيام لإنشاء بطاقة المحفظة الفعلية مع الاحتفاظ بمعاينة المحفظة التي تشاهدها.",
+    walletPassPreviewTitle: "معاينة بطاقة Apple Wallet",
+    walletPassPreviewDesc:
+      "عاين كيف تظهر بطاقة أعمالك الرقمية في محفظة Apple Wallet.",
+    walletPassDigitalType: "البطاقة الرقمية",
+    walletPassContactType: "بطاقة جهة الاتصال",
+    walletPassDownloadBtn: "تحميل بطاقة المحفظة (.pkpass)",
     unlockAnalytics: "فتح إحصائياتك",
     upgradeDialogTitleAnalytics: "فتح إحصائياتك",
     upgradeDialogDescAnalytics:

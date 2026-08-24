@@ -1,13 +1,13 @@
 import { useEffect, useRef, useState } from "react";
 import QRCode from "qrcode";
-import { Crown, Download, Lock, QrCode, Smartphone, Sparkles, Zap } from "lucide-react";
+import { Crown, Download, Lock, QrCode, Smartphone, Sparkles, Wallet, Zap } from "lucide-react";
 import { toast } from "sonner";
 import { buildVCard, type Card } from "@/lib/card";
 import { supabase } from "@/lib/supabase";
 import { useTranslation } from "@/lib/i18n";
 import { isProEntitled } from "@/lib/card-design";
 import type { Session } from "@supabase/supabase-js";
-import { ProUpgradeDialog } from "./ProUpgradeDialog";
+import { ProUpgradeDialog, type ProUpgradeSource } from "./ProUpgradeDialog";
 
 interface QrTabProps {
   card: Card;
@@ -23,7 +23,9 @@ export function QrTab({ card, session, onTrialStarted, onUpgradeRequest }: QrTab
   const [permanentQrUrl, setPermanentQrUrl] = useState<string>("");
   const [permanentToken, setPermanentToken] = useState<string | null>(null);
   const [activeQr, setActiveQr] = useState<"profile" | "offline" | "permanent">("profile");
+  const [activePassType, setActivePassType] = useState<"digital" | "contact">("digital");
   const [upgradeOpen, setUpgradeOpen] = useState<boolean>(false);
+  const [upgradeSource, setUpgradeSource] = useState<ProUpgradeSource>("qr_export");
 
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
@@ -80,6 +82,7 @@ export function QrTab({ card, session, onTrialStarted, onUpgradeRequest }: QrTab
 
   const handleDownloadHighResQr = async (type: "profile" | "offline" | "permanent") => {
     if (!isPro) {
+      setUpgradeSource("qr_export");
       setUpgradeOpen(true);
       onUpgradeRequest?.();
       return;
@@ -105,6 +108,7 @@ export function QrTab({ card, session, onTrialStarted, onUpgradeRequest }: QrTab
   // Lockscreen Wallpaper Canvas Export (1080x1920)
   const handleGenerateWallpaper = async () => {
     if (!isPro) {
+      setUpgradeSource("qr_export");
       setUpgradeOpen(true);
       onUpgradeRequest?.();
       return;
@@ -219,6 +223,7 @@ export function QrTab({ card, session, onTrialStarted, onUpgradeRequest }: QrTab
 
   const handleDownloadWalletPass = async (passType: "digital" | "contact" = "digital") => {
     if (!isPro) {
+      setUpgradeSource("wallet_add");
       setUpgradeOpen(true);
       onUpgradeRequest?.();
       return;
@@ -257,6 +262,15 @@ export function QrTab({ card, session, onTrialStarted, onUpgradeRequest }: QrTab
   };
 
   const cardDisplayName = lang === "ar" && card.full_name_ar ? card.full_name_ar : card.full_name;
+  const cardDisplayTitle =
+    lang === "ar" && card.title_ar ? card.title_ar : card.title || card.company || "";
+
+  const walletPassQrUrl =
+    activePassType === "contact"
+      ? offlineQrUrl
+      : permanentToken && permanentQrUrl
+        ? permanentQrUrl
+        : profileQrUrl;
 
   return (
     <div className="space-y-8 max-w-4xl mx-auto">
@@ -273,6 +287,7 @@ export function QrTab({ card, session, onTrialStarted, onUpgradeRequest }: QrTab
           <button
             type="button"
             onClick={() => {
+              setUpgradeSource("qr_export");
               setUpgradeOpen(true);
               onUpgradeRequest?.();
             }}
@@ -396,6 +411,7 @@ export function QrTab({ card, session, onTrialStarted, onUpgradeRequest }: QrTab
           {/* Wallet Pass Download button under applicable QR */}
           <button
             type="button"
+            data-testid="wallet-quick-action"
             onClick={() => handleDownloadWalletPass(activeQr === "offline" ? "contact" : "digital")}
             className={`w-full py-3 px-4 font-semibold text-xs rounded-xl border flex items-center justify-between shadow-sm transition-colors ${
               isPro
@@ -413,9 +429,180 @@ export function QrTab({ card, session, onTrialStarted, onUpgradeRequest }: QrTab
                 {activeQr === "offline" ? t("appleWalletContactBtn") : t("appleWalletDigitalBtn")}
               </span>
             </span>
-            <span className="text-[10px] font-extrabold px-2.5 py-0.5 rounded-md bg-amber-500/10 text-amber-300 border border-amber-500/20">
-              {isPro ? t("signedBadge") : "PRO"}
+            {!isPro && (
+              <span className="text-[10px] font-extrabold px-2.5 py-0.5 rounded-md bg-amber-500/10 text-amber-300 border border-amber-500/20">
+                PRO
+              </span>
+            )}
+          </button>
+        </div>
+      </div>
+
+      {/* APPLE WALLET PASS VISUAL PREVIEW & EXPORT HUB */}
+      <div
+        data-testid="wallet-pass-preview-section"
+        className="justtap-glass rounded-3xl p-6 space-y-5 border border-slate-800"
+      >
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+          <div className="flex items-center space-x-2.5 rtl:space-x-reverse">
+            <div className="p-2 rounded-xl bg-purple-500/10 border border-purple-500/20 text-purple-400">
+              <Wallet className="w-5 h-5" />
+            </div>
+            <div>
+              <h4 className="text-base font-bold text-white font-display">
+                {t("walletPassPreviewTitle")}
+              </h4>
+              <p className="text-xs text-slate-400">{t("walletPassPreviewDesc")}</p>
+            </div>
+          </div>
+
+          {!isPro && (
+            <span
+              data-testid="wallet-pro-preview-badge"
+              className="text-[10px] text-amber-400 bg-amber-400/10 px-2.5 py-1 rounded-full font-extrabold border border-amber-400/20 self-start sm:self-auto"
+            >
+              {t("proPreviewBadge")}
             </span>
+          )}
+        </div>
+
+        {/* Pass Type Switcher */}
+        <div className="flex justify-center gap-1.5 bg-slate-950/80 rounded-2xl p-1.5 border border-slate-800 max-w-sm mx-auto">
+          <button
+            type="button"
+            data-testid="wallet-type-digital"
+            onClick={() => setActivePassType("digital")}
+            className={`flex-1 flex items-center justify-center space-x-1.5 rtl:space-x-reverse py-2 rounded-xl text-xs font-bold transition-all ${
+              activePassType === "digital"
+                ? "bg-purple-700 text-white shadow-md shadow-purple-700/30"
+                : "text-slate-400 hover:text-white"
+            }`}
+          >
+            <Sparkles className="w-3.5 h-3.5" />
+            <span>{t("walletPassDigitalType")}</span>
+          </button>
+
+          <button
+            type="button"
+            data-testid="wallet-type-contact"
+            onClick={() => setActivePassType("contact")}
+            className={`flex-1 flex items-center justify-center space-x-1.5 rtl:space-x-reverse py-2 rounded-xl text-xs font-bold transition-all ${
+              activePassType === "contact"
+                ? "bg-emerald-700 text-white shadow-md shadow-emerald-700/30"
+                : "text-slate-400 hover:text-white"
+            }`}
+          >
+            <Zap className="w-3.5 h-3.5" />
+            <span>{t("walletPassContactType")}</span>
+          </button>
+        </div>
+
+        {/* Apple Wallet Visual Pass Mockup */}
+        <div className="flex justify-center">
+          <div
+            data-testid="wallet-pass-card"
+            data-pass-type={activePassType}
+            className="w-full max-w-sm rounded-[2rem] p-5 bg-gradient-to-b from-slate-900 via-[#100c18] to-[#08080A] border border-slate-700/70 shadow-2xl space-y-4 text-white relative overflow-hidden"
+          >
+            {/* Ambient Purple Glow */}
+            <div
+              className="pointer-events-none absolute -top-10 -right-10 w-40 h-40 opacity-25 blur-2xl rounded-full"
+              style={{ backgroundColor: card.accent_color || "#6B21A8" }}
+            />
+
+            {/* Pass Header */}
+            <div className="flex items-center justify-between border-b border-slate-800/80 pb-3">
+              <div className="flex items-center space-x-2 rtl:space-x-reverse">
+                <span className="font-display font-black text-sm tracking-tight text-white">
+                  JustTap<span className="text-purple-400">.</span>
+                </span>
+                <span className="text-[9px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-md bg-purple-500/20 text-purple-300 border border-purple-500/30">
+                  PASS
+                </span>
+              </div>
+              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                {activePassType === "contact"
+                  ? t("walletPassContactType")
+                  : t("walletPassDigitalType")}
+              </span>
+            </div>
+
+            {/* Primary & Secondary Fields */}
+            <div className="space-y-1">
+              <span className="text-[10px] uppercase font-bold text-slate-500 tracking-wider">
+                {lang === "ar" ? "الاسم" : "NAME"}
+              </span>
+              <h5
+                data-testid="wallet-pass-name"
+                className="text-lg font-extrabold text-white truncate font-display"
+              >
+                {cardDisplayName}
+              </h5>
+              {cardDisplayTitle && (
+                <p
+                  data-testid="wallet-pass-title"
+                  className="text-xs text-slate-300 truncate font-medium"
+                >
+                  {cardDisplayTitle}
+                </p>
+              )}
+            </div>
+
+            {/* Barcode Section */}
+            <div className="p-3 bg-white rounded-2xl flex flex-col items-center justify-center space-y-1 shadow-inner border border-slate-200">
+              {walletPassQrUrl ? (
+                <img
+                  src={walletPassQrUrl}
+                  alt="Wallet Barcode"
+                  className="w-36 h-36 object-contain"
+                />
+              ) : (
+                <div className="w-36 h-36 bg-slate-100 flex items-center justify-center text-slate-400 text-xs">
+                  {t("generatingQr")}
+                </div>
+              )}
+              <span className="text-[9px] font-mono text-slate-500 truncate max-w-[200px]" dir="ltr">
+                {activePassType === "contact"
+                  ? "Offline vCard"
+                  : `/c/${card.slug || "justtap"}`}
+              </span>
+            </div>
+
+            {/* Back info preview */}
+            <div className="pt-2 border-t border-slate-800/80 flex items-center justify-between text-[11px] text-slate-400">
+              <span className="truncate" dir="ltr">
+                {card.phone || card.email || "JustTap Digital Identity"}
+              </span>
+              <span className="text-[10px] font-semibold text-purple-400 shrink-0">
+                Apple Wallet
+              </span>
+            </div>
+          </div>
+        </div>
+
+        {/* Primary Action Button */}
+        <div className="max-w-sm mx-auto pt-1">
+          <button
+            type="button"
+            data-testid="wallet-primary-cta"
+            onClick={() => handleDownloadWalletPass(activePassType)}
+            className={`w-full py-3.5 px-4 text-xs font-bold rounded-xl border flex items-center justify-center space-x-2 rtl:space-x-reverse transition-all ${
+              isPro
+                ? "bg-black hover:bg-slate-950 text-white border-slate-700 shadow-lg"
+                : "bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-slate-950 border-amber-400 font-extrabold shadow-lg shadow-amber-500/20"
+            }`}
+          >
+            {!isPro ? (
+              <>
+                <Crown className="w-4 h-4 fill-slate-950" />
+                <span>{t("upgradeToAddWallet")}</span>
+              </>
+            ) : (
+              <>
+                <Download className="w-4 h-4" />
+                <span>{t("walletPassDownloadBtn")}</span>
+              </>
+            )}
           </button>
         </div>
       </div>
@@ -465,7 +652,7 @@ export function QrTab({ card, session, onTrialStarted, onUpgradeRequest }: QrTab
       <ProUpgradeDialog
         open={upgradeOpen}
         onOpenChange={setUpgradeOpen}
-        source="qr_export"
+        source={upgradeSource}
         draft={card}
         session={session}
         onTrialStarted={onTrialStarted}
