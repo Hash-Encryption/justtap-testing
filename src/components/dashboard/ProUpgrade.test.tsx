@@ -29,7 +29,9 @@ import {
   getSampleAnalyticsData,
   isAnalyticsDashboardData,
   type AnalyticsDashboardData,
+  type AnalyticsRange,
 } from "@/lib/analytics-dashboard";
+import type { Session } from "@supabase/supabase-js";
 import { ConnectionsTab } from "./LeadsTab";
 import { AnalyticsTab } from "./AnalyticsTab";
 import { QrTab } from "./QrTab";
@@ -782,7 +784,7 @@ describe("7-Day Pro Trial — Entitlement Tests", () => {
 
     // Step 3: simulate onTrialStarted behavior:
     // Modal closes, draft is updated in memory/state to trialing, but NO auto-publish is executed.
-    let autoPublishTriggered = false;
+    const autoPublishTriggered = false;
     let modalOpen = true;
     let activeDraft = { ...freeDraftWithCustom };
 
@@ -1090,7 +1092,7 @@ describe("7-Day Pro Trial — Entitlement Tests", () => {
 
   // 48. Successful trial activation does NOT automatically save follow-up details
   it("48. enforces non-autopublish / non-autosave rule on trial activation for Connections", () => {
-    let autoSaved = false;
+    const autoSaved = false;
     let entitlementState = "free";
 
     // Trial starts
@@ -1233,7 +1235,7 @@ describe("7-Day Pro Trial — Entitlement Tests", () => {
 
   // 56. Trial activation does NOT automatically export CSV
   it("56. ensures trial activation does NOT automatically download or generate CSV", () => {
-    let csvDownloaded = false;
+    const csvDownloaded = false;
     let cardPlanTier: "free" | "trialing" = "free";
 
     // Trial starts
@@ -1449,9 +1451,9 @@ describe("Phase 4 — Analytics Pro Preview & Contextual Upgrade Experience", ()
     const isPro = false;
 
     // Emulate AnalyticsTab data loading branch
-    function loadAnalyticsData(range: string) {
+    function loadAnalyticsData(range: AnalyticsRange) {
       if (!isPro) {
-        return { data: getSampleAnalyticsData(range as any), rpcCalled: false };
+        return { data: getSampleAnalyticsData(range), rpcCalled: false };
       }
       rpcCalled = true;
       return { data: null, rpcCalled: true };
@@ -2200,8 +2202,8 @@ describe("Phase 6: Integrated Apple Wallet & Pro Discovery Experience", () => {
         <QrTab card={testCard} />
       </LanguageProvider>,
     );
-    expect(html).toContain("data-testid=\"wallet-pass-preview-section\"");
-    expect(html).toContain("data-testid=\"wallet-pass-card\"");
+    expect(html).toContain('data-testid="wallet-pass-preview-section"');
+    expect(html).toContain('data-testid="wallet-pass-card"');
     expect(html).toContain("Jordan Executive");
     expect(html).toContain("Chief Executive Officer");
     expect(html).toContain("Apple Wallet Pass Preview");
@@ -2236,7 +2238,7 @@ describe("Phase 6: Integrated Apple Wallet & Pro Discovery Experience", () => {
         <QrTab card={freeCard} />
       </LanguageProvider>,
     );
-    expect(html).toContain("data-testid=\"wallet-pro-preview-badge\"");
+    expect(html).toContain('data-testid="wallet-pro-preview-badge"');
     expect(html).toContain("PRO PREVIEW");
   });
 
@@ -2357,7 +2359,7 @@ describe("Phase 6: Integrated Apple Wallet & Pro Discovery Experience", () => {
   // 134. Continue Previewing dismisses modal cleanly without altering preview state or card data
   it("134. ensures Continue Previewing dismisses modal cleanly while keeping preview intact", () => {
     let open = true;
-    let activePassType: "digital" | "contact" = "digital";
+    const activePassType: "digital" | "contact" = "digital";
 
     const handleClose = () => {
       open = false;
@@ -2535,7 +2537,9 @@ describe("Phase 6: Integrated Apple Wallet & Pro Discovery Experience", () => {
     );
     expect(html).toContain("ترقية للإضافة إلى المحفظة");
     expect(html).toContain("متابعة المعاينة");
-    expect(html).toContain("ابدأ تجربة JustTap Pro المجانية لمدة 7 أيام لإنشاء بطاقة المحفظة الفعلية");
+    expect(html).toContain(
+      "ابدأ تجربة JustTap Pro المجانية لمدة 7 أيام لإنشاء بطاقة المحفظة الفعلية",
+    );
   });
 
   // 145. Renders QrTab in Arabic mode with proper localized Wallet pass preview and RTL layout
@@ -2636,8 +2640,8 @@ describe("Phase 6: Integrated Apple Wallet & Pro Discovery Experience", () => {
   // 149. Phase 7 — Connections: Save Follow-up: preview note/tags -> upgrade -> drawer/fields intact -> NO auto-save -> deliberate save persists
   it("149. Phase 7: Connections preserves entered follow-up notes/tags post-trial without auto-saving, then allows deliberate save", () => {
     let card: Card = { ...baseFreeCard };
-    let leadNoteState = "Met at Riyadh Tech Summit - follow up on Tuesday";
-    let leadTagsState = ["investor", "saudi-tech"];
+    const leadNoteState = "Met at Riyadh Tech Summit - follow up on Tuesday";
+    const leadTagsState = ["investor", "saudi-tech"];
     let saveCallCount = 0;
 
     function handleFollowUpSave(isPro: boolean, note: string, tags: string[]) {
@@ -2720,10 +2724,10 @@ describe("Phase 6: Integrated Apple Wallet & Pro Discovery Experience", () => {
   // 151. Phase 7 — Analytics: Sample preview -> Unlock Analytics -> trial succeeds -> range/tab preserved -> NO fake events -> live data loads
   it("151. Phase 7: Analytics transitions from sample preview to live data without generating fake events", () => {
     let card: Card = { ...baseFreeCard };
-    const selectedRange = "30d";
+    const selectedRange: AnalyticsRange = "30d";
 
     // Free user gets sample preview
-    const sampleData = getSampleAnalyticsData(selectedRange as any);
+    const sampleData = getSampleAnalyticsData(selectedRange);
     expect(isProEntitled(card)).toBe(false);
     expect(sampleData.metrics.profile_views).toBeGreaterThan(0);
 
@@ -2880,7 +2884,7 @@ describe("Phase 6: Integrated Apple Wallet & Pro Discovery Experience", () => {
 
   // 157. Phase 7 — ProFeaturesTab properly renders with session and onTrialStarted props
   it("157. Phase 7: ProFeaturesTab accepts session and onTrialStarted props without error", () => {
-    const mockSession = { access_token: "fake-jwt", user: { id: "user-1" } } as any;
+    const mockSession = { access_token: "fake-jwt", user: { id: "user-1" } } as unknown as Session;
     const onTrialStarted = vi.fn();
     const html = renderToStaticMarkup(
       <LanguageProvider>

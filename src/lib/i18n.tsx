@@ -252,8 +252,7 @@ const translations = {
     upgradeDialogDescWallet:
       "Start the 7-day JustTap Pro trial to create your real Wallet pass while keeping the Wallet preview you are viewing.",
     walletPassPreviewTitle: "Apple Wallet Pass Preview",
-    walletPassPreviewDesc:
-      "Preview how your digital business card appears in Apple Wallet.",
+    walletPassPreviewDesc: "Preview how your digital business card appears in Apple Wallet.",
     walletPassDigitalType: "Digital Card",
     walletPassContactType: "Contact Card",
     walletPassDownloadBtn: "Download Wallet Pass (.pkpass)",
@@ -688,8 +687,7 @@ const translations = {
     upgradeDialogDescWallet:
       "ابدأ تجربة JustTap Pro المجانية لمدة 7 أيام لإنشاء بطاقة المحفظة الفعلية مع الاحتفاظ بمعاينة المحفظة التي تشاهدها.",
     walletPassPreviewTitle: "معاينة بطاقة Apple Wallet",
-    walletPassPreviewDesc:
-      "عاين كيف تظهر بطاقة أعمالك الرقمية في محفظة Apple Wallet.",
+    walletPassPreviewDesc: "عاين كيف تظهر بطاقة أعمالك الرقمية في محفظة Apple Wallet.",
     walletPassDigitalType: "البطاقة الرقمية",
     walletPassContactType: "بطاقة جهة الاتصال",
     walletPassDownloadBtn: "تحميل بطاقة المحفظة (.pkpass)",

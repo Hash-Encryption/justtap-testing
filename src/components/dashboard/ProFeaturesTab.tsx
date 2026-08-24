@@ -29,13 +29,7 @@ type Props = {
   onTrialStarted?: (trialEndsAt: Date) => void;
 };
 
-export function ProFeaturesTab({
-  card,
-  onChange,
-  userId,
-  session,
-  onTrialStarted,
-}: Props) {
+export function ProFeaturesTab({ card, onChange, userId, session, onTrialStarted }: Props) {
   const { t } = useTranslation();
   const [uploadingPdf, setUploadingPdf] = useState(false);
   const [upgradeOpen, setUpgradeOpen] = useState(false);

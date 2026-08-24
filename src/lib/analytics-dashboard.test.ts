@@ -129,8 +129,12 @@ describe("owner analytics dashboard", () => {
       expect(data1.metrics.profile_views).toBe(expectedViews);
       expect(data1.metrics.contact_saves).toBe(expectedSaves);
       expect(data1.metrics.connections).toBe(expectedConnections);
-      expect(data1.top_actions.find((a) => a.action === "vcard_download")?.count).toBe(expectedSaves);
-      expect(data1.top_actions.find((a) => a.action === "connection_submit")?.count).toBe(expectedConnections);
+      expect(data1.top_actions.find((a) => a.action === "vcard_download")?.count).toBe(
+        expectedSaves,
+      );
+      expect(data1.top_actions.find((a) => a.action === "connection_submit")?.count).toBe(
+        expectedConnections,
+      );
     }
   });
 });

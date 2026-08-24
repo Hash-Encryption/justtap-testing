@@ -561,10 +561,11 @@ export function QrTab({ card, session, onTrialStarted, onUpgradeRequest }: QrTab
                   {t("generatingQr")}
                 </div>
               )}
-              <span className="text-[9px] font-mono text-slate-500 truncate max-w-[200px]" dir="ltr">
-                {activePassType === "contact"
-                  ? "Offline vCard"
-                  : `/c/${card.slug || "justtap"}`}
+              <span
+                className="text-[9px] font-mono text-slate-500 truncate max-w-[200px]"
+                dir="ltr"
+              >
+                {activePassType === "contact" ? "Offline vCard" : `/c/${card.slug || "justtap"}`}
               </span>
             </div>
 

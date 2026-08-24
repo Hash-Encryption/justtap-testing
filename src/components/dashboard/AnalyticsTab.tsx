@@ -156,9 +156,7 @@ export function AnalyticsTab({
             >
               {t("analyticsPreviewBadge")}
             </span>
-            <p className="text-xs text-amber-200/90 leading-relaxed">
-              {t("analyticsPreviewDesc")}
-            </p>
+            <p className="text-xs text-amber-200/90 leading-relaxed">{t("analyticsPreviewDesc")}</p>
           </div>
 
           <button

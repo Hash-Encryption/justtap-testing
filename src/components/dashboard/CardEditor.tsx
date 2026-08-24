@@ -564,7 +564,11 @@ export function CardEditor({
               }`}
             />
             <span className="text-xs font-semibold text-slate-300">
-              {isDirty ? (lastAutoSaved ? t("draftSavedLocally") : t("unsavedChanges")) : t("saved")}
+              {isDirty
+                ? lastAutoSaved
+                  ? t("draftSavedLocally")
+                  : t("unsavedChanges")
+                : t("saved")}
             </span>
           </div>
         </div>
@@ -676,12 +680,8 @@ export function CardEditor({
                   {t("proPreviewBadge")}
                 </span>
               </div>
-              <p className="text-xs font-semibold text-white">
-                {t("proPreviewOnlyYou")}
-              </p>
-              <p className="text-[11px] text-slate-400">
-                {t("proPreviewTrialHint")}
-              </p>
+              <p className="text-xs font-semibold text-white">{t("proPreviewOnlyYou")}</p>
+              <p className="text-[11px] text-slate-400">{t("proPreviewTrialHint")}</p>
               <div className="flex items-center justify-center gap-2 pt-1">
                 <button
                   type="button"
@@ -712,9 +712,7 @@ export function CardEditor({
                       {t("customCreatorEngine")}
                     </h3>
                     {!isPro && (
-                      <p className="text-[11px] text-slate-400">
-                        {t("proPreviewSubtitle")}
-                      </p>
+                      <p className="text-[11px] text-slate-400">{t("proPreviewSubtitle")}</p>
                     )}
                   </div>
                 </div>
@@ -1130,7 +1128,8 @@ export function CardEditor({
               className="fixed bottom-4 right-4 z-50 flex items-center gap-1.5 rounded-full border border-emerald-400/30 bg-emerald-400/10 px-3 py-1.5 text-[11px] font-bold text-emerald-300 shadow-lg backdrop-blur-sm"
             >
               <Sparkles className="h-3 w-3" />
-              {t("proTrialBadgePrefix")} · {daysLeft} {daysLeft !== 1 ? t("daysRemaining") : t("dayRemaining")}
+              {t("proTrialBadgePrefix")} · {daysLeft}{" "}
+              {daysLeft !== 1 ? t("daysRemaining") : t("dayRemaining")}
             </div>
           );
         })()}
