@@ -14,7 +14,9 @@ export type ProUpgradeSource =
   | "preview_dock"
   | "pro_features"
   | "pro_features_save"
-  | "pro_features_action";
+  | "pro_features_action"
+  | "connections_save"
+  | "connections_export";
 
 export type ProUpgradeDialogProps = {
   open: boolean;
@@ -44,6 +46,8 @@ export function ProUpgradeDialogBody({
   const isPublish = source === "publish_attempt";
   const isCreatorHeader = source === "custom_creator_header" || source === "preview_dock";
   const isProFeaturesSave = source === "pro_features_save";
+  const isConnectionsSave = source === "connections_save";
+  const isConnectionsExport = source === "connections_export";
 
   // Identify matching preset name if any
   const matchedPreset = draft
@@ -99,7 +103,11 @@ export function ProUpgradeDialogBody({
               ? t("upgradeDialogTitleCreator")
               : isProFeaturesSave
                 ? t("upgradeDialogTitleProSave")
-                : t("upgradeDialogTitleDefault")}
+                : isConnectionsSave
+                  ? t("upgradeDialogTitleConnectionsSave")
+                  : isConnectionsExport
+                    ? t("upgradeDialogTitleConnectionsExport")
+                    : t("upgradeDialogTitleDefault")}
         </h2>
 
         <p className="text-xs text-slate-400">
@@ -109,7 +117,11 @@ export function ProUpgradeDialogBody({
               ? t("upgradeDialogDescCreator")
               : isProFeaturesSave
                 ? t("upgradeDialogDescProSave")
-                : t("upgradeDialogDescDefault")}
+                : isConnectionsSave
+                  ? t("upgradeDialogDescConnectionsSave")
+                  : isConnectionsExport
+                    ? t("upgradeDialogDescConnectionsExport")
+                    : t("upgradeDialogDescDefault")}
         </p>
       </DialogHeader>
 
@@ -217,7 +229,13 @@ export function ProUpgradeDialogBody({
           disabled={loading}
           className="h-10 w-full rounded-2xl text-xs font-medium text-slate-400 hover:text-white transition-colors disabled:opacity-60"
         >
-          {isPublish ? t("keepEditing") : isCreatorHeader ? t("continueDesigning") : t("maybeLater")}
+          {isPublish
+            ? t("keepEditing")
+            : isCreatorHeader
+              ? t("continueDesigning")
+              : isConnectionsSave || isConnectionsExport
+                ? t("continueReviewing")
+                : t("maybeLater")}
         </button>
       </div>
     </>

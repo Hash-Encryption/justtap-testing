@@ -40,12 +40,21 @@ Last updated: 2026-08-22
 - Cloudflare Pages Phase 07 staging deployment and live acceptance PASSED on project `justtap-v2-staging`:
   - Final root-opacity correction deployment `2745d8f9-2a8e-41a8-b705-a7ae49225d52` is available at `https://2745d8f9.justtap-v2-staging.pages.dev` and `https://v2-07-public-card-renderer.justtap-v2-staging.pages.dev`.
   - Verified active/missing cards, permanent tag redirect/revocation, vCard, anonymous dashboard privacy, dynamic post-deploy card creation, metadata, 390x844 and desktop rendering, mobile RTL, keyboard focus, live mid-animation root opacity `1`, transform-only entrance keyframes, contained dock actions, a functional public privacy-enhanced video iframe, and a clean browser console.
-- Complete suite contains 107 automated tests: 96 passed and 11 mutation-capable live-auth tests safely skipped because optional credentials were not supplied; 0 failed (`npm run test:v2`).
-- TypeScript, ESLint (0 errors; 8 pre-existing warnings), production build, secret scan, browser credential scan, public-route privilege scan, changed-file Prettier validation, and `git diff --check` passed.
+- Completed Phase 07 Public Card Renderer implementation and Cloudflare Pages staging verification.
+- Completed Phase 2 Integrated Card Editor Preview with non-autopublish, PRO marker, and contextual CTA.
+- Completed Phase 3 Connections Integrated Pro Preview:
+  - Replaced static locked follow-up notice with safe interactive Free Pro Preview across private tags, follow-up status, and private owner note.
+  - Free preview state remains strictly local in component memory; persistence action branches before Supabase write (`supabase.from("card_leads").update(...)`).
+  - Added contextual "Upgrade to Save Follow-up" and "Upgrade to Export" actions integrated with shared `ProUpgradeDialog` (`connections_save`, `connections_export`).
+  - Preserved Phase 2 non-auto-action rule: trial activation updates in-memory entitlement without auto-saving follow-up details or auto-downloading CSV; user explicitly triggers the final action.
+  - Preview state survives trial activation in memory without unmounting `ConnectionsTab` or resetting user drafts.
+  - Authorized active 7-day trial, Paid Pro, and Enterprise accounts maintain full real persistence and authorized CSV export without regressions.
+  - Bilingual EN and Arabic support with native RTL layout.
+  - All 66 unit tests in `ProUpgrade.test.tsx` pass (228 total unit tests passed, 11 browser tests passed, 0 failures).
 
 ## In progress
 
-- 7-Day Pro Trial — awaiting user approval of implementation before checkpoint commit.
+- Phase 3 complete — awaiting user approval of Phase 3 completion report.
 
   **Migration** `20260822000000_trial_entitlement.sql`:
   - `trial_started_at`, `trial_ends_at`, `trial_used` columns on `public.profiles`

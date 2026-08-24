@@ -123,7 +123,7 @@ type Tab = "cards" | "analytics" | "qr" | "leads" | "pro";
 function Dashboard() {
   const { t, lang } = useTranslation();
   const navigate = useNavigate();
-  const { user, loading } = useAuth();
+  const { user, session, loading } = useAuth();
   const isAdmin = useIsAdmin(user?.id);
   const userId = user?.id;
   const userEmailRef = React.useRef(user?.email);
@@ -677,10 +677,34 @@ function Dashboard() {
                 cardId={selectedCard.id}
                 isPro={isProEntitled(selectedCard)}
                 cards={cards}
+                session={session}
                 onSelectCardId={(id) => {
                   setSelectedCardId(id);
                   const target = cards.find((c) => c.id === id);
                   if (target) setDraft(target);
+                }}
+                onTrialStarted={(trialEndsAt) => {
+                  if (!selectedCardId) return;
+                  setCards((prev) =>
+                    prev.map((c) =>
+                      c.id === selectedCardId
+                        ? {
+                            ...c,
+                            plan_tier: "trialing" as const,
+                            trial_ends_at: trialEndsAt.toISOString(),
+                          }
+                        : c,
+                    ),
+                  );
+                  setDraft((prev) =>
+                    prev && prev.id === selectedCardId
+                      ? {
+                          ...prev,
+                          plan_tier: "trialing" as const,
+                          trial_ends_at: trialEndsAt.toISOString(),
+                        }
+                      : prev,
+                  );
                 }}
               />
             ) : (

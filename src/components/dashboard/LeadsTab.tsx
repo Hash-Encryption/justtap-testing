@@ -13,6 +13,7 @@ import {
   RefreshCw,
   Save,
   Search,
+  Sparkles,
   Trash2,
   UserRound,
   X,
@@ -20,6 +21,7 @@ import {
 import { toast } from "sonner";
 import { supabase } from "@/lib/supabase";
 import { decodeHtmlEntities } from "@/lib/sanitization";
+import type { Session } from "@supabase/supabase-js";
 import {
   buildConnectionsCsv,
   getConnectionContactLinks,
@@ -45,6 +47,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { formatLocalizedRelativeTime, useTranslation, type Translations } from "@/lib/i18n";
+import { ProUpgradeDialog, type ProUpgradeSource } from "./ProUpgradeDialog";
 
 const STATUS_OPTIONS: {
   id: ConnectionStatus | "all";
@@ -69,17 +72,25 @@ export function ConnectionsTab({
   isPro,
   cards,
   onSelectCardId,
+  session,
+  onTrialStarted,
 }: {
   cardId: string;
   isPro: boolean;
   cards?: { id: string; full_name?: string | null; slug?: string | null }[];
   onSelectCardId?: (id: string) => void;
+  session?: Session | null;
+  onTrialStarted?: (trialEndsAt: Date) => void;
 }) {
   const { t, lang } = useTranslation();
   const [connections, setConnections] = useState<Connection[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
   const [reload, setReload] = useState(0);
+
+  // Upgrade Modal State
+  const [upgradeOpen, setUpgradeOpen] = useState(false);
+  const [upgradeSource, setUpgradeSource] = useState<ProUpgradeSource>("connections_save");
 
   // Search & Filter State
   const [searchQuery, setSearchQuery] = useState("");
@@ -243,6 +254,7 @@ export function ConnectionsTab({
           {isPro ? (
             <button
               type="button"
+              data-testid="connections-export-csv-btn"
               onClick={exportCsv}
               disabled={connections.length === 0 || loading}
               className="inline-flex min-h-9 items-center justify-center gap-2 rounded-xl border border-slate-800 bg-[#121216] px-3.5 text-xs font-bold text-slate-200 transition-colors hover:border-slate-700 hover:bg-slate-900 hover:text-white disabled:opacity-40"
@@ -251,10 +263,25 @@ export function ConnectionsTab({
               <span>{t("exportCsv")}</span>
             </button>
           ) : (
-            <div className="inline-flex items-center gap-1.5 rounded-xl border border-slate-800/80 bg-[#121216] px-3 py-1.5 text-xs text-slate-400">
-              <LockKeyhole className="h-3.5 w-3.5 text-purple-400" />
-              <span>{t("csvProNotice")}</span>
-            </div>
+            <button
+              type="button"
+              data-testid="connections-export-csv-btn"
+              onClick={() => {
+                setUpgradeSource("connections_export");
+                setUpgradeOpen(true);
+              }}
+              disabled={connections.length === 0 || loading}
+              className="inline-flex min-h-9 items-center justify-center gap-2 rounded-xl border border-slate-800 bg-[#121216] px-3.5 text-xs font-bold text-slate-200 transition-colors hover:border-purple-500/40 hover:bg-slate-900 hover:text-white disabled:opacity-40"
+            >
+              <FileDown className="h-4 w-4 text-purple-400" />
+              <span>{t("exportCsv")}</span>
+              <span
+                data-testid="connections-export-pro-marker"
+                className="rounded-md border border-amber-400/30 bg-amber-400/15 px-1.5 py-0.5 text-[9px] font-extrabold uppercase tracking-wider text-amber-300"
+              >
+                {t("proMarker")}
+              </span>
+            </button>
           )}
         </div>
       </div>
@@ -548,6 +575,10 @@ export function ConnectionsTab({
                 );
               }}
               onRequestDelete={(conn) => setDeletingConnection(conn)}
+              onRequestUpgrade={(source) => {
+                setUpgradeSource(source);
+                setUpgradeOpen(true);
+              }}
             />
           )}
         </SheetContent>
@@ -595,6 +626,18 @@ export function ConnectionsTab({
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* SHARED PRO UPGRADE DIALOG */}
+      <ProUpgradeDialog
+        open={upgradeOpen}
+        onOpenChange={setUpgradeOpen}
+        source={upgradeSource}
+        session={session}
+        onTrialStarted={(trialEndsAt) => {
+          onTrialStarted?.(trialEndsAt);
+          setUpgradeOpen(false);
+        }}
+      />
     </section>
   );
 }
@@ -605,12 +648,14 @@ function ConnectionDetailPanel({
   onClose,
   onSaved,
   onRequestDelete,
+  onRequestUpgrade,
 }: {
   connection: Connection;
   isPro: boolean;
   onClose: () => void;
   onSaved: (connection: Connection) => void;
   onRequestDelete: (connection: Connection) => void;
+  onRequestUpgrade: (source: ProUpgradeSource) => void;
 }) {
   const { t, lang } = useTranslation();
   const [status, setStatus] = useState<ConnectionStatus>(connection.status);
@@ -637,7 +682,7 @@ function ConnectionDetailPanel({
     setTagInput("");
     setOwnerNote(connection.owner_note ?? "");
     setTagError(null);
-  }, [connection]);
+  }, [connection.id]);
 
   const name = decodeHtmlEntities(connection.sender_name);
   const company = connection.sender_company ? decodeHtmlEntities(connection.sender_company) : null;
@@ -666,6 +711,11 @@ function ConnectionDetailPanel({
   }
 
   async function handleSave() {
+    if (!isPro) {
+      onRequestUpgrade("connections_save");
+      return;
+    }
+
     setSaving(true);
     setTagError(null);
 
@@ -820,105 +870,124 @@ function ConnectionDetailPanel({
           </div>
         )}
 
-        {/* PRO MANAGEMENT SECTION */}
-        {isPro ? (
-          <div className="space-y-4 pt-2 border-t border-slate-800/80">
-            {/* PRIVATE TAGS */}
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <label className="text-xs font-semibold text-slate-300">{t("privateTags")}</label>
-                <span className="text-[10px] text-slate-500 tabular-nums">
-                  {tags.length.toLocaleString(lang === "ar" ? "ar-EG" : "en-US")}/
-                  {(20).toLocaleString(lang === "ar" ? "ar-EG" : "en-US")}
-                </span>
-              </div>
-
-              {/* Tag Chips */}
-              <div className="flex flex-wrap gap-1.5 min-h-7">
-                {tags.map((tag) => (
-                  <span
-                    key={tag}
-                    className="inline-flex items-center gap-1 rounded-lg border border-purple-500/30 bg-purple-500/10 px-2 py-1 text-xs font-medium text-purple-200"
-                  >
-                    <span>#{tag}</span>
-                    <button
-                      type="button"
-                      onClick={() => handleRemoveTag(tag)}
-                      className="text-purple-300 hover:text-white focus-visible:outline-none"
-                      aria-label={`${t("removeTagAria")} #${tag}`}
-                    >
-                      <X className="h-3 w-3" />
-                    </button>
-                  </span>
-                ))}
-              </div>
-
-              {/* Add Tag Input */}
-              <div className="flex gap-2">
-                <input
-                  type="text"
-                  value={tagInput}
-                  onChange={(e) => setTagInput(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") {
-                      e.preventDefault();
-                      handleAddTag();
-                    }
-                  }}
-                  maxLength={40}
-                  placeholder={t("addTagPlaceholder")}
-                  className="h-9 flex-1 rounded-xl border border-slate-800 bg-[#08080a] px-3 text-xs text-white placeholder:text-slate-600 focus:border-purple-500 focus:outline-none"
-                />
-                <button
-                  type="button"
-                  onClick={handleAddTag}
-                  disabled={!tagInput.trim()}
-                  className="inline-flex items-center gap-1 rounded-xl border border-slate-800 bg-slate-900 px-3 text-xs font-semibold text-slate-200 hover:bg-slate-800 hover:text-white disabled:opacity-40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-400"
-                >
-                  <Plus className="h-3.5 w-3.5" />
-                  <span>{t("add")}</span>
-                </button>
-              </div>
-              {tagError && <p className="text-[11px] text-red-400">{tagError}</p>}
+        {/* PRO MANAGEMENT SECTION (INTERACTIVE FOR BOTH PRO AND FREE PREVIEW) */}
+        <div className="space-y-4 pt-2 border-t border-slate-800/80">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-1.5">
+              <LockKeyhole className="h-3.5 w-3.5 text-purple-400" />
+              <span className="text-xs font-semibold text-slate-300">
+                {t("proFollowUpFeaturesTitle")}
+              </span>
             </div>
-
-            {/* FOLLOW-UP STATUS */}
-            <div className="space-y-1.5">
-              <label className="text-xs font-semibold text-slate-300">{t("followUpStatus")}</label>
-              <select
-                value={status}
-                onChange={(e) => setStatus(e.target.value as ConnectionStatus)}
-                className="h-10 w-full rounded-xl border border-slate-800 bg-[#08080a] px-3 text-xs text-white outline-none focus:border-purple-500"
+            {!isPro && (
+              <span
+                data-testid="connections-pro-preview-marker"
+                className="rounded-md border border-amber-400/30 bg-amber-400/15 px-1.5 py-0.5 text-[9px] font-extrabold uppercase tracking-wider text-amber-300"
               >
-                {Object.entries(STATUS_DISPLAY_LABELS).map(([val, lbl]) => (
-                  <option key={val} value={val}>
-                    {lbl}
-                  </option>
-                ))}
-              </select>
+                {t("proPreviewBadge")}
+              </span>
+            )}
+          </div>
+
+          {/* PRIVATE TAGS */}
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <label className="text-xs font-semibold text-slate-300">{t("privateTags")}</label>
+              <span className="text-[10px] text-slate-500 tabular-nums">
+                {tags.length.toLocaleString(lang === "ar" ? "ar-EG" : "en-US")}/
+                {(20).toLocaleString(lang === "ar" ? "ar-EG" : "en-US")}
+              </span>
             </div>
 
-            {/* PRIVATE NOTE */}
-            <div className="space-y-1.5">
-              <div className="flex items-center justify-between">
-                <label className="text-xs font-semibold text-slate-300 flex items-center gap-1.5">
-                  <LockKeyhole className="h-3.5 w-3.5 text-purple-400" />
-                  <span>{t("privateNote")}</span>
-                </label>
-                <span className="text-[10px] text-slate-500">{t("onlyYouCanSeeThis")}</span>
-              </div>
-              <textarea
-                value={ownerNote}
-                onChange={(e) => setOwnerNote(e.target.value)}
-                maxLength={2000}
-                rows={3}
-                placeholder={t("privateNotePlaceholder")}
-                className="w-full rounded-xl border border-slate-800 bg-[#08080a] p-3 text-xs text-white placeholder:text-slate-600 focus:border-purple-500 focus:outline-none leading-relaxed"
+            {/* Tag Chips */}
+            <div className="flex flex-wrap gap-1.5 min-h-7">
+              {tags.map((tag) => (
+                <span
+                  key={tag}
+                  className="inline-flex items-center gap-1 rounded-lg border border-purple-500/30 bg-purple-500/10 px-2 py-1 text-xs font-medium text-purple-200"
+                >
+                  <span>#{tag}</span>
+                  <button
+                    type="button"
+                    onClick={() => handleRemoveTag(tag)}
+                    className="text-purple-300 hover:text-white focus-visible:outline-none"
+                    aria-label={`${t("removeTagAria")} #${tag}`}
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
+                </span>
+              ))}
+            </div>
+
+            {/* Add Tag Input */}
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={tagInput}
+                onChange={(e) => setTagInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    handleAddTag();
+                  }
+                }}
+                maxLength={40}
+                placeholder={t("addTagPlaceholder")}
+                className="h-9 flex-1 rounded-xl border border-slate-800 bg-[#08080a] px-3 text-xs text-white placeholder:text-slate-600 focus:border-purple-500 focus:outline-none"
               />
+              <button
+                type="button"
+                onClick={handleAddTag}
+                disabled={!tagInput.trim()}
+                className="inline-flex items-center gap-1 rounded-xl border border-slate-800 bg-slate-900 px-3 text-xs font-semibold text-slate-200 hover:bg-slate-800 hover:text-white disabled:opacity-40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-400"
+              >
+                <Plus className="h-3.5 w-3.5" />
+                <span>{t("add")}</span>
+              </button>
             </div>
+            {tagError && <p className="text-[11px] text-red-400">{tagError}</p>}
+          </div>
 
+          {/* FOLLOW-UP STATUS */}
+          <div className="space-y-1.5">
+            <label className="text-xs font-semibold text-slate-300">{t("followUpStatus")}</label>
+            <select
+              value={status}
+              onChange={(e) => setStatus(e.target.value as ConnectionStatus)}
+              className="h-10 w-full rounded-xl border border-slate-800 bg-[#08080a] px-3 text-xs text-white outline-none focus:border-purple-500"
+            >
+              {Object.entries(STATUS_DISPLAY_LABELS).map(([val, lbl]) => (
+                <option key={val} value={val}>
+                  {lbl}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* PRIVATE NOTE */}
+          <div className="space-y-1.5">
+            <div className="flex items-center justify-between">
+              <label className="text-xs font-semibold text-slate-300 flex items-center gap-1.5">
+                <LockKeyhole className="h-3.5 w-3.5 text-purple-400" />
+                <span>{t("privateNote")}</span>
+              </label>
+              <span className="text-[10px] text-slate-500">{t("onlyYouCanSeeThis")}</span>
+            </div>
+            <textarea
+              value={ownerNote}
+              onChange={(e) => setOwnerNote(e.target.value)}
+              maxLength={2000}
+              rows={3}
+              placeholder={t("privateNotePlaceholder")}
+              className="w-full rounded-xl border border-slate-800 bg-[#08080a] p-3 text-xs text-white placeholder:text-slate-600 focus:border-purple-500 focus:outline-none leading-relaxed"
+            />
+          </div>
+
+          {/* SAVE OR UPGRADE BUTTON */}
+          {isPro ? (
             <button
               type="button"
+              data-testid="save-follow-up-btn"
               onClick={() => void handleSave()}
               disabled={saving}
               className="w-full inline-flex min-h-10 items-center justify-center gap-2 rounded-xl bg-purple-700 px-4 text-xs font-bold text-white transition-colors hover:bg-purple-600 disabled:opacity-60 shadow-md shadow-purple-900/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-400"
@@ -926,18 +995,21 @@ function ConnectionDetailPanel({
               {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
               <span>{saving ? t("saving") : t("saveChanges")}</span>
             </button>
-          </div>
-        ) : (
-          <div className="rounded-2xl border border-slate-800/80 bg-[#08080a] p-4 text-xs text-slate-400 space-y-1.5">
-            <p className="font-semibold text-slate-300 flex items-center gap-1.5">
-              <LockKeyhole className="h-3.5 w-3.5 text-purple-400" />
-              <span>{t("proFollowUpFeaturesTitle")}</span>
-            </p>
-            <p className="text-[11px] leading-relaxed text-slate-500">
-              {t("proFollowUpFeaturesDesc")}
-            </p>
-          </div>
-        )}
+          ) : (
+            <button
+              type="button"
+              data-testid="upgrade-to-save-follow-up-btn"
+              onClick={() => void handleSave()}
+              className="w-full inline-flex min-h-10 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-purple-600 via-purple-700 to-amber-500 px-4 text-xs font-bold text-white transition-all hover:opacity-95 shadow-md shadow-purple-900/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-400"
+            >
+              <Sparkles className="h-4 w-4" />
+              <span>{t("upgradeToSaveFollowUp")}</span>
+              <span className="rounded-md border border-amber-400/30 bg-amber-400/20 px-1.5 py-0.5 text-[9px] font-extrabold uppercase tracking-wider text-amber-200">
+                {t("proMarker")}
+              </span>
+            </button>
+          )}
+        </div>
       </div>
 
       {/* DRAWER FOOTER / DESTRUCTIVE ACTION */}

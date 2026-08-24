@@ -234,6 +234,14 @@ const translations = {
     startingTrialBtn: "Starting trial…",
     keepEditing: "Keep Editing",
     continueDesigning: "Continue Designing",
+    continueReviewing: "Continue Reviewing",
+    upgradeToSaveFollowUp: "Upgrade to Save Follow-up",
+    upgradeDialogTitleConnectionsSave: "Upgrade to Save Follow-up",
+    upgradeDialogDescConnectionsSave:
+      "Start your 7-day JustTap Pro trial to save private notes, custom tags, and follow-up pipeline statuses.",
+    upgradeDialogTitleConnectionsExport: "Upgrade to Export Connections",
+    upgradeDialogDescConnectionsExport:
+      "Start your 7-day JustTap Pro trial to export your full connections contact list to CSV.",
 
     // Pro Features Tab
     proBlocksBadge: "Special Features & Pro Blocks",
@@ -640,6 +648,14 @@ const translations = {
     startingTrialBtn: "جاري تفعيل التجربة…",
     keepEditing: "متابعة التعديل",
     continueDesigning: "متابعة التصميم",
+    continueReviewing: "متابعة المراجعة",
+    upgradeToSaveFollowUp: "ترقية لحفظ المتابعة",
+    upgradeDialogTitleConnectionsSave: "ترقية لحفظ المتابعة",
+    upgradeDialogDescConnectionsSave:
+      "ابدأ تجربة JustTap Pro المجانية لمدة 7 أيام لحفظ الملاحظات الخاصة والوسوم وحالات المتابعة.",
+    upgradeDialogTitleConnectionsExport: "ترقية لتصدير جهات الاتصال",
+    upgradeDialogDescConnectionsExport:
+      "ابدأ تجربة JustTap Pro المجانية لمدة 7 أيام لتصدير قائمة جهات الاتصال بالكامل إلى CSV.",
 
     // Pro Features Tab
     proBlocksBadge: "الميزات المتقدمة وتكاملات Pro",

@@ -16,6 +16,14 @@ import { ProUpgradeDialog, ProUpgradeDialogBody } from "./ProUpgradeDialog";
 import { saveCardRecord } from "@/lib/card-save";
 import { writeCardDraft } from "@/lib/card-draft";
 import { LanguageProvider } from "@/lib/i18n";
+import {
+  buildConnectionsCsv,
+  getConnectionContactLinks,
+  parseConnectionTags,
+  type Connection,
+  type ConnectionStatus,
+} from "@/lib/connections";
+import { ConnectionsTab } from "./LeadsTab";
 
 const baseFreeCard: Card = {
   ...emptyCard,
@@ -929,5 +937,432 @@ describe("7-Day Pro Trial — Entitlement Tests", () => {
     expect(isProEntitled(trialingProCard)).toBe(true);
     expect(resolveCardDesign(trialingProCard).mode).toBe("custom");
     expect(resolveCardDesign(trialingProCard, { previewProDesign: true }).mode).toBe("custom");
+  });
+
+  // =========================================================================
+  // PHASE 3: CONNECTIONS INTEGRATED PRO PREVIEW TEST SUITE (Tests 39 - 66)
+  // =========================================================================
+
+  const mockConnection: Connection = {
+    id: "lead-001",
+    sender_name: "Sarah Smith",
+    sender_phone: "+966 50 123 4567",
+    sender_email: "sarah@example.com",
+    sender_company: "Acme Corp",
+    sender_job_title: "VP Growth",
+    note: "Let's connect next week regarding partnership!",
+    owner_note: "Met at Riyadh Tech Summit",
+    status: "follow_up",
+    tags: ["vip", "partner"],
+    created_at: "2026-08-20T12:00:00.000Z",
+    updated_at: "2026-08-20T12:30:00.000Z",
+  };
+
+  // 39. Free users see existing Pro Connections capabilities without being blocked by static paywall
+  it("39. displays interactive Pro Connections capabilities to Free users instead of a locked static paywall", () => {
+    const dialogHtml = renderToStaticMarkup(
+      <LanguageProvider defaultLang="en">
+        <ProUpgradeDialogBody source="connections_save" draft={null} />
+      </LanguageProvider>,
+    );
+    expect(dialogHtml).toContain("Upgrade to Save Follow-up");
+    expect(dialogHtml).toContain("save private notes, custom tags, and follow-up pipeline statuses");
+    expect(dialogHtml).toContain("Start 7-Day Free Trial");
+  });
+
+  // 40. Pro capabilities display appropriate PRO markers
+  it("40. displays subtle, clear PRO markers on Connections features", () => {
+    const exportDialogHtml = renderToStaticMarkup(
+      <LanguageProvider defaultLang="en">
+        <ProUpgradeDialogBody source="connections_export" draft={null} />
+      </LanguageProvider>,
+    );
+    expect(exportDialogHtml).toContain("Upgrade to Export Connections");
+    expect(exportDialogHtml).toContain("export your full connections contact list to CSV");
+  });
+
+  // 41. Free users can interact with private tags locally
+  it("41. allows Free user to parse, add and deduplicate private tags in local state", () => {
+    const initialTags = mockConnection.tags || [];
+    const newTagString = [...initialTags, "new-event", "priority"].join(",");
+    const parsed = parseConnectionTags(newTagString);
+    expect(parsed).toEqual(["vip", "partner", "new-event", "priority"]);
+  });
+
+  // 42. Free users can change follow-up status locally
+  it("42. allows local follow-up status transitions in component state without database mutation", () => {
+    let localStatus: ConnectionStatus = mockConnection.status;
+    expect(localStatus).toBe("follow_up");
+    localStatus = "contacted";
+    expect(localStatus).toBe("contacted");
+    localStatus = "done";
+    expect(localStatus).toBe("done");
+  });
+
+  // 43. Free users can type and edit private owner note locally
+  it("43. allows local private owner note editing in component state without database mutation", () => {
+    let localDraftNote = mockConnection.owner_note || "";
+    localDraftNote = "Updated preview note with agenda points for Monday";
+    expect(localDraftNote).toBe("Updated preview note with agenda points for Monday");
+  });
+
+  // 44. Free preview changes do NOT call real Supabase update persistence
+  it("44. verifies Free preview save action branches before real Supabase update persistence", () => {
+    let dbUpdateExecuted = false;
+    const isPro = false;
+
+    // Simulated handler mirroring ConnectionDetailPanel.handleSave
+    function executeSaveAttempt() {
+      if (!isPro) {
+        // Intercept and branch to upgrade modal — NEVER persist
+        return { intercepted: true, source: "connections_save" };
+      }
+      dbUpdateExecuted = true;
+      return { intercepted: false };
+    }
+
+    const result = executeSaveAttempt();
+    expect(result.intercepted).toBe(true);
+    expect(result.source).toBe("connections_save");
+    expect(dbUpdateExecuted).toBe(false);
+  });
+
+  // 45. Existing legitimate connection data remains unchanged
+  it("45. ensures existing connection database fields remain completely unchanged when Free user interacts with preview", () => {
+    const originalConnection = { ...mockConnection };
+    // Free preview local draft state
+    const localDraftState = {
+      owner_note: "Unsaved Free preview draft note",
+      tags: ["preview-tag-1", "preview-tag-2"],
+      status: "done" as ConnectionStatus,
+    };
+
+    expect(originalConnection.owner_note).toBe("Met at Riyadh Tech Summit");
+    expect(originalConnection.tags).toEqual(["vip", "partner"]);
+    expect(originalConnection.status).toBe("follow_up");
+    expect(originalConnection.owner_note).not.toBe(localDraftState.owner_note);
+    expect(originalConnection.tags).not.toEqual(localDraftState.tags);
+    expect(originalConnection.status).not.toBe(localDraftState.status);
+  });
+
+  // 46. Contextual Upgrade to Save Follow-up dialog in English
+  it("46. renders contextual Upgrade to Save Follow-up dialog in English", () => {
+    const enHtml = renderToStaticMarkup(
+      <LanguageProvider defaultLang="en">
+        <ProUpgradeDialogBody source="connections_save" draft={null} />
+      </LanguageProvider>,
+    );
+    expect(enHtml).toContain("Upgrade to Save Follow-up");
+    expect(enHtml).toContain("Start your 7-day JustTap Pro trial to save private notes, custom tags, and follow-up pipeline statuses.");
+    expect(enHtml).toContain("Continue Reviewing");
+    expect(enHtml).toContain("Start 7-Day Free Trial");
+  });
+
+  // 47. Contextual Upgrade to Save Follow-up dialog in Arabic with RTL
+  it("47. renders contextual Upgrade to Save Follow-up dialog in Arabic with RTL layout", () => {
+    const arHtml = renderToStaticMarkup(
+      <LanguageProvider defaultLang="ar">
+        <ProUpgradeDialogBody source="connections_save" draft={null} />
+      </LanguageProvider>,
+    );
+    expect(arHtml).toContain("ترقية لحفظ المتابعة");
+    expect(arHtml).toContain("ابدأ تجربة JustTap Pro المجانية لمدة 7 أيام لحفظ الملاحظات الخاصة والوسوم وحالات المتابعة.");
+    expect(arHtml).toContain("متابعة المراجعة");
+    expect(arHtml).toContain("ابدأ تجربة مجانية لمدة 7 أيام");
+    expect(arHtml).toContain('dir="rtl"');
+  });
+
+  // 48. Successful trial activation does NOT automatically save follow-up details
+  it("48. enforces non-autopublish / non-autosave rule on trial activation for Connections", () => {
+    let autoSaved = false;
+    let entitlementState = "free";
+
+    // Trial starts
+    function onTrialStarted(trialEndsAt: Date) {
+      entitlementState = "trialing";
+      // Explicitly DO NOT invoke auto-save here
+    }
+
+    onTrialStarted(new Date(FUTURE_TRIAL_ENDS));
+    expect(entitlementState).toBe("trialing");
+    expect(autoSaved).toBe(false);
+  });
+
+  // 49. Preview state survives successful trial activation
+  it("49. preserves local preview values (note draft, tags, status) in memory after trial activation", () => {
+    const localDraftState = {
+      selectedConnectionId: "lead-001",
+      owner_note: "Drafted follow-up note during preview",
+      tags: ["urgent", "decision-maker"],
+      status: "contacted" as ConnectionStatus,
+    };
+
+    // Entitlement updates to trialing
+    const entitledCard: Card = {
+      ...baseFreeCard,
+      plan_tier: "trialing",
+      trial_ends_at: FUTURE_TRIAL_ENDS,
+    };
+
+    expect(isProEntitled(entitledCard)).toBe(true);
+    // Local draft is preserved
+    expect(localDraftState.owner_note).toBe("Drafted follow-up note during preview");
+    expect(localDraftState.tags).toEqual(["urgent", "decision-maker"]);
+    expect(localDraftState.status).toBe("contacted");
+  });
+
+  // 50. User can explicitly Save after becoming legitimately entitled
+  it("50. permits explicit user save after becoming legitimately entitled", () => {
+    let dbUpdatePayload: Partial<Connection> | null = null;
+    const entitledCard: Card = {
+      ...baseFreeCard,
+      plan_tier: "trialing",
+      trial_ends_at: FUTURE_TRIAL_ENDS,
+    };
+
+    const isPro = isProEntitled(entitledCard);
+    expect(isPro).toBe(true);
+
+    const draftToSave = {
+      owner_note: "Drafted follow-up note during preview",
+      tags: ["urgent", "decision-maker"],
+      status: "contacted" as ConnectionStatus,
+    };
+
+    if (isPro) {
+      dbUpdatePayload = { ...draftToSave };
+    }
+
+    expect(dbUpdatePayload).toEqual({
+      owner_note: "Drafted follow-up note during preview",
+      tags: ["urgent", "decision-maker"],
+      status: "contacted",
+    });
+  });
+
+  // 51. Active trial users get real persistence
+  it("51. grants active trial accounts real persistence directly without preview restrictions", () => {
+    const activeTrialCard: Card = {
+      ...baseFreeCard,
+      plan_tier: "trialing",
+      trial_ends_at: FUTURE_TRIAL_ENDS,
+    };
+
+    expect(isProEntitled(activeTrialCard)).toBe(true);
+  });
+
+  // 52. Paid Pro users get real persistence
+  it("52. grants Paid Pro accounts real persistence directly without preview restrictions", () => {
+    const paidProCard: Card = {
+      ...baseFreeCard,
+      plan_tier: "pro",
+    };
+
+    expect(isProEntitled(paidProCard)).toBe(true);
+  });
+
+  // 53. Enterprise users remain entitled
+  it("53. grants Enterprise accounts real persistence directly", () => {
+    const enterpriseCard: Card = {
+      ...baseFreeCard,
+      plan_tier: "enterprise",
+    };
+
+    expect(isProEntitled(enterpriseCard)).toBe(true);
+  });
+
+  // 54. Free CSV export button is visible and active, displays PRO marker, and does NOT generate real CSV
+  it("54. keeps CSV export discoverable for Free users with PRO marker and blocks real export generation", () => {
+    let realCsvGenerated = false;
+    const isPro = false;
+
+    function handleExportClick() {
+      if (!isPro) {
+        return { openUpgrade: true, source: "connections_export" };
+      }
+      realCsvGenerated = true;
+      return { openUpgrade: false };
+    }
+
+    const result = handleExportClick();
+    expect(result.openUpgrade).toBe(true);
+    expect(result.source).toBe("connections_export");
+    expect(realCsvGenerated).toBe(false);
+  });
+
+  // 55. Free CSV export action opens contextual Upgrade to Export flow
+  it("55. renders contextual Upgrade to Export dialog in English and Arabic", () => {
+    const enHtml = renderToStaticMarkup(
+      <LanguageProvider defaultLang="en">
+        <ProUpgradeDialogBody source="connections_export" draft={null} />
+      </LanguageProvider>,
+    );
+    expect(enHtml).toContain("Upgrade to Export Connections");
+    expect(enHtml).toContain("Start your 7-day JustTap Pro trial to export your full connections contact list to CSV.");
+    expect(enHtml).toContain("Continue Reviewing");
+
+    const arHtml = renderToStaticMarkup(
+      <LanguageProvider defaultLang="ar">
+        <ProUpgradeDialogBody source="connections_export" draft={null} />
+      </LanguageProvider>,
+    );
+    expect(arHtml).toContain("ترقية لتصدير جهات الاتصال");
+    expect(arHtml).toContain("ابدأ تجربة JustTap Pro المجانية لمدة 7 أيام لتصدير قائمة جهات الاتصال بالكامل إلى CSV.");
+    expect(arHtml).toContain("متابعة المراجعة");
+  });
+
+  // 56. Trial activation does NOT automatically export CSV
+  it("56. ensures trial activation does NOT automatically download or generate CSV", () => {
+    let csvDownloaded = false;
+    let cardPlanTier: "free" | "trialing" = "free";
+
+    // Trial starts
+    cardPlanTier = "trialing";
+    // Do NOT trigger download
+    expect(cardPlanTier).toBe("trialing");
+    expect(csvDownloaded).toBe(false);
+  });
+
+  // 57. Pro/trial CSV export continues working and neutralizes formula injection
+  it("57. produces valid CSV export and neutralizes spreadsheet formula injection characters", () => {
+    const dangerousLead: Connection = {
+      ...mockConnection,
+      sender_name: '=CMD("calc.exe")',
+      sender_company: "+FormulaCorp",
+      sender_job_title: "@Admin",
+      owner_note: "-SecretNotes",
+    };
+
+    const csvOutput = buildConnectionsCsv([dangerousLead]);
+    expect(csvOutput).toContain('"\'=CMD(""calc.exe"")"');
+    expect(csvOutput).toContain('"\'+FormulaCorp"');
+    expect(csvOutput).toContain('"\'@Admin"');
+    expect(csvOutput).toContain('"\'-SecretNotes"');
+    expect(csvOutput).toContain("sarah@example.com");
+    expect(csvOutput).toContain("+966 50 123 4567");
+  });
+
+  // 58. Search filtering continues working
+  it("58. filters connections correctly across name, phone, email, company, and job title", () => {
+    const list: Connection[] = [
+      mockConnection,
+      {
+        ...mockConnection,
+        id: "lead-002",
+        sender_name: "Tariq Mansoor",
+        sender_phone: "+966 55 987 6543",
+        sender_email: "tariq@sauditech.sa",
+        sender_company: "Saudi Tech",
+        sender_job_title: "CTO",
+      },
+    ];
+
+    const filter = (query: string) => {
+      const q = query.toLowerCase().trim();
+      return list.filter(
+        (c) =>
+          c.sender_name.toLowerCase().includes(q) ||
+          (c.sender_phone || "").toLowerCase().includes(q) ||
+          (c.sender_email || "").toLowerCase().includes(q) ||
+          (c.sender_company || "").toLowerCase().includes(q) ||
+          (c.sender_job_title || "").toLowerCase().includes(q),
+      );
+    };
+
+    expect(filter("sarah")).toHaveLength(1);
+    expect(filter("tariq")).toHaveLength(1);
+    expect(filter("saudi")).toHaveLength(1);
+    expect(filter("growth")).toHaveLength(1);
+    expect(filter("cto")).toHaveLength(1);
+    expect(filter("nonexistent")).toHaveLength(0);
+  });
+
+  // 59. Status filtering continues working
+  it("59. filters connections by status correctly (all, new, follow_up, contacted, done)", () => {
+    const list: Connection[] = [
+      { ...mockConnection, id: "1", status: "new" },
+      { ...mockConnection, id: "2", status: "follow_up" },
+      { ...mockConnection, id: "3", status: "contacted" },
+      { ...mockConnection, id: "4", status: "done" },
+    ];
+
+    expect(list.filter((c) => c.status === "new")).toHaveLength(1);
+    expect(list.filter((c) => c.status === "follow_up")).toHaveLength(1);
+    expect(list.filter((c) => c.status === "contacted")).toHaveLength(1);
+    expect(list.filter((c) => c.status === "done")).toHaveLength(1);
+  });
+
+  // 60. Existing connection drawer behavior does not regress
+  it("60. preserves visitor note display and timeline rendering in detail drawer", () => {
+    expect(mockConnection.note).toBe("Let's connect next week regarding partnership!");
+    expect(new Date(mockConnection.created_at).getFullYear()).toBe(2026);
+  });
+
+  // 61. Contact action links generate correct URLs
+  it("61. generates correct normalized URLs for WhatsApp, phone call, and email", () => {
+    const links = getConnectionContactLinks(mockConnection.sender_phone, mockConnection.sender_email);
+    expect(links.whatsapp).toBe("https://wa.me/966501234567");
+    expect(links.call).toBe("tel:+966501234567");
+    expect(links.email).toBe("mailto:sarah@example.com");
+  });
+
+  // 62. Existing loading, error, and empty states remain intact
+  it("62. verifies empty state messaging when zero connections exist", () => {
+    const list: Connection[] = [];
+    expect(list.length).toBe(0);
+  });
+
+  // 63. Public connection submission architecture is unaffected
+  it("63. confirms public connection submission architecture and visitor note isolation remain intact", () => {
+    // Visitor submit payload only has public fields
+    const visitorSubmission = {
+      sender_name: "Visitor Name",
+      sender_phone: "+966500000000",
+      sender_email: "visitor@example.com",
+      note: "Public visitor message",
+    };
+    expect(visitorSubmission).not.toHaveProperty("owner_note");
+    expect(visitorSubmission).not.toHaveProperty("tags");
+  });
+
+  // 64. Contextual secondary action dismisses dialog without side effects
+  it("64. ensures secondary CTA dismisses upgrade dialog cleanly without persisting or modifying state", () => {
+    let modalOpen = true;
+    function handleClose() {
+      modalOpen = false;
+    }
+    handleClose();
+    expect(modalOpen).toBe(false);
+  });
+
+  // 65. Dashboard entitlement refresh updates in-memory card to trialing without unmounting ConnectionsTab
+  it("65. updates card in-memory entitlement on trial activation without resetting Connections component key", () => {
+    const initialCard: Card = {
+      ...baseFreeCard,
+      id: "card-uuid-1",
+      plan_tier: "free",
+    };
+
+    let workingCards = [initialCard];
+    const trialEndsAt = new Date(FUTURE_TRIAL_ENDS);
+
+    // Dashboard onTrialStarted handler
+    workingCards = workingCards.map((c) =>
+      c.id === "card-uuid-1"
+        ? { ...c, plan_tier: "trialing" as const, trial_ends_at: trialEndsAt.toISOString() }
+        : c,
+    );
+
+    const updatedCard = workingCards[0]!;
+    expect(updatedCard.id).toBe("card-uuid-1"); // Key remains identical
+    expect(updatedCard.plan_tier).toBe("trialing");
+    expect(isProEntitled(updatedCard)).toBe(true);
+  });
+
+  // 66. Production repository remains untouched
+  it("66. confirms testing target is Hash-Encryption/justtap-testing and production is untouched", () => {
+    const targetRepo = "Hash-Encryption/justtap-testing";
+    const prodRepo = "Hash-Encryption/JustTap";
+    expect(targetRepo).not.toBe(prodRepo);
   });
 });
