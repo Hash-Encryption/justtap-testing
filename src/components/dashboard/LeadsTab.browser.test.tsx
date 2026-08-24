@@ -93,7 +93,11 @@ describe("ConnectionsTab Component — Browser & Mobile Regression", () => {
       expect(document.activeElement).toBe(searchInput);
 
       // Simulate typing keystrokes
-      searchInput.value = "Sarah";
+      const nativeInputValueSetter = Object.getOwnPropertyDescriptor(
+        window.HTMLInputElement.prototype,
+        "value",
+      )?.set;
+      nativeInputValueSetter?.call(searchInput, "Sarah");
       searchInput.dispatchEvent(new Event("input", { bubbles: true }));
       await nextPaint();
 
