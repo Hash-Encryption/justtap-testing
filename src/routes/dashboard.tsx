@@ -2,8 +2,6 @@ import React, { Component, useEffect, useState, type ReactNode } from "react";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import {
   BarChart3,
-  CheckCircle2,
-  Crown,
   ExternalLink,
   Inbox,
   LayoutGrid,
@@ -14,7 +12,6 @@ import {
   QrCode,
   Shield,
   Sparkles,
-  Zap,
 } from "lucide-react";
 import { toast } from "sonner";
 import { STORAGE_BUCKET, supabase } from "@/lib/supabase";
@@ -23,11 +20,12 @@ import { useAuth, useIsAdmin } from "@/hooks/useAuth";
 import { CardEditor } from "@/components/dashboard/CardEditor";
 import { ProFeaturesTab } from "@/components/dashboard/ProFeaturesTab";
 import { AnalyticsTab } from "@/components/dashboard/AnalyticsTab";
-import { LeadsTab } from "@/components/dashboard/LeadsTab";
+import { ConnectionsTab } from "@/components/dashboard/LeadsTab";
 import { QrTab } from "@/components/dashboard/QrTab";
 import { useTranslation } from "@/lib/i18n";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
-import { slugValidationMessage, validateSlug } from "@/lib/slug";
+import { isProEntitled } from "@/lib/card-design";
+import { validateSlug } from "@/lib/slug";
 import {
   clearCardDraft,
   GUEST_DRAFT_CARD_ID,
@@ -36,10 +34,10 @@ import {
 } from "@/lib/card-draft";
 
 class TabErrorBoundary extends Component<
-  { children: ReactNode },
+  { children: ReactNode; fallbackTitle?: string; reloadText?: string },
   { hasError: boolean; error: Error | null }
 > {
-  constructor(props: { children: ReactNode }) {
+  constructor(props: { children: ReactNode; fallbackTitle?: string; reloadText?: string }) {
     super(props);
     this.state = { hasError: false, error: null };
   }
@@ -53,7 +51,9 @@ class TabErrorBoundary extends Component<
     if (this.state.hasError) {
       return (
         <div className="justtap-glass rounded-3xl p-8 text-center border border-slate-800">
-          <h2 className="text-lg font-bold text-white font-display">Special Features Editor</h2>
+          <h2 className="text-lg font-bold text-white font-display">
+            {this.props.fallbackTitle || "Special Features Editor"}
+          </h2>
           <p className="mt-2 text-xs text-slate-400">
             {this.state.error?.message || "Temporarily unable to render features component."}
           </p>
@@ -62,7 +62,7 @@ class TabErrorBoundary extends Component<
             onClick={() => this.setState({ hasError: false, error: null })}
             className="mt-4 rounded-xl bg-purple-700 px-4 py-2 text-xs font-bold text-white"
           >
-            Reload Component
+            {this.props.reloadText || "Reload Component"}
           </button>
         </div>
       );
@@ -106,7 +106,7 @@ export const Route = createFileRoute("/dashboard")({
       { title: "Dashboard — JustTap Digital Cards" },
       {
         name: "description",
-        content: "Manage your digital business cards, analytics, leads and QR codes.",
+        content: "Manage your digital business cards, analytics, Connections and QR codes.",
       },
       { property: "og:title", content: "Dashboard — JustTap" },
       {
@@ -121,9 +121,9 @@ export const Route = createFileRoute("/dashboard")({
 type Tab = "cards" | "analytics" | "qr" | "leads" | "pro";
 
 function Dashboard() {
-  const { t } = useTranslation();
+  const { t, lang } = useTranslation();
   const navigate = useNavigate();
-  const { user, session, loading } = useAuth();
+  const { user, loading } = useAuth();
   const isAdmin = useIsAdmin(user?.id);
   const userId = user?.id;
   const userEmailRef = React.useRef(user?.email);
@@ -230,7 +230,7 @@ function Dashboard() {
             setDraft(published);
             setEditing(false);
             setFetching(false);
-            toast.success("Your digital card has been published!");
+            toast.success(t("cardPublishedToast"));
             return;
           }
         }
@@ -271,7 +271,7 @@ function Dashboard() {
     return () => {
       cancelled = true;
     };
-  }, [userId]);
+  }, [userId, t]);
 
   async function signOut() {
     await supabase.auth.signOut();
@@ -310,11 +310,11 @@ function Dashboard() {
   }
 
   const navItems: { id: Tab; label: string; icon: React.ReactNode }[] = [
-    { id: "cards", label: "Cards", icon: <LayoutGrid className="w-4 h-4" /> },
-    { id: "analytics", label: "Analytics", icon: <BarChart3 className="w-4 h-4" /> },
-    { id: "qr", label: "QR & Export", icon: <QrCode className="w-4 h-4" /> },
-    { id: "leads", label: "Leads", icon: <Inbox className="w-4 h-4" /> },
-    { id: "pro", label: "Pro Features", icon: <Sparkles className="w-4 h-4 text-amber-400" /> },
+    { id: "cards", label: t("cardsTab"), icon: <LayoutGrid className="w-4 h-4" /> },
+    { id: "analytics", label: t("analyticsTab"), icon: <BarChart3 className="w-4 h-4" /> },
+    { id: "qr", label: t("qrCodeTab"), icon: <QrCode className="w-4 h-4" /> },
+    { id: "leads", label: t("leadsTab"), icon: <Inbox className="w-4 h-4" /> },
+    { id: "pro", label: t("proTab"), icon: <Sparkles className="w-4 h-4 text-amber-400" /> },
   ];
 
   return (
@@ -328,10 +328,10 @@ function Dashboard() {
       />
 
       {/* DESKTOP SIDEBAR NAVIGATION */}
-      <aside className="hidden md:flex flex-col w-64 shrink-0 min-h-screen justtap-glass border-r border-slate-800 p-5 justify-between sticky top-0 h-screen z-30">
+      <aside className="hidden md:flex flex-col w-64 shrink-0 min-h-screen justtap-glass border-r rtl:border-r-0 rtl:border-l border-slate-800 p-5 justify-between sticky top-0 h-screen z-30">
         <div className="space-y-8">
           {/* Logo */}
-          <Link to="/" className="flex items-center space-x-2 px-2">
+          <Link to="/" className="flex items-center space-x-2 rtl:space-x-reverse px-2">
             <span className="font-display text-xl font-extrabold text-white tracking-tight">
               JustTap<span className="text-purple-500">.</span>
             </span>
@@ -354,7 +354,7 @@ function Dashboard() {
                       setEditing(false);
                     }
                   }}
-                  className={`w-full flex items-center space-x-3 px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all ${
+                  className={`w-full flex items-center space-x-3 rtl:space-x-reverse px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all text-start ${
                     active
                       ? "bg-purple-700 text-white shadow-lg shadow-purple-700/25"
                       : "text-slate-400 hover:text-white hover:bg-slate-900/60"
@@ -375,20 +375,20 @@ function Dashboard() {
           {isAdmin && (
             <Link
               to="/admin"
-              className="flex items-center space-x-2 text-xs font-semibold text-amber-300 hover:text-amber-200 px-3 py-2 rounded-xl bg-amber-500/10 border border-amber-500/20 transition-colors"
+              className="flex items-center space-x-2 rtl:space-x-reverse text-xs font-semibold text-amber-300 hover:text-amber-200 px-3 py-2 rounded-xl bg-amber-500/10 border border-amber-500/20 transition-colors"
             >
               <Shield className="w-3.5 h-3.5" />
-              <span>Admin Portal</span>
+              <span>{t("adminPortal")}</span>
             </Link>
           )}
 
           <button
             type="button"
             onClick={() => void signOut()}
-            className="w-full flex items-center space-x-2 text-xs font-semibold text-slate-400 hover:text-white px-3 py-2 rounded-xl hover:bg-slate-900 transition-colors"
+            className="w-full flex items-center space-x-2 rtl:space-x-reverse text-xs font-semibold text-slate-400 hover:text-white px-3 py-2 rounded-xl hover:bg-slate-900 transition-colors"
           >
             <LogOut className="w-3.5 h-3.5" />
-            <span>Sign Out</span>
+            <span>{t("signOut")}</span>
           </button>
         </div>
       </aside>
@@ -426,7 +426,7 @@ function Dashboard() {
             JustTap<span className="text-purple-500">.</span>
           </Link>
 
-          <div className="flex items-center space-x-2">
+          <div className="flex items-center space-x-2 rtl:space-x-reverse">
             <LanguageSwitcher />
             {isAdmin && (
               <Link
@@ -454,20 +454,21 @@ function Dashboard() {
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                   <div>
                     <h1 className="text-2xl font-extrabold text-white font-display">
-                      My Digital Cards
+                      {t("myCardsTitle")}
                     </h1>
                     <p className="text-xs text-slate-400 mt-1">
-                      Manage all digital business cards owned by your account ({cards.length} cards)
+                      {t("myCardsSubtitle")} (
+                      {cards.length.toLocaleString(lang === "ar" ? "ar-EG" : "en-US")})
                     </p>
                   </div>
 
                   <button
                     type="button"
                     onClick={handleCreateNewCard}
-                    className="px-4 py-2.5 rounded-xl bg-purple-700 hover:bg-purple-600 text-white font-bold text-xs shadow-lg shadow-purple-700/30 flex items-center space-x-2 transition-all self-start sm:self-auto"
+                    className="px-4 py-2.5 rounded-xl bg-purple-700 hover:bg-purple-600 text-white font-bold text-xs shadow-lg shadow-purple-700/30 flex items-center gap-2 transition-all self-start sm:self-auto"
                   >
                     <Plus className="w-4 h-4" />
-                    <span>Create New Card</span>
+                    <span>{t("createNewCard")}</span>
                   </button>
                 </div>
 
@@ -478,20 +479,17 @@ function Dashboard() {
                     </div>
                     <div className="space-y-2">
                       <h2 className="text-xl font-bold text-white font-display">
-                        Welcome to JustTap
+                        {t("welcomeTitle")}
                       </h2>
-                      <p className="text-xs text-slate-400 leading-relaxed">
-                        You don&apos;t have a digital business card created yet. Create your
-                        personalized NFC profile to start sharing contact info instantly.
-                      </p>
+                      <p className="text-xs text-slate-400 leading-relaxed">{t("noCardDesc")}</p>
                     </div>
                     <button
                       type="button"
                       onClick={handleCreateNewCard}
-                      className="px-6 py-3 rounded-xl bg-purple-700 hover:bg-purple-600 text-white font-bold text-xs shadow-lg shadow-purple-700/30 inline-flex items-center space-x-2 transition-all"
+                      className="px-6 py-3 rounded-xl bg-purple-700 hover:bg-purple-600 text-white font-bold text-xs shadow-lg shadow-purple-700/30 inline-flex items-center gap-2 transition-all"
                     >
                       <Plus className="w-4 h-4" />
-                      <span>Create My First Card</span>
+                      <span>{t("createMyCardBtn")}</span>
                     </button>
                   </div>
                 ) : (
@@ -508,8 +506,8 @@ function Dashboard() {
                               : "border-slate-800"
                           }`}
                         >
-                          <div className="flex items-start justify-between space-x-3">
-                            <div className="flex items-center space-x-3 min-w-0">
+                          <div className="flex items-start justify-between space-x-3 rtl:space-x-reverse">
+                            <div className="flex items-center space-x-3 rtl:space-x-reverse min-w-0">
                               <div
                                 className="w-12 h-12 rounded-2xl overflow-hidden shrink-0 font-bold text-lg flex items-center justify-center border border-white/10"
                                 style={{
@@ -529,9 +527,11 @@ function Dashboard() {
                               </div>
                               <div className="min-w-0">
                                 <h3 className="text-base font-bold text-white truncate">
-                                  {c.full_name}
+                                  {lang === "ar" && c.full_name_ar ? c.full_name_ar : c.full_name}
                                 </h3>
-                                <p className="text-xs text-slate-400 truncate">/c/{c.slug}</p>
+                                <p className="text-xs text-slate-400 truncate" dir="ltr">
+                                  /c/{c.slug}
+                                </p>
                               </div>
                             </div>
 
@@ -546,16 +546,25 @@ function Dashboard() {
                               }`}
                             >
                               {tagStatus === "active" || tagStatus === "assigned"
-                                ? "NFC Tag Linked"
+                                ? t("tagLinkedBadge")
                                 : tagStatus === "inactive" || tagStatus === "revoked"
-                                  ? "Tag Inactive"
-                                  : "Digital Only"}
+                                  ? t("tagInactiveBadge")
+                                  : t("digitalOnlyBadge")}
                             </span>
                           </div>
 
                           <div className="text-xs text-slate-400 space-y-1">
-                            {c.title && <p className="truncate">Title: {c.title}</p>}
-                            {c.phone && <p className="truncate">Phone: {c.phone}</p>}
+                            {c.title && (
+                              <p className="truncate">
+                                {t("jobTitle")}:{" "}
+                                {lang === "ar" && c.title_ar ? c.title_ar : c.title}
+                              </p>
+                            )}
+                            {c.phone && (
+                              <p className="truncate" dir="ltr">
+                                {t("phoneNumber")}: {c.phone}
+                              </p>
+                            )}
                           </div>
 
                           {/* Quick Actions */}
@@ -563,10 +572,10 @@ function Dashboard() {
                             <button
                               type="button"
                               onClick={() => handleSelectCardForEdit(c)}
-                              className="flex-1 py-2 px-3 rounded-xl bg-purple-700/20 hover:bg-purple-700/30 text-purple-300 border border-purple-500/30 text-xs font-bold flex items-center justify-center space-x-1.5 transition-colors"
+                              className="flex-1 py-2 px-3 rounded-xl bg-purple-700/20 hover:bg-purple-700/30 text-purple-300 border border-purple-500/30 text-xs font-bold flex items-center justify-center gap-1.5 transition-colors"
                             >
                               <Pencil className="w-3.5 h-3.5" />
-                              <span>Edit Card</span>
+                              <span>{t("editCard")}</span>
                             </button>
 
                             <button
@@ -575,10 +584,10 @@ function Dashboard() {
                                 setSelectedCardId(c.id);
                                 setTab("qr");
                               }}
-                              className="py-2 px-3 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-800 text-xs font-bold flex items-center justify-center space-x-1.5 transition-colors"
+                              className="py-2 px-3 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-800 text-xs font-bold flex items-center justify-center gap-1.5 transition-colors"
                             >
                               <QrCode className="w-3.5 h-3.5" />
-                              <span>QR</span>
+                              <span>{t("qrCodeTab")}</span>
                             </button>
 
                             <a
@@ -586,7 +595,7 @@ function Dashboard() {
                               target="_blank"
                               rel="noreferrer"
                               className="py-2 px-3 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-800 text-xs font-bold flex items-center justify-center transition-colors"
-                              title="View Public Card"
+                              title={t("viewPublicCardTitle")}
                             >
                               <ExternalLink className="w-3.5 h-3.5" />
                             </a>
@@ -602,7 +611,6 @@ function Dashboard() {
                 draft={draft || emptyCard}
                 setDraft={setDraft}
                 userId={user?.id ?? "guest"}
-                session={session}
                 isNew={!cards.some((c) => c.id === draft?.id)}
                 savedSlug={selectedCard?.slug}
                 publishedCard={selectedCard}
@@ -628,12 +636,22 @@ function Dashboard() {
 
         {/* TAB 2: ANALYTICS */}
         {tab === "analytics" && (
-          <div className="space-y-6">
-            <h1 className="text-2xl font-bold text-white font-display">Analytics</h1>
+          <div>
             {selectedCard?.id ? (
-              <AnalyticsTab cardId={selectedCard.id} />
+              <AnalyticsTab
+                key={selectedCard.id}
+                cardId={selectedCard.id}
+                isPro={isProEntitled(selectedCard)}
+                cards={cards}
+                onSelectCardId={(id) => {
+                  setSelectedCardId(id);
+                  const target = cards.find((c) => c.id === id);
+                  if (target) setDraft(target);
+                }}
+                onNavigateToConnections={() => setTab("leads")}
+              />
             ) : (
-              <p className="text-xs text-slate-400">Select a card to view analytics.</p>
+              <p className="text-xs text-slate-400">{t("selectCardToViewAnalytics")}</p>
             )}
           </div>
         )}
@@ -641,23 +659,32 @@ function Dashboard() {
         {/* TAB 3: QR & EXPORT */}
         {tab === "qr" && (
           <div className="space-y-6">
-            <h1 className="text-2xl font-bold text-white font-display">QR Code & Export Hub</h1>
+            <h1 className="text-2xl font-bold text-white font-display">{t("qrHubTitle")}</h1>
             {selectedCard ? (
               <QrTab card={selectedCard} />
             ) : (
-              <p className="text-xs text-slate-400">Select a card to view QR features.</p>
+              <p className="text-xs text-slate-400">{t("selectCardToViewQr")}</p>
             )}
           </div>
         )}
 
-        {/* TAB 4: LEADS */}
+        {/* TAB 4: CONNECTIONS */}
         {tab === "leads" && (
-          <div className="space-y-6">
-            <h1 className="text-2xl font-bold text-white font-display">Captured Leads</h1>
+          <div>
             {selectedCard?.id ? (
-              <LeadsTab cardId={selectedCard.id} />
+              <ConnectionsTab
+                key={selectedCard.id}
+                cardId={selectedCard.id}
+                isPro={isProEntitled(selectedCard)}
+                cards={cards}
+                onSelectCardId={(id) => {
+                  setSelectedCardId(id);
+                  const target = cards.find((c) => c.id === id);
+                  if (target) setDraft(target);
+                }}
+              />
             ) : (
-              <p className="text-xs text-slate-400">Select a card to view leads.</p>
+              <p className="text-xs text-slate-400">{t("selectCardToViewConnections")}</p>
             )}
           </div>
         )}
@@ -666,9 +693,12 @@ function Dashboard() {
         {tab === "pro" && (
           <div className="space-y-6">
             <h1 className="text-2xl font-bold text-white font-display">
-              Special Features & Integrations
+              {t("specialFeaturesTitle")}
             </h1>
-            <TabErrorBoundary>
+            <TabErrorBoundary
+              fallbackTitle={t("specialFeaturesEditor")}
+              reloadText={t("reloadComponent")}
+            >
               <ProFeaturesTab
                 card={selectedCard}
                 userId={user?.id ?? "guest"}

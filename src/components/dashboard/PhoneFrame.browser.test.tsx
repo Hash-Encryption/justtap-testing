@@ -188,6 +188,46 @@ describe("CardEditor phone preview layout", () => {
     expect(document.querySelector<HTMLElement>("[data-card-design]")?.dir).toBe("rtl");
     assertContainedLayout();
   });
+
+  it("renders Free user custom design in PhoneFrame preview while public card remains Classic V2", async () => {
+    const freeCustomCard: Card = {
+      ...previewCard,
+      plan_tier: "free",
+      design_mode: "custom",
+      bg_color: "#07111F",
+      surface_color: "#0D1A2B",
+      accent_color: "#2E6FDB",
+      champagne_accent: "#E6D5AC",
+      text_color: "#F8FAFC",
+    };
+
+    const host = document.createElement("div");
+    host.style.width = "270px";
+    document.body.append(host);
+    root = createRoot(host);
+    root.render(
+      <PhoneFrame>
+        <CardPreview card={freeCustomCard} />
+      </PhoneFrame>,
+    );
+    await nextPaint();
+
+    // In PhoneFrame preview, Free user sees custom design
+    const previewElement = document.querySelector<HTMLElement>('[data-card-design="custom"]');
+    expect(previewElement).not.toBeNull();
+    expect(getComputedStyle(previewElement!).backgroundColor).toBe("rgb(7, 17, 31)");
+
+    // Unmount and render public CardView for the same card
+    root.unmount();
+    root = createRoot(host);
+    root.render(<CardView card={freeCustomCard} />);
+    await nextPaint();
+
+    // Public route strictly renders Classic V2
+    const publicElement = document.querySelector<HTMLElement>('[data-card-design="classic_v2"]');
+    expect(publicElement).not.toBeNull();
+    expect(getComputedStyle(publicElement!).backgroundColor).toBe("rgb(8, 8, 10)");
+  });
 });
 
 describe("public card mobile scrolling", () => {

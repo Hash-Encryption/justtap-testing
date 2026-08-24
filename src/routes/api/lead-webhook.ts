@@ -20,9 +20,8 @@ export const Route = createFileRoute("/api/lead-webhook")({
           }
 
           // Query card and pro features
-          const apiKey =
-            (typeof process !== "undefined" && process.env?.["SUPABASE_SERVICE_ROLE_KEY"]) ||
-            SUPABASE_ANON_KEY;
+          const { getSupabaseServiceRoleKey } = await import("@/lib/server-env");
+          const apiKey = getSupabaseServiceRoleKey() || SUPABASE_ANON_KEY;
 
           const client = createClient(SUPABASE_URL, apiKey, {
             auth: { persistSession: false, autoRefreshToken: false },
@@ -38,6 +37,50 @@ export const Route = createFileRoute("/api/lead-webhook")({
           }
 
           const card = data as Card;
+
+          // Check caller authentication
+          const authHeader = request.headers.get("Authorization");
+          const token = authHeader?.startsWith("Bearer ") ? authHeader.slice(7) : null;
+          let isOwner = false;
+          if (token) {
+            const { data: userData } = await client.auth.getUser(token);
+            if (userData?.user && userData.user.id === card.user_id) {
+              isOwner = true;
+            }
+          }
+
+          if (is_test) {
+            if (!isOwner) {
+              return new Response(
+                JSON.stringify({
+                  error: "Unauthorized: Owner authentication required for test mode",
+                }),
+                { status: 401, headers: { "Content-Type": "application/json" } },
+              );
+            }
+          } else {
+            const connectionId = body.connection_id;
+            if (!connectionId) {
+              return new Response(JSON.stringify({ error: "Connection verification required" }), {
+                status: 403,
+                headers: { "Content-Type": "application/json" },
+              });
+            }
+            const { data: leadRecord } = await client
+              .from("card_leads")
+              .select("id")
+              .eq("id", connectionId)
+              .eq("card_id", card_id)
+              .maybeSingle();
+
+            if (!leadRecord) {
+              return new Response(JSON.stringify({ error: "Invalid connection verification" }), {
+                status: 403,
+                headers: { "Content-Type": "application/json" },
+              });
+            }
+          }
+
           const pro = card.pro_features;
 
           if (!pro?.enable_lead_webhook && !is_test) {
@@ -90,7 +133,6 @@ export const Route = createFileRoute("/api/lead-webhook")({
             JSON.stringify({
               success: true,
               webhook_status: webhookStatus,
-              notified_email: pro?.notify_email || card.email || null,
             }),
             {
               status: 200,

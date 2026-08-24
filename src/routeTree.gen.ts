@@ -17,6 +17,7 @@ import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as ApiAdminAuthRouteImport } from './routes/api/admin-auth'
 import { Route as ApiLeadEmailRouteImport } from './routes/api/lead-email'
 import { Route as ApiLeadWebhookRouteImport } from './routes/api/lead-webhook'
+import { Route as ApiTrialStartRouteImport } from './routes/api/trial-start'
 import { Route as CSlugRouteImport } from './routes/c.$slug'
 import { Route as TTokenRouteImport } from './routes/t.$token'
 import { Route as ApiOgSlugRouteImport } from './routes/api/og.$slug'
@@ -63,6 +64,11 @@ const ApiLeadWebhookRoute = ApiLeadWebhookRouteImport.update({
   path: '/api/lead-webhook',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiTrialStartRoute = ApiTrialStartRouteImport.update({
+  id: '/api/trial-start',
+  path: '/api/trial-start',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const CSlugRoute = CSlugRouteImport.update({
   id: '/c/$slug',
   path: '/c/$slug',
@@ -98,6 +104,7 @@ export interface FileRoutesByFullPath {
   '/api/admin-auth': typeof ApiAdminAuthRoute
   '/api/lead-email': typeof ApiLeadEmailRoute
   '/api/lead-webhook': typeof ApiLeadWebhookRoute
+  '/api/trial-start': typeof ApiTrialStartRoute
   '/c/$slug': typeof CSlugRoute
   '/t/$token': typeof TTokenRoute
   '/api/og/$slug': typeof ApiOgSlugRoute
@@ -113,6 +120,7 @@ export interface FileRoutesByTo {
   '/api/admin-auth': typeof ApiAdminAuthRoute
   '/api/lead-email': typeof ApiLeadEmailRoute
   '/api/lead-webhook': typeof ApiLeadWebhookRoute
+  '/api/trial-start': typeof ApiTrialStartRoute
   '/c/$slug': typeof CSlugRoute
   '/t/$token': typeof TTokenRoute
   '/api/og/$slug': typeof ApiOgSlugRoute
@@ -129,6 +137,7 @@ export interface FileRoutesById {
   '/api/admin-auth': typeof ApiAdminAuthRoute
   '/api/lead-email': typeof ApiLeadEmailRoute
   '/api/lead-webhook': typeof ApiLeadWebhookRoute
+  '/api/trial-start': typeof ApiTrialStartRoute
   '/c/$slug': typeof CSlugRoute
   '/t/$token': typeof TTokenRoute
   '/api/og/$slug': typeof ApiOgSlugRoute
@@ -146,6 +155,7 @@ export interface FileRouteTypes {
     | '/api/admin-auth'
     | '/api/lead-email'
     | '/api/lead-webhook'
+    | '/api/trial-start'
     | '/c/$slug'
     | '/t/$token'
     | '/api/og/$slug'
@@ -161,6 +171,7 @@ export interface FileRouteTypes {
     | '/api/admin-auth'
     | '/api/lead-email'
     | '/api/lead-webhook'
+    | '/api/trial-start'
     | '/c/$slug'
     | '/t/$token'
     | '/api/og/$slug'
@@ -176,6 +187,7 @@ export interface FileRouteTypes {
     | '/api/admin-auth'
     | '/api/lead-email'
     | '/api/lead-webhook'
+    | '/api/trial-start'
     | '/c/$slug'
     | '/t/$token'
     | '/api/og/$slug'
@@ -192,6 +204,7 @@ export interface RootRouteChildren {
   ApiAdminAuthRoute: typeof ApiAdminAuthRoute
   ApiLeadEmailRoute: typeof ApiLeadEmailRoute
   ApiLeadWebhookRoute: typeof ApiLeadWebhookRoute
+  ApiTrialStartRoute: typeof ApiTrialStartRoute
   CSlugRoute: typeof CSlugRoute
   TTokenRoute: typeof TTokenRoute
   ApiOgSlugRoute: typeof ApiOgSlugRoute
@@ -257,6 +270,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiLeadWebhookRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/trial-start': {
+      id: '/api/trial-start'
+      path: '/api/trial-start'
+      fullPath: '/api/trial-start'
+      preLoaderRoute: typeof ApiTrialStartRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/c/$slug': {
       id: '/c/$slug'
       path: '/c/$slug'
@@ -304,6 +324,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiAdminAuthRoute: ApiAdminAuthRoute,
   ApiLeadEmailRoute: ApiLeadEmailRoute,
   ApiLeadWebhookRoute: ApiLeadWebhookRoute,
+  ApiTrialStartRoute: ApiTrialStartRoute,
   CSlugRoute: CSlugRoute,
   TTokenRoute: TTokenRoute,
   ApiOgSlugRoute: ApiOgSlugRoute,

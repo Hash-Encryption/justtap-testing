@@ -2,6 +2,7 @@ import { useRef, useState } from "react";
 import { ImagePlus, Loader2, X } from "lucide-react";
 import { toast } from "sonner";
 import { STORAGE_BUCKET, supabase } from "@/lib/supabase";
+import { useTranslation } from "@/lib/i18n";
 
 function compressImageToDataUrl(file: File, maxDim = 1000, quality = 0.85): Promise<string> {
   return new Promise((resolve, reject) => {
@@ -52,6 +53,7 @@ export function Dropzone({
   onChange: (url: string | null) => void;
   round?: boolean;
 }) {
+  const { t } = useTranslation();
   const [busy, setBusy] = useState(false);
   const [over, setOver] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -136,7 +138,7 @@ export function Dropzone({
               alt={label}
               className={`h-16 w-16 object-cover ${round ? "rounded-full" : "rounded-xl"}`}
             />
-            <span className="text-xs text-muted-foreground">Click or drop to replace</span>
+            <span className="text-xs text-muted-foreground">{t("dropzoneReplace")}</span>
             <button
               type="button"
               onClick={(e) => {
@@ -152,7 +154,7 @@ export function Dropzone({
         ) : (
           <span className="flex flex-col items-center gap-1.5 text-xs text-muted-foreground">
             <ImagePlus className="h-5 w-5 text-primary" />
-            Drag &amp; drop or click to upload
+            {t("dropzoneUpload")}
           </span>
         )}
       </div>

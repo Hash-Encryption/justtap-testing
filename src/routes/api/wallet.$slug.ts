@@ -5,6 +5,7 @@ import { resolveTagTokenFromSupabase } from "@/lib/nfc-tag.server";
 import type { TagLookupResult } from "@/lib/nfc-tag";
 import { getWalletApiKey } from "@/lib/server-env";
 import { validateSlug } from "@/lib/slug";
+import { buildVCard } from "@/lib/card";
 
 export const WALLETWALLET_PASSES_ENDPOINT = "https://api.walletwallet.dev/api/passes";
 
@@ -73,26 +74,47 @@ export async function handleWalletRequest(
   }
 
   const requestUrl = new URL(request.url);
-  let barcodeValue = `${requestUrl.origin}/c/${cleanSlug}`;
-  const tagToken = requestUrl.searchParams.get("token");
-  if (tagToken) {
-    const resolveTagToken = dependencies.resolveTagToken ?? resolveTagTokenFromSupabase;
-    const tag = await resolveTagToken(tagToken);
-    if (tag.status === "found" && tag.slug === cleanSlug) {
-      barcodeValue = `https://justtap.pages.dev/t/${tagToken}`;
+  const passType = requestUrl.searchParams.get("type") || requestUrl.searchParams.get("pass_type");
+  const isContactPass = passType === "contact" || passType === "vcard";
+
+  const passTitle = isContactPass ? "Contact Card" : "Digital Card";
+  const passDescription = isContactPass
+    ? `Contact information for ${result.card.full_name}`
+    : `Live digital business card for ${result.card.full_name}`;
+  const passSerial = isContactPass
+    ? `justtap-contact-${result.card.id}`
+    : `justtap-digital-${result.card.id}`;
+
+  let barcodeValue: string;
+  if (isContactPass) {
+    barcodeValue = buildVCard(result.card);
+  } else {
+    barcodeValue = `${requestUrl.origin}/c/${cleanSlug}`;
+    const tagToken = requestUrl.searchParams.get("token");
+    if (tagToken) {
+      const resolveTagToken = dependencies.resolveTagToken ?? resolveTagTokenFromSupabase;
+      const tag = await resolveTagToken(tagToken);
+      if (tag.status === "found" && tag.slug === cleanSlug) {
+        barcodeValue = `${requestUrl.origin}/t/${tagToken}`;
+      }
     }
   }
 
   const secondaryFields = [
+    { label: "CARD", value: passTitle },
     result.card.title ? { label: "TITLE", value: result.card.title } : null,
     result.card.company ? { label: "COMPANY", value: result.card.company } : null,
   ].filter((field): field is { label: string; value: string } => field !== null);
+
   const backFields = [
     result.card.phone ? { label: "PHONE", value: result.card.phone } : null,
     result.card.email ? { label: "EMAIL", value: result.card.email } : null,
     result.card.social_links?.website
       ? { label: "WEBSITE", value: result.card.social_links.website }
       : null,
+    isContactPass
+      ? { label: "INFO", value: "Offline contact card" }
+      : { label: "LINK", value: `${requestUrl.origin}/c/${cleanSlug}` },
   ].filter((field): field is { label: string; value: string } => field !== null);
 
   let walletResponse: Response;
@@ -104,11 +126,13 @@ export async function handleWalletRequest(
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
+        serialNumber: passSerial,
         barcodeValue,
         barcodeFormat: "QR",
         logoText: "JustTap",
-        description: `Digital business card for ${result.card.full_name}`,
+        description: passDescription,
         organizationName: "JustTap",
+        headerFields: [{ label: "CARD", value: passTitle }],
         primaryFields: [{ label: "NAME", value: result.card.full_name }],
         secondaryFields,
         backFields,

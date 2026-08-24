@@ -1,5 +1,8 @@
 import { createFileRoute, notFound, redirect } from "@tanstack/react-router";
-import { resolveTagTokenFromSupabase } from "@/lib/nfc-tag.server";
+import {
+  recordPermanentTagPageViewFromSupabase,
+  resolveTagTokenFromSupabase,
+} from "@/lib/nfc-tag.server";
 import { CardNotFound, CardServiceError } from "@/components/card/CardStatusPages";
 
 export const Route = createFileRoute("/t/$token")({
@@ -12,9 +15,11 @@ export const Route = createFileRoute("/t/$token")({
     }
 
     if (result.status === "found") {
+      const attributed = await recordPermanentTagPageViewFromSupabase(token);
       throw redirect({
         to: "/c/$slug",
         params: { slug: result.slug },
+        search: attributed ? { jt_entry: "permanent_tag" } : {},
         replace: true,
       });
     }

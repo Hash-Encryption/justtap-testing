@@ -736,17 +736,19 @@ export function CardEditor({
 
               {/* 1. PRESET PALETTES */}
               <div className="space-y-3">
-                <span className="text-xs font-semibold text-slate-300 block">Preset Palettes</span>
+                <span className="text-xs font-semibold text-slate-300 block">
+                  {t("presetPalettes")}
+                </span>
                 <div className="grid grid-cols-2 gap-2.5">
                   {DESIGN_PRESET_PALETTES.map((preset) => (
                     <button
                       key={preset.id}
                       type="button"
                       onClick={() => applyPreset(preset.id)}
-                      className="p-3 rounded-xl bg-slate-900/80 border border-slate-800 hover:border-amber-500/40 text-left transition-all space-y-1.5"
+                      className="p-3 rounded-xl bg-slate-900/80 border border-slate-800 hover:border-amber-500/40 text-start transition-all space-y-1.5"
                     >
                       <span className="text-xs font-bold text-white block">{preset.name}</span>
-                      <div className="flex items-center space-x-1.5">
+                      <div className="flex items-center space-x-1.5 rtl:space-x-reverse">
                         <span
                           className="w-4 h-4 rounded-full border border-white/25 shadow-xs"
                           style={{ backgroundColor: preset.bg_color }}
@@ -781,7 +783,7 @@ export function CardEditor({
               {/* 2. HEADER DIVIDER PATTERNS */}
               <div className="space-y-3">
                 <span className="text-xs font-semibold text-slate-300 block">
-                  Header Divider Pattern
+                  {t("headerDividerPattern")}
                 </span>
                 <div className="flex flex-wrap gap-2">
                   {PATTERNS.map((p) => (
@@ -803,7 +805,9 @@ export function CardEditor({
 
               {/* 3. SURFACE FINISHES */}
               <div className="space-y-3">
-                <span className="text-xs font-semibold text-slate-300 block">Surface Finish</span>
+                <span className="text-xs font-semibold text-slate-300 block">
+                  {t("surfaceFinish")}
+                </span>
                 <div className="grid grid-cols-2 gap-2">
                   {FINISHES.map((f) => (
                     <button
@@ -825,31 +829,31 @@ export function CardEditor({
               {/* 4. FIVE CUSTOM COLOR CONTROLS */}
               <div className="space-y-3">
                 <span className="text-xs font-semibold text-slate-300 block">
-                  Five Color Controls
+                  {t("fiveColorControls")}
                 </span>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
                   <ColorPickerField
-                    label="1. Background"
+                    label={t("colorBg")}
                     value={draft.bg_color || "#08080A"}
                     onChange={(v) => set("bg_color", v)}
                   />
                   <ColorPickerField
-                    label="2. Surface"
+                    label={t("colorSurface")}
                     value={draft.surface_color || "#121216"}
                     onChange={(v) => set("surface_color", v)}
                   />
                   <ColorPickerField
-                    label="3. Primary Accent"
+                    label={t("colorPrimaryAccent")}
                     value={draft.accent_color || "#6B21A8"}
                     onChange={(v) => set("accent_color", v)}
                   />
                   <ColorPickerField
-                    label="4. Champagne Accent"
+                    label={t("colorChampagneAccent")}
                     value={draft.champagne_accent || "#E6D5AC"}
                     onChange={(v) => set("champagne_accent", v)}
                   />
                   <ColorPickerField
-                    label="5. Text Color"
+                    label={t("colorText")}
                     value={draft.text_color || "#FAFAFA"}
                     onChange={(v) => set("text_color", v)}
                   />
@@ -885,17 +889,19 @@ export function CardEditor({
               {/* 5. CORNER STYLE & FONT */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <span className="text-xs font-semibold text-slate-300 block">Corner Style</span>
+                  <span className="text-xs font-semibold text-slate-300 block">
+                    {t("cornerStyle")}
+                  </span>
                   <div className="flex gap-1.5">
                     {RADIUS_OPTIONS.map((r) => (
                       <button
                         key={r.value}
                         type="button"
                         onClick={() => set("border_radius", r.value as BorderRadius)}
-                        className={`flex-1 py-2 text-[11px] font-bold rounded-xl border transition-all ${
+                        className={`flex-1 py-2 text-xs font-bold rounded-xl border transition-all ${
                           draft.border_radius === r.value
                             ? "border-amber-400 bg-amber-400/10 text-amber-300"
-                            : "border-slate-800 bg-slate-900/60 text-slate-400"
+                            : "border-slate-800 bg-slate-900 text-slate-400"
                         }`}
                       >
                         {r.label}
@@ -905,17 +911,19 @@ export function CardEditor({
                 </div>
 
                 <div className="space-y-2">
-                  <span className="text-xs font-semibold text-slate-300 block">Card Font</span>
+                  <span className="text-xs font-semibold text-slate-300 block">
+                    {t("cardFont")}
+                  </span>
                   <div className="flex gap-1.5">
                     {FONT_OPTIONS.map((font) => (
                       <button
                         key={font.value}
                         type="button"
                         onClick={() => set("font_family", font.value as FontFamily)}
-                        className={`flex-1 py-2 text-[10px] font-bold rounded-xl border truncate transition-all ${
+                        className={`flex-1 py-2 text-xs font-bold rounded-xl border transition-all ${
                           draft.font_family === font.value
                             ? "border-amber-400 bg-amber-400/10 text-amber-300"
-                            : "border-slate-800 bg-slate-900/60 text-slate-400"
+                            : "border-slate-800 bg-slate-900 text-slate-400"
                         }`}
                       >
                         {font.label}
@@ -980,7 +988,7 @@ export function CardEditor({
               label={t("whatsappNumber")}
               value={draft.whatsapp_phone ?? ""}
               onChange={(v) => set("whatsapp_phone", v)}
-              hint="Auto-formats local numbers (e.g. 0501234567 -> 966501234567)"
+              hint={t("whatsappHint")}
             />
             <Input
               label={t("whatsappMessage")}
@@ -1064,34 +1072,34 @@ export function CardEditor({
 
             <div className="space-y-2">
               <h3 className="text-xl font-bold text-white">
-                {(draft.is_active ?? true) ? "Disable Public Profile?" : "Enable Public Profile?"}
+                {(draft.is_active ?? true)
+                  ? t("disablePublicModalTitle")
+                  : t("enablePublicModalTitle")}
               </h3>
               <p className="text-xs text-slate-400 leading-relaxed">
                 {(draft.is_active ?? true)
-                  ? "This will turn your public profile (/c/" +
-                    draft.slug +
-                    ") into a 404 inactive page. Note: Your physical permanent token (/t/:token) identity will remain completely safe and protected."
-                  : "This will reactivate your public profile URL (/c/" + draft.slug + ")."}
+                  ? t("disablePublicModalDesc")
+                  : t("enablePublicModalDesc")}
               </p>
             </div>
 
-            <div className="flex justify-end space-x-3 pt-2">
+            <div className="flex justify-end space-x-3 rtl:space-x-reverse pt-2">
               <button
                 type="button"
                 onClick={() => setShowDeactivateModal(false)}
                 className="px-4 py-2 text-xs font-semibold text-slate-400 hover:text-white"
               >
-                Cancel
+                {t("cancel")}
               </button>
 
               <button
                 type="button"
                 onClick={() => void handleToggleDeactivate()}
                 disabled={deactivating}
-                className="px-4 py-2 rounded-xl bg-red-600 hover:bg-red-500 text-white font-bold text-xs flex items-center space-x-1.5"
+                className="px-4 py-2 rounded-xl bg-red-600 hover:bg-red-500 text-white font-bold text-xs flex items-center space-x-1.5 rtl:space-x-reverse"
               >
                 {deactivating ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : null}
-                <span>Confirm</span>
+                <span>{t("confirm")}</span>
               </button>
             </div>
           </div>

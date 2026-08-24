@@ -17,6 +17,7 @@ import { STORAGE_BUCKET, supabase } from "@/lib/supabase";
 import { defaultProFeatures, getEmbedVideoUrl, type Card, type ProFeatures } from "@/lib/card";
 import { sanitizeText, sanitizeUrl } from "@/lib/sanitization";
 import { isProEntitled } from "@/lib/card-design";
+import { useTranslation } from "@/lib/i18n";
 import { ProUpgradeDialog, type ProUpgradeSource } from "./ProUpgradeDialog";
 
 type Props = {
@@ -26,6 +27,7 @@ type Props = {
 };
 
 export function ProFeaturesTab({ card, onChange, userId }: Props) {
+  const { t } = useTranslation();
   const [uploadingPdf, setUploadingPdf] = useState(false);
   const [upgradeOpen, setUpgradeOpen] = useState(false);
   const [upgradeSource, setUpgradeSource] = useState<ProUpgradeSource>("pro_features");
@@ -517,7 +519,7 @@ export function ProFeaturesTab({ card, onChange, userId }: Props) {
           </div>
 
           <div className="flex items-center gap-2">
-            <label className="text-xs font-medium cursor-pointer">Email Alerts</label>
+            <label className="text-xs font-medium cursor-pointer">{t("emailAlertsToggle")}</label>
             <input
               type="checkbox"
               checked={pro.enable_email_alerts !== false}
@@ -531,7 +533,7 @@ export function ProFeaturesTab({ card, onChange, userId }: Props) {
           <div className="mt-4 space-y-4 pt-3 border-t border-border/40">
             <div>
               <label className="mb-1 block text-xs font-medium text-muted-foreground">
-                Destination Email Address for Lead Notifications
+                {t("emailAlertsDestLabel")}
               </label>
               <div className="flex gap-2">
                 <input
@@ -547,14 +549,11 @@ export function ProFeaturesTab({ card, onChange, userId }: Props) {
                   disabled={testingEmail}
                   className="flex shrink-0 items-center gap-1.5 rounded-xl bg-primary px-4 py-2 text-xs font-semibold text-primary-foreground hover:opacity-90 disabled:opacity-50"
                 >
-                  <Send className="h-3.5 w-3.5" />
-                  {testingEmail ? "Sending..." : "Send Test Email Alert"}
+                  <Send className="h-3.5 w-3.5 rtl:rotate-180" />
+                  {testingEmail ? t("sendingTestEmail") : t("sendTestEmailBtn")}
                 </button>
               </div>
-              <p className="mt-1.5 text-[11px] text-muted-foreground">
-                Leads are also saved permanently in your{" "}
-                <strong className="text-foreground">Leads Inbox</strong> tab for CSV export.
-              </p>
+              <p className="mt-1.5 text-[11px] text-muted-foreground">{t("leadsInboxHint")}</p>
             </div>
           </div>
         )}
@@ -569,19 +568,17 @@ export function ProFeaturesTab({ card, onChange, userId }: Props) {
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h3 className="font-semibold text-sm">Advanced HTTP Webhook (Zapier / Make.com)</h3>
+                <h3 className="font-semibold text-sm">{t("webhookTitle")}</h3>
                 <span className="rounded-full bg-secondary px-2 py-0.5 text-[10px] font-medium text-muted-foreground">
-                  Optional
+                  {t("webhookOptional")}
                 </span>
               </div>
-              <p className="text-xs text-muted-foreground">
-                Forward raw JSON lead payloads to external automation systems or custom APIs.
-              </p>
+              <p className="text-xs text-muted-foreground">{t("webhookDesc")}</p>
             </div>
           </div>
 
           <div className="flex items-center gap-2">
-            <label className="text-xs font-medium cursor-pointer">Enable Webhook</label>
+            <label className="text-xs font-medium cursor-pointer">{t("enableWebhookToggle")}</label>
             <input
               type="checkbox"
               checked={pro.enable_lead_webhook ?? false}
@@ -595,7 +592,7 @@ export function ProFeaturesTab({ card, onChange, userId }: Props) {
           <div className="mt-4 space-y-3 pt-3 border-t border-border/40">
             <div>
               <label className="mb-1 block text-xs font-medium text-muted-foreground">
-                Webhook Catch Endpoint URL
+                {t("webhookUrlLabel")}
               </label>
               <div className="flex gap-2">
                 <input
@@ -613,8 +610,8 @@ export function ProFeaturesTab({ card, onChange, userId }: Props) {
                   disabled={testingWebhook}
                   className="flex shrink-0 items-center gap-1.5 rounded-xl border border-border px-3 text-xs font-medium hover:bg-secondary disabled:opacity-50"
                 >
-                  <Send className="h-3.5 w-3.5" />
-                  {testingWebhook ? "…" : "Test Webhook"}
+                  <Send className="h-3.5 w-3.5 rtl:rotate-180" />
+                  {testingWebhook ? "…" : t("testWebhookBtn")}
                 </button>
               </div>
             </div>
@@ -631,10 +628,8 @@ export function ProFeaturesTab({ card, onChange, userId }: Props) {
                 <Sparkles className="h-5 w-5" />
               </div>
               <div>
-                <h4 className="text-xs font-semibold">Remove Branding Badge</h4>
-                <p className="text-[11px] text-muted-foreground">
-                  Hide &quot;Powered by JustTap&quot; footer watermark.
-                </p>
+                <h4 className="text-xs font-semibold">{t("removeBrandingTitle")}</h4>
+                <p className="text-[11px] text-muted-foreground">{t("removeBrandingDesc")}</p>
               </div>
             </div>
 
@@ -653,7 +648,7 @@ export function ProFeaturesTab({ card, onChange, userId }: Props) {
         <div className="flex items-center gap-2 text-xs">
           <Sparkles className="h-4 w-4 text-primary" />
           <span className="font-medium text-muted-foreground">
-            {isPro ? "Pro features active on your account" : "Customize special features & publish"}
+            {isPro ? t("proFeaturesActiveOnAccount") : t("customizeSpecialFeatures")}
           </span>
         </div>
         <button
@@ -662,7 +657,7 @@ export function ProFeaturesTab({ card, onChange, userId }: Props) {
           disabled={saving}
           className="flex items-center gap-2 rounded-xl bg-primary px-5 py-2.5 text-xs font-semibold text-primary-foreground hover:opacity-90 transition-opacity disabled:opacity-50"
         >
-          {saving ? "Saving..." : "Save & Publish Special Features"}
+          {saving ? t("saving") : t("saveProFeaturesBtn")}
         </button>
       </div>
 

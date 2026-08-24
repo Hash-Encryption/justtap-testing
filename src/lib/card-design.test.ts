@@ -188,4 +188,28 @@ describe("Phase 07 shared card design & Custom Creator resolver", () => {
     expect(resolveCardDesign({ ...customCard, plan_tier: "free" })).toEqual(CLASSIC_V2_DESIGN);
     expect(CLASSIC_V2_DESIGN.onAccentColor).toBe("#FFFFFF");
   });
+
+  it("resolves custom design for Free cards when previewProDesign option is explicitly true", () => {
+    const freeCustomCard: Card = { ...customCard, plan_tier: "free" };
+    // Public / default resolver strictly returns Classic V2 for Free
+    expect(resolveCardDesign(freeCustomCard)).toEqual(CLASSIC_V2_DESIGN);
+    expect(resolveCardDesign(freeCustomCard, { previewProDesign: false })).toEqual(
+      CLASSIC_V2_DESIGN,
+    );
+
+    // Private trusted preview resolver returns custom design
+    const previewDesign = resolveCardDesign(freeCustomCard, { previewProDesign: true });
+    expect(previewDesign.mode).toBe("custom");
+    if (previewDesign.mode === "custom") {
+      expect(previewDesign.bgColor).toBe("#010203");
+      expect(previewDesign.surfaceColor).toBe("#111213");
+      expect(previewDesign.accentColor).toBe("#212223");
+      expect(previewDesign.champagneAccent).toBe("#D1D2D3");
+      expect(previewDesign.textColor).toBe("#F1F2F3");
+      expect(previewDesign.headerPattern).toBe("geometric");
+      expect(previewDesign.surfaceFinish).toBe("carbon_grain");
+      expect(previewDesign.borderRadius).toBe("rounded");
+      expect(previewDesign.fontFamily).toBe("Space Grotesk");
+    }
+  });
 });

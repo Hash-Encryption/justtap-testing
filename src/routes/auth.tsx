@@ -4,6 +4,8 @@ import { Mail, Lock, User, ArrowRight } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { z } from "zod";
 import { formatAuthErrorMessage, validateRedirectUrl } from "@/lib/auth";
+import { useTranslation } from "@/lib/i18n";
+import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 
 export const Route = createFileRoute("/auth")({
   validateSearch: z.object({
@@ -24,6 +26,7 @@ export const Route = createFileRoute("/auth")({
 });
 
 function AuthPage() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const search = Route.useSearch();
   const [isSignUp, setIsSignUp] = useState(search.mode === "signup");
@@ -42,7 +45,7 @@ function AuthPage() {
 
     try {
       if (isSignUp) {
-        const { data, error } = await supabase.auth.signUp({
+        const { error } = await supabase.auth.signUp({
           email,
           password,
           options: {
@@ -54,19 +57,19 @@ function AuthPage() {
 
         setMessage({
           type: "success",
-          text: "Account created! Redirecting...",
+          text: t("authSuccessCreated"),
         });
 
         setTimeout(() => void navigate({ to: redirectTarget as "/dashboard" }), 1200);
       } else {
-        const { data, error } = await supabase.auth.signInWithPassword({
+        const { error } = await supabase.auth.signInWithPassword({
           email,
           password,
         });
 
         if (error) throw error;
 
-        setMessage({ type: "success", text: "Sign in successful! Redirecting..." });
+        setMessage({ type: "success", text: t("authSuccessSignIn") });
         setTimeout(() => void navigate({ to: redirectTarget as "/dashboard" }), 800);
       }
     } catch (err: unknown) {
@@ -82,26 +85,27 @@ function AuthPage() {
 
   return (
     <div className="grid-glow min-h-screen bg-background text-foreground flex flex-col items-center justify-center p-4 font-sans selection:bg-primary selection:text-primary-foreground">
-      {/* BRANDING */}
-      <Link to="/" className="mb-8 flex items-center space-x-2 group">
-        <div className="w-10 h-10 rounded-2xl bg-primary border border-[#E6D5AC]/20 flex items-center justify-center font-extrabold text-primary-foreground text-xl shadow-lg shadow-[rgba(107,33,168,0.25)] group-hover:scale-105 transition-transform">
-          J
-        </div>
-        <span className="font-display font-extrabold text-2xl text-foreground tracking-tight">
-          JustTap
-        </span>
-      </Link>
+      {/* BRANDING & LANGUAGE SWITCHER */}
+      <div className="mb-6 flex items-center gap-4">
+        <Link to="/" className="flex items-center gap-2 group">
+          <div className="w-10 h-10 rounded-2xl bg-primary border border-[#E6D5AC]/20 flex items-center justify-center font-extrabold text-primary-foreground text-xl shadow-lg shadow-[rgba(107,33,168,0.25)] group-hover:scale-105 transition-transform">
+            J
+          </div>
+          <span className="font-display font-extrabold text-2xl text-foreground tracking-tight">
+            {t("appName")}
+          </span>
+        </Link>
+        <LanguageSwitcher />
+      </div>
 
       {/* AUTH CARD */}
       <div className="justtap-glass w-full max-w-md rounded-3xl p-6 sm:p-8 space-y-6">
         <div className="text-center space-y-1">
           <h2 className="font-display text-2xl font-extrabold text-foreground">
-            {isSignUp ? "Create JustTap Account" : "Welcome Back"}
+            {isSignUp ? t("authTitleSignUp") : t("authTitleSignIn")}
           </h2>
           <p className="text-xs text-muted-foreground">
-            {isSignUp
-              ? "Start building your physical NFC and digital business card profile"
-              : "Sign in to access your card editor, leads, and analytics"}
+            {isSignUp ? t("authDescSignUp") : t("authDescSignIn")}
           </p>
         </div>
 
@@ -120,16 +124,18 @@ function AuthPage() {
         <form onSubmit={handleSubmit} className="space-y-4">
           {isSignUp && (
             <div>
-              <label className="block text-xs font-semibold text-foreground mb-1">Full Name</label>
+              <label className="block text-xs font-semibold text-foreground mb-1">
+                {t("authFullNameLabel")}
+              </label>
               <div className="relative">
-                <User className="w-4 h-4 text-muted-foreground absolute left-3 top-3.5" />
+                <User className="w-4 h-4 text-muted-foreground absolute left-3 rtl:left-auto rtl:right-3 top-3.5" />
                 <input
                   type="text"
                   required
                   value={fullName}
                   onChange={(e) => setFullName(e.target.value)}
-                  placeholder="Hashim Alnimari"
-                  className="w-full pl-9 pr-4 py-2.5 bg-background border border-border rounded-xl text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+                  placeholder={t("authFullNamePlaceholder")}
+                  className="w-full pl-9 pr-4 rtl:pl-4 rtl:pr-9 py-2.5 bg-background border border-border rounded-xl text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
                 />
               </div>
             </div>
@@ -137,33 +143,35 @@ function AuthPage() {
 
           <div>
             <label className="block text-xs font-semibold text-foreground mb-1">
-              Email Address
+              {t("authEmailLabel")}
             </label>
             <div className="relative">
-              <Mail className="w-4 h-4 text-muted-foreground absolute left-3 top-3.5" />
+              <Mail className="w-4 h-4 text-muted-foreground absolute left-3 rtl:left-auto rtl:right-3 top-3.5" />
               <input
                 type="email"
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="you@example.com"
-                className="w-full pl-9 pr-4 py-2.5 bg-background border border-border rounded-xl text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+                placeholder={t("authEmailPlaceholder")}
+                className="w-full pl-9 pr-4 rtl:pl-4 rtl:pr-9 py-2.5 bg-background border border-border rounded-xl text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
               />
             </div>
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-foreground mb-1">Password</label>
+            <label className="block text-xs font-semibold text-foreground mb-1">
+              {t("authPasswordLabel")}
+            </label>
             <div className="relative">
-              <Lock className="w-4 h-4 text-muted-foreground absolute left-3 top-3.5" />
+              <Lock className="w-4 h-4 text-muted-foreground absolute left-3 rtl:left-auto rtl:right-3 top-3.5" />
               <input
                 type="password"
                 required
                 minLength={6}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                placeholder="••••••••"
-                className="w-full pl-9 pr-4 py-2.5 bg-background border border-border rounded-xl text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+                placeholder={t("authPasswordPlaceholder")}
+                className="w-full pl-9 pr-4 rtl:pl-4 rtl:pr-9 py-2.5 bg-background border border-border rounded-xl text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
               />
             </div>
           </div>
@@ -171,10 +179,16 @@ function AuthPage() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full py-3.5 px-4 bg-primary hover:bg-[#7E22CE] text-primary-foreground font-bold rounded-2xl shadow-xl shadow-[rgba(107,33,168,0.25)] flex items-center justify-center space-x-2 transition-all disabled:opacity-50 mt-2"
+            className="w-full py-3.5 px-4 bg-primary hover:bg-[#7E22CE] text-primary-foreground font-bold rounded-2xl shadow-xl shadow-[rgba(107,33,168,0.25)] flex items-center justify-center gap-2 transition-all disabled:opacity-50 mt-2"
           >
-            <span>{loading ? "Processing..." : isSignUp ? "Create Free Account" : "Sign In"}</span>
-            <ArrowRight className="w-4 h-4" />
+            <span>
+              {loading
+                ? t("authSubmitProcessing")
+                : isSignUp
+                  ? t("authSubmitSignUp")
+                  : t("authSubmitSignIn")}
+            </span>
+            <ArrowRight className="w-4 h-4 rtl:rotate-180" />
           </button>
         </form>
 
@@ -187,7 +201,7 @@ function AuthPage() {
             }}
             className="min-h-11 px-3 text-xs text-muted-foreground hover:text-[#E6D5AC] font-medium transition-colors"
           >
-            {isSignUp ? "Already have an account? Sign in" : "Don't have an account? Sign up free"}
+            {isSignUp ? t("authToggleToSignIn") : t("authToggleToSignUp")}
           </button>
         </div>
       </div>

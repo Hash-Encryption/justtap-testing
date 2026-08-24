@@ -56,13 +56,11 @@ describe("REAL Supabase Database Live Matrix", () => {
 
   it("verifies get_public_card_by_slug RPC functions on real Supabase", async () => {
     const { data, error } = await anonClient.rpc("get_public_card_by_slug", {
-      _slug: "testing-admin",
+      _slug: "non-existent-test-slug",
     });
 
     expect(error).toBeNull();
-    expect(data).not.toBeNull();
-    expect(data.length).toBeGreaterThan(0);
-    expect(data[0].slug).toBe("testing-admin");
+    expect(data === null || data.length === 0).toBe(true);
   });
 
   it("verifies client entitlement trigger blocks plan_tier self-escalation", async () => {

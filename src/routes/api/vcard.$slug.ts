@@ -3,7 +3,6 @@ import { createClient } from "@supabase/supabase-js";
 import { SUPABASE_ANON_KEY, SUPABASE_URL } from "@/lib/supabase";
 import { buildVCard } from "@/lib/card";
 import { checkRateLimit } from "@/lib/rate-limit";
-import { sanitizeText } from "@/lib/sanitization";
 import { validateSlug } from "@/lib/slug";
 import { resolvePublicCardFromSupabase } from "@/lib/public-card.server";
 
@@ -63,18 +62,26 @@ export const Route = createFileRoute("/api/vcard/$slug")({
         const card = result.card;
 
         // 4. Log analytics without changing public-card resolution semantics
-        const apiKey =
-          (typeof process !== "undefined" && process.env?.["SUPABASE_SERVICE_ROLE_KEY"]) ||
-          SUPABASE_ANON_KEY;
+        const requestUrl = new URL(request.url);
+        const eventId = requestUrl.searchParams.get("event_id") || crypto.randomUUID();
+        const sessionId = requestUrl.searchParams.get("session_id");
+        const referrerHost = requestUrl.searchParams.get("referrer_host");
+        const deviceCategory = requestUrl.searchParams.get("device_category");
+        const metadata = {
+          ...(referrerHost ? { referrer_host: referrerHost } : {}),
+          ...(deviceCategory ? { device_category: deviceCategory } : {}),
+        };
 
-        const client = createClient(SUPABASE_URL, apiKey, {
+        const client = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
           auth: { persistSession: false, autoRefreshToken: false },
         });
 
-        await client.from("card_analytics").insert({
-          card_id: card.id,
-          event_type: "vcard_download",
-          user_agent: sanitizeText(request.headers.get("user-agent") || "", 250) || null,
+        await client.rpc("record_public_card_event", {
+          _card_slug: card.slug,
+          _event_type: "vcard_download",
+          _event_id: eventId,
+          _session_id: sessionId,
+          _metadata: metadata,
         });
 
         // 5. Stream vCard response with strict security headers
