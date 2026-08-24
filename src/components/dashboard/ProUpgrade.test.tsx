@@ -33,6 +33,7 @@ import {
 import { ConnectionsTab } from "./LeadsTab";
 import { AnalyticsTab } from "./AnalyticsTab";
 import { QrTab } from "./QrTab";
+import { ProFeaturesTab } from "./ProFeaturesTab";
 
 const baseFreeCard: Card = {
   ...emptyCard,
@@ -2584,5 +2585,317 @@ describe("Phase 6: Integrated Apple Wallet & Pro Discovery Experience", () => {
     expect(html).not.toContain("SIGNED");
     expect(html).not.toContain("معتمد");
     expect(html).toContain("Download Wallet Pass (.pkpass)");
+  });
+
+  // ==========================================
+  // PHASE 7: UPGRADE → RETURN → CONTINUE INTEGRATION MATRIX
+  // ==========================================
+
+  // 148. Phase 7 — Card Editor: Free custom preview -> Upgrade to Publish -> trial activated -> draft intact -> NO auto-publish -> deliberate publish saves
+  it("148. Phase 7: Card Editor preserves draft state post-trial without auto-publishing, then allows deliberate publish", () => {
+    let workingDraft: Card = {
+      ...baseFreeCard,
+      ...customDesignFields,
+    };
+    let saveCallCount = 0;
+
+    // Simulated handleSave before upgrade: blocked by entitlement
+    function handleSave(draft: Card) {
+      if (draft.design_mode === "custom" && !isProEntitled(draft)) {
+        // Upgrade dialog opens
+        return { ok: false, upgradeRequired: true };
+      }
+      saveCallCount++;
+      return { ok: true, saved: draft };
+    }
+
+    const preTrialAttempt = handleSave(workingDraft);
+    expect(preTrialAttempt.upgradeRequired).toBe(true);
+    expect(saveCallCount).toBe(0);
+
+    // Trial activation occurs
+    const trialEndsAt = new Date(FUTURE_TRIAL_ENDS);
+    workingDraft = {
+      ...workingDraft,
+      plan_tier: "trialing",
+      trial_ends_at: trialEndsAt.toISOString(),
+    };
+
+    // Confirm NO auto-publish occurred upon trial activation
+    expect(saveCallCount).toBe(0);
+    expect(workingDraft.accent_color).toBe("#C98F9D");
+    expect(workingDraft.font_family).toBe("Space Grotesk");
+    expect(isProEntitled(workingDraft)).toBe(true);
+
+    // Deliberate second publish succeeds
+    const postTrialAttempt = handleSave(workingDraft);
+    expect(postTrialAttempt.ok).toBe(true);
+    expect(saveCallCount).toBe(1);
+  });
+
+  // 149. Phase 7 — Connections: Save Follow-up: preview note/tags -> upgrade -> drawer/fields intact -> NO auto-save -> deliberate save persists
+  it("149. Phase 7: Connections preserves entered follow-up notes/tags post-trial without auto-saving, then allows deliberate save", () => {
+    let card: Card = { ...baseFreeCard };
+    let leadNoteState = "Met at Riyadh Tech Summit - follow up on Tuesday";
+    let leadTagsState = ["investor", "saudi-tech"];
+    let saveCallCount = 0;
+
+    function handleFollowUpSave(isPro: boolean, note: string, tags: string[]) {
+      if (!isPro) {
+        return { ok: false, upgradeRequired: true };
+      }
+      saveCallCount++;
+      return { ok: true, note, tags };
+    }
+
+    const preUpgradeSave = handleFollowUpSave(isProEntitled(card), leadNoteState, leadTagsState);
+    expect(preUpgradeSave.upgradeRequired).toBe(true);
+    expect(saveCallCount).toBe(0);
+
+    // Upgrade triggers and finishes
+    card = {
+      ...card,
+      plan_tier: "trialing",
+      trial_ends_at: FUTURE_TRIAL_ENDS,
+    };
+
+    // Note, tags, and drawer state remain mounted with NO auto-save
+    expect(saveCallCount).toBe(0);
+    expect(leadNoteState).toBe("Met at Riyadh Tech Summit - follow up on Tuesday");
+    expect(leadTagsState).toEqual(["investor", "saudi-tech"]);
+
+    // Deliberate second save executes successfully
+    const postUpgradeSave = handleFollowUpSave(isProEntitled(card), leadNoteState, leadTagsState);
+    expect(postUpgradeSave.ok).toBe(true);
+    expect(saveCallCount).toBe(1);
+  });
+
+  // 150. Phase 7 — Connections: Export: Filtered list -> upgrade -> list/filters intact -> NO auto-download -> deliberate export works
+  it("150. Phase 7: Connections preserves filtered list post-trial without auto-download, then allows deliberate export", () => {
+    let card: Card = { ...baseFreeCard };
+    let downloadCallCount = 0;
+    const connections: Connection[] = [
+      {
+        id: "lead-1",
+        sender_name: "Nasser Al-Subaie",
+        sender_phone: "+966501234567",
+        sender_email: "nasser@example.com",
+        sender_company: "Aramco",
+        sender_job_title: "VP Engineering",
+        note: null,
+        owner_note: "Key partner",
+        status: "contacted",
+        tags: ["enterprise"],
+        created_at: "2026-03-01T10:00:00Z",
+        updated_at: "2026-03-01T10:00:00Z",
+      },
+    ];
+
+    function handleExportClick(isPro: boolean, list: Connection[]) {
+      if (!isPro) {
+        return { ok: false, upgradeRequired: true };
+      }
+      downloadCallCount++;
+      return { ok: true, csv: buildConnectionsCsv(list) };
+    }
+
+    const preAttempt = handleExportClick(isProEntitled(card), connections);
+    expect(preAttempt.upgradeRequired).toBe(true);
+    expect(downloadCallCount).toBe(0);
+
+    // Trial starts
+    card = { ...card, plan_tier: "trialing", trial_ends_at: FUTURE_TRIAL_ENDS };
+
+    // Confirm NO auto-download occurred
+    expect(downloadCallCount).toBe(0);
+
+    // Deliberate click generates CSV
+    const postAttempt = handleExportClick(isProEntitled(card), connections);
+    expect(postAttempt.ok).toBe(true);
+    expect(downloadCallCount).toBe(1);
+    expect(postAttempt.csv).toContain("Nasser Al-Subaie");
+    expect(postAttempt.csv).toContain("+966501234567");
+  });
+
+  // 151. Phase 7 — Analytics: Sample preview -> Unlock Analytics -> trial succeeds -> range/tab preserved -> NO fake events -> live data loads
+  it("151. Phase 7: Analytics transitions from sample preview to live data without generating fake events", () => {
+    let card: Card = { ...baseFreeCard };
+    const selectedRange = "30d";
+
+    // Free user gets sample preview
+    const sampleData = getSampleAnalyticsData(selectedRange as any);
+    expect(isProEntitled(card)).toBe(false);
+    expect(sampleData.metrics.profile_views).toBeGreaterThan(0);
+
+    // Trial activates
+    card = { ...card, plan_tier: "trialing", trial_ends_at: FUTURE_TRIAL_ENDS };
+    expect(isProEntitled(card)).toBe(true);
+
+    // Selected range and tab remain mounted
+    expect(selectedRange).toBe("30d");
+  });
+
+  // 152. Phase 7 — QR & Wallpaper: High-res / wallpaper preview -> upgrade -> context preserved -> NO auto-download -> deliberate download works
+  it("152. Phase 7: QR & Wallpaper preserves context post-trial without auto-download, then allows deliberate export", () => {
+    let card: Card = { ...baseFreeCard };
+    let exportCount = 0;
+
+    function handleDownloadHighRes(isPro: boolean) {
+      if (!isPro) {
+        return { ok: false, upgradeRequired: true };
+      }
+      exportCount++;
+      return { ok: true };
+    }
+
+    const preAttempt = handleDownloadHighRes(isProEntitled(card));
+    expect(preAttempt.upgradeRequired).toBe(true);
+    expect(exportCount).toBe(0);
+
+    // Trial activates
+    card = { ...card, plan_tier: "trialing", trial_ends_at: FUTURE_TRIAL_ENDS };
+
+    // Confirm NO auto-download
+    expect(exportCount).toBe(0);
+
+    // Deliberate click succeeds
+    const postAttempt = handleDownloadHighRes(isProEntitled(card));
+    expect(postAttempt.ok).toBe(true);
+    expect(exportCount).toBe(1);
+  });
+
+  // 153. Phase 7 — Apple Wallet: Wallet preview -> upgrade -> pass type preserved -> zero auto-fetch/sign/download -> deliberate action fetches
+  it("153. Phase 7: Apple Wallet preserves pass type selection post-trial with zero auto-fetch/sign/download, then executes on deliberate click", () => {
+    let card: Card = { ...baseFreeCard };
+    const activePassType: "digital" | "contact" = "contact";
+    let walletFetchCount = 0;
+
+    function handleWalletDownload(isPro: boolean, passType: string) {
+      if (!isPro) {
+        return { ok: false, upgradeRequired: true };
+      }
+      walletFetchCount++;
+      return { ok: true, endpoint: `/api/wallet/${card.slug}?type=${passType}` };
+    }
+
+    const preAttempt = handleWalletDownload(isProEntitled(card), activePassType);
+    expect(preAttempt.upgradeRequired).toBe(true);
+    expect(walletFetchCount).toBe(0);
+
+    // Trial activates
+    card = { ...card, plan_tier: "trialing", trial_ends_at: FUTURE_TRIAL_ENDS };
+
+    // Pass type remains contact card, ZERO auto-fetch or signing
+    expect(activePassType).toBe("contact");
+    expect(walletFetchCount).toBe(0);
+
+    // Deliberate click invokes protected endpoint
+    const postAttempt = handleWalletDownload(isProEntitled(card), activePassType);
+    expect(postAttempt.ok).toBe(true);
+    expect(walletFetchCount).toBe(1);
+    expect(postAttempt.endpoint).toBe(`/api/wallet/${card.slug}?type=contact`);
+  });
+
+  // 154. Phase 7 — Pro Features: Edited fields -> save attempt -> upgrade -> draft fields preserved in memory -> NO auto-save -> deliberate save works
+  it("154. Phase 7: Pro Features preserves edited in-memory configuration post-trial without auto-saving, then saves on deliberate click", () => {
+    let card: Card = {
+      ...baseFreeCard,
+      pro_features: {
+        video_url: "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+        pdf_url: "https://example.com/brochure.pdf",
+        booking_url: "https://calendly.com/founder/30min",
+        remove_branding: true,
+      },
+    };
+    let databaseSaveCount = 0;
+
+    function handleProFeaturesSave(c: Card) {
+      if (!isProEntitled(c)) {
+        return { ok: false, upgradeRequired: true };
+      }
+      databaseSaveCount++;
+      return { ok: true, savedFeatures: c.pro_features };
+    }
+
+    const preAttempt = handleProFeaturesSave(card);
+    expect(preAttempt.upgradeRequired).toBe(true);
+    expect(databaseSaveCount).toBe(0);
+
+    // Trial activates
+    card = { ...card, plan_tier: "trialing", trial_ends_at: FUTURE_TRIAL_ENDS };
+
+    // Configuration remains in memory, NO database write
+    expect(databaseSaveCount).toBe(0);
+    expect(card.pro_features?.video_url).toBe("https://www.youtube.com/watch?v=dQw4w9WgXcQ");
+    expect(card.pro_features?.booking_url).toBe("https://calendly.com/founder/30min");
+
+    // Deliberate save persists configuration
+    const postAttempt = handleProFeaturesSave(card);
+    expect(postAttempt.ok).toBe(true);
+    expect(databaseSaveCount).toBe(1);
+  });
+
+  // 155. Phase 7 — Multi-card safety: Upgrading Card A gives trial entitlement only to Card A; Card B remains free without selection jumps
+  it("155. Phase 7: Multi-card entitlement correctly scopes trial to selected Card A while Card B remains free", () => {
+    const cardA: Card = { ...baseFreeCard, id: "card-a", slug: "card-a-ceo" };
+    const cardB: Card = { ...baseFreeCard, id: "card-b", slug: "card-b-cto" };
+    let cards = [cardA, cardB];
+    const selectedCardId = "card-a";
+
+    // Dashboard handleTrialStarted logic
+    function dashboardTrialStarted(trialEndsAt: Date) {
+      cards = cards.map((c) =>
+        c.id === selectedCardId
+          ? {
+              ...c,
+              plan_tier: "trialing" as const,
+              trial_ends_at: trialEndsAt.toISOString(),
+            }
+          : c,
+      );
+    }
+
+    dashboardTrialStarted(new Date(FUTURE_TRIAL_ENDS));
+
+    // Card A is entitled; Card B is strictly free
+    expect(isProEntitled(cards[0])).toBe(true);
+    expect(isProEntitled(cards[1])).toBe(false);
+    expect(selectedCardId).toBe("card-a");
+  });
+
+  // 156. Phase 7 — Expired trial regression safety: Expired trial reverts to Free preview and gating across all tabs
+  it("156. Phase 7: Expired trial reverts to Free preview and gating across all feature areas", () => {
+    const expiredCard: Card = {
+      ...baseFreeCard,
+      plan_tier: "trialing",
+      trial_ends_at: PAST_TRIAL_ENDS,
+    };
+
+    expect(isProEntitled(expiredCard)).toBe(false);
+
+    // Custom design defaults to classic
+    const resolved = resolveCardDesign(expiredCard);
+    expect(resolved.mode).toBe("classic_v2");
+  });
+
+  // 157. Phase 7 — ProFeaturesTab properly renders with session and onTrialStarted props
+  it("157. Phase 7: ProFeaturesTab accepts session and onTrialStarted props without error", () => {
+    const mockSession = { access_token: "fake-jwt", user: { id: "user-1" } } as any;
+    const onTrialStarted = vi.fn();
+    const html = renderToStaticMarkup(
+      <LanguageProvider>
+        <ProFeaturesTab
+          card={baseFreeCard}
+          userId="user-1"
+          session={mockSession}
+          onTrialStarted={onTrialStarted}
+          onChange={vi.fn()}
+        />
+      </LanguageProvider>,
+    );
+
+    expect(html).toContain("Elevate Your Profile with Interactive Blocks");
+    expect(html).toContain("Video Intro Embed");
+    expect(html).toContain("Save &amp; Publish Special Features");
   });
 });

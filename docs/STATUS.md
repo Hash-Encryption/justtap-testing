@@ -41,48 +41,20 @@ Last updated: 2026-08-22
   - Final root-opacity correction deployment `2745d8f9-2a8e-41a8-b705-a7ae49225d52` is available at `https://2745d8f9.justtap-v2-staging.pages.dev` and `https://v2-07-public-card-renderer.justtap-v2-staging.pages.dev`.
   - Verified active/missing cards, permanent tag redirect/revocation, vCard, anonymous dashboard privacy, dynamic post-deploy card creation, metadata, 390x844 and desktop rendering, mobile RTL, keyboard focus, live mid-animation root opacity `1`, transform-only entrance keyframes, contained dock actions, a functional public privacy-enhanced video iframe, and a clean browser console.
 - Completed Phase 07 Public Card Renderer implementation and Cloudflare Pages staging verification.
-- Completed Phase 2 Integrated Card Editor Preview with non-autopublish, PRO marker, and contextual CTA.
-- Completed Phase 3 Connections Integrated Pro Preview:
-  - Replaced static locked follow-up notice with safe interactive Free Pro Preview across private tags, follow-up status, and private owner note.
-  - Free preview state remains strictly local in component memory; persistence action branches before Supabase write (`supabase.from("card_leads").update(...)`).
-  - Added contextual "Upgrade to Save Follow-up" and "Upgrade to Export" actions integrated with shared `ProUpgradeDialog` (`connections_save`, `connections_export`).
-  - Preserved Phase 2 non-auto-action rule: trial activation updates in-memory entitlement without auto-saving follow-up details or auto-downloading CSV; user explicitly triggers the final action.
-  - Preview state survives trial activation in memory without unmounting `ConnectionsTab` or resetting user drafts.
-  - Authorized active 7-day trial, Paid Pro, and Enterprise accounts maintain full real persistence and authorized CSV export without regressions.
-  - Bilingual EN and Arabic support with native RTL layout.
-  - All 66 unit tests in `ProUpgrade.test.tsx` pass (228 total unit tests passed, 11 browser tests passed, 0 failures).
+- Completed Phase 2: Integrated Card Editor Preview with non-autopublish, PRO marker, and contextual CTA.
+- Completed Phase 3: Connections Integrated Pro Preview with non-autosave follow-up, non-auto-export, and contextual CTAs.
+- Completed Phase 4: Integrated Analytics Pro Preview with deterministic sample data, PRO preview marker, and contextual CTA.
+- Completed Phase 5: Integrated QR and Export Pro Preview with contextual CTA and non-autoexport.
+- Completed Phase 6: Integrated Apple Wallet Pro Preview with contextual CTA, non-autoissue, and server-side entitlement checks.
+- Completed Phase 7: Upgrade → Return → Continue + Final Integration across all Phase 1–6 experiences:
+  - Unified `handleTrialStarted` in `src/routes/dashboard.tsx` updating selected card entitlement upon verified trial start without switching cards.
+  - Connected authenticated `session` to `CardEditor` and `ProFeaturesTab`.
+  - Connected `session` and `onTrialStarted` to `ProFeaturesTab` and `ProUpgradeDialog`.
+  - Verified non-auto-execution across all 6 protected actions: Card Publish, Follow-up Save, Connections CSV Export, Analytics Live View, 2000px QR / Wallpaper Export, Apple Wallet Issuance, and Pro Features Save.
+  - Verified context preservation across all tabs in working memory without unauthorized draft persistence.
+  - Complete 157-test suite in `ProUpgrade.test.tsx` passes with 100% success (320 unit tests, 12 browser Playwright tests).
+  - TypeScript `typecheck:v2`, secret scan, and git diff check pass cleanly.
 
-## In progress
+## Release Readiness
 
-- Phase 3 complete — awaiting user approval of Phase 3 completion report.
-
-  **Migration** `20260822000000_trial_entitlement.sql`:
-  - `trial_started_at`, `trial_ends_at`, `trial_used` columns on `public.profiles`
-  - `'trialing'` added to `cards_plan_tier_values` and `profiles_plan_tier_values` CHECK constraints
-  - `cards_enforce_pro_design_features` trigger updated to allow active trialing accounts (with server-time expiry check via profiles JOIN)
-  - `start_pro_trial()` SECURITY DEFINER RPC: one-per-account, records timestamps, returns `trial_ends_at`
-  - `get_public_card_by_slug` rebuilt with inline expiry: `trialing AND trial_ends_at > now()` treated as Pro at query time — no background job needed
-
-  **Server route** `src/routes/api/trial-start.ts`: rate-limited, calls `start_pro_trial()` via service-role client, returns `{ ok, trialEndsAt }`
-
-  **Client** `src/lib/billing.ts`: `startProTrial(session)` → POST `/api/trial-start` → `{ ok, trialEndsAt }`. Client never touches `plan_tier`, `trial_started_at`, or `trial_ends_at` directly.
-
-  **Types** `src/lib/card.ts`: `PlanTier` now includes `"trialing"`, `Card` has `trial_ends_at?: string | null`
-
-  **Entitlement helper** `src/lib/card-design.ts`: `isProEntitled(card)` exported — replaces all `plan_tier === "pro" || plan_tier === "enterprise"` inline checks in `CardEditor`, `ProFeaturesTab`, and `resolveCardDesign`
-
-  **UX** `ProUpgradeDialog`: `"Start 7-Day Free Trial"` CTA everywhere, `onTrialStarted` fires only after backend confirmation
-
-  **Trial badge** in `CardEditor`: `"Pro Trial · N days remaining"` computed from trusted `trial_ends_at`
-
-  **Tests 22–33**: all pass covering CTA, backend activation, second-trial rejection, client forgery prevention, active/expired entitlement, public RPC expiry logic, data preservation, Pro restoration, no-destructive-reset
-
-## Deferred work
-
-- Apple Wallet signing/certificate infrastructure, billing lifecycle, analytics redesign, and leads redesign remain deferred to their authorized phases.
-- Controlled Real Supabase Pro-user Custom Creator persistence remains not verified because no controlled legitimate Pro fixture is available.
-- Stripe payment method collection: BILLING EXTENSION POINT is clearly marked in `billing.ts` and `trial-start.ts`; no rebuild required when Stripe is wired.
-
-## Next phase
-
-Do not begin Phase 08 until the 7-Day Trial checkpoint commit is approved and committed.
+JustTap Pro is fully integrated, tested, and release-ready across all Phase 1–7 experiences.

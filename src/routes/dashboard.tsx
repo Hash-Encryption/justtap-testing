@@ -301,6 +301,30 @@ function Dashboard() {
     setTab("cards");
   };
 
+  const handleTrialStarted = (trialEndsAt: Date) => {
+    if (!selectedCardId) return;
+    setCards((prev) =>
+      prev.map((c) =>
+        c.id === selectedCardId
+          ? {
+              ...c,
+              plan_tier: "trialing" as const,
+              trial_ends_at: trialEndsAt.toISOString(),
+            }
+          : c,
+      ),
+    );
+    setDraft((prev) =>
+      prev && prev.id === selectedCardId
+        ? {
+            ...prev,
+            plan_tier: "trialing" as const,
+            trial_ends_at: trialEndsAt.toISOString(),
+          }
+        : prev,
+    );
+  };
+
   if (loading || fetching || !user) {
     return (
       <div className="grid min-h-screen place-items-center bg-[#08080A]">
@@ -611,6 +635,7 @@ function Dashboard() {
                 draft={draft || emptyCard}
                 setDraft={setDraft}
                 userId={user?.id ?? "guest"}
+                session={session}
                 isNew={!cards.some((c) => c.id === draft?.id)}
                 savedSlug={selectedCard?.slug}
                 publishedCard={selectedCard}
@@ -650,29 +675,7 @@ function Dashboard() {
                   if (target) setDraft(target);
                 }}
                 onNavigateToConnections={() => setTab("leads")}
-                onTrialStarted={(trialEndsAt) => {
-                  if (!selectedCardId) return;
-                  setCards((prev) =>
-                    prev.map((c) =>
-                      c.id === selectedCardId
-                        ? {
-                            ...c,
-                            plan_tier: "trialing" as const,
-                            trial_ends_at: trialEndsAt.toISOString(),
-                          }
-                        : c,
-                    ),
-                  );
-                  setDraft((prev) =>
-                    prev && prev.id === selectedCardId
-                      ? {
-                          ...prev,
-                          plan_tier: "trialing" as const,
-                          trial_ends_at: trialEndsAt.toISOString(),
-                        }
-                      : prev,
-                  );
-                }}
+                onTrialStarted={handleTrialStarted}
               />
             ) : (
               <p className="text-xs text-slate-400">{t("selectCardToViewAnalytics")}</p>
@@ -689,29 +692,7 @@ function Dashboard() {
                 key={selectedCard.id}
                 card={selectedCard}
                 session={session}
-                onTrialStarted={(trialEndsAt) => {
-                  if (!selectedCardId) return;
-                  setCards((prev) =>
-                    prev.map((c) =>
-                      c.id === selectedCardId
-                        ? {
-                            ...c,
-                            plan_tier: "trialing" as const,
-                            trial_ends_at: trialEndsAt.toISOString(),
-                          }
-                        : c,
-                    ),
-                  );
-                  setDraft((prev) =>
-                    prev && prev.id === selectedCardId
-                      ? {
-                          ...prev,
-                          plan_tier: "trialing" as const,
-                          trial_ends_at: trialEndsAt.toISOString(),
-                        }
-                      : prev,
-                  );
-                }}
+                onTrialStarted={handleTrialStarted}
               />
             ) : (
               <p className="text-xs text-slate-400">{t("selectCardToViewQr")}</p>
@@ -734,29 +715,7 @@ function Dashboard() {
                   const target = cards.find((c) => c.id === id);
                   if (target) setDraft(target);
                 }}
-                onTrialStarted={(trialEndsAt) => {
-                  if (!selectedCardId) return;
-                  setCards((prev) =>
-                    prev.map((c) =>
-                      c.id === selectedCardId
-                        ? {
-                            ...c,
-                            plan_tier: "trialing" as const,
-                            trial_ends_at: trialEndsAt.toISOString(),
-                          }
-                        : c,
-                    ),
-                  );
-                  setDraft((prev) =>
-                    prev && prev.id === selectedCardId
-                      ? {
-                          ...prev,
-                          plan_tier: "trialing" as const,
-                          trial_ends_at: trialEndsAt.toISOString(),
-                        }
-                      : prev,
-                  );
-                }}
+                onTrialStarted={handleTrialStarted}
               />
             ) : (
               <p className="text-xs text-slate-400">{t("selectCardToViewConnections")}</p>
@@ -777,6 +736,8 @@ function Dashboard() {
               <ProFeaturesTab
                 card={selectedCard}
                 userId={user?.id ?? "guest"}
+                session={session}
+                onTrialStarted={handleTrialStarted}
                 onChange={(updated) => {
                   setDraft(updated);
                   setCards((prev) => prev.map((c) => (c.id === updated.id ? updated : c)));

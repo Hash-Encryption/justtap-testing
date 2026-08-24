@@ -19,14 +19,23 @@ import { sanitizeText, sanitizeUrl } from "@/lib/sanitization";
 import { isProEntitled } from "@/lib/card-design";
 import { useTranslation } from "@/lib/i18n";
 import { ProUpgradeDialog, type ProUpgradeSource } from "./ProUpgradeDialog";
+import type { Session } from "@supabase/supabase-js";
 
 type Props = {
   card: Card;
   onChange: (updated: Card) => void;
   userId: string;
+  session?: Session | null;
+  onTrialStarted?: (trialEndsAt: Date) => void;
 };
 
-export function ProFeaturesTab({ card, onChange, userId }: Props) {
+export function ProFeaturesTab({
+  card,
+  onChange,
+  userId,
+  session,
+  onTrialStarted,
+}: Props) {
   const { t } = useTranslation();
   const [uploadingPdf, setUploadingPdf] = useState(false);
   const [upgradeOpen, setUpgradeOpen] = useState(false);
@@ -667,6 +676,11 @@ export function ProFeaturesTab({ card, onChange, userId }: Props) {
         onOpenChange={setUpgradeOpen}
         source={upgradeSource}
         draft={card}
+        session={session}
+        onTrialStarted={(trialEndsAt) => {
+          onTrialStarted?.(trialEndsAt);
+          setUpgradeOpen(false);
+        }}
       />
     </div>
   );
