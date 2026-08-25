@@ -200,4 +200,56 @@ describe("CardEditor Browser UX Suite", () => {
     root?.unmount();
     container.remove();
   });
+
+  it("proves sticky section nav does not overlap sticky hotbar when scrolling at mobile 375px, 390px, and 412px in EN and AR/RTL", async () => {
+    for (const width of ["375px", "390px", "412px"]) {
+      for (const lang of ["en" as const, "ar" as const]) {
+        const container = document.createElement("div");
+        container.id = "browser-test-root";
+        container.style.width = width;
+        container.style.maxWidth = width;
+        container.style.height = "600px";
+        container.style.overflowY = "auto";
+        container.style.overflowX = "hidden";
+        document.body.appendChild(container);
+
+        root = createRoot(container);
+        flushSync(() => {
+          root?.render(
+            <LanguageProvider defaultLang={lang}>
+              <CardEditor
+                draft={testCard}
+                setDraft={() => {}}
+                userId="user-test-1"
+                isNew={false}
+                onSaved={() => {}}
+              />
+            </LanguageProvider>,
+          );
+        });
+        await nextPaint();
+
+        const hotbar = container.querySelector<HTMLElement>('[data-testid="editor-hotbar"]');
+        const navWrapper = container.querySelector<HTMLElement>(
+          '[data-testid="editor-section-nav-wrapper"]',
+        );
+
+        expect(hotbar).not.toBeNull();
+        expect(navWrapper).not.toBeNull();
+
+        // Scroll container down 500px so both sticky elements reach their sticky positions
+        container.scrollTop = 500;
+        await nextPaint();
+
+        const hotbarRect = hotbar!.getBoundingClientRect();
+        const navRect = navWrapper!.getBoundingClientRect();
+
+        // Assert that the floating nav sits completely below the hotbar without overlapping
+        expect(navRect.top).toBeGreaterThanOrEqual(hotbarRect.bottom - 2);
+
+        root?.unmount();
+        container.remove();
+      }
+    }
+  });
 });

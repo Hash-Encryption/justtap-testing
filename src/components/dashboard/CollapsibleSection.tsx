@@ -32,7 +32,7 @@ export function CollapsibleSection({
     <section
       id={id}
       data-testid={id ? `section-${id}` : "collapsible-section"}
-      className={`justtap-glass rounded-3xl border border-slate-800 transition-all scroll-mt-36 ${className}`}
+      className={`justtap-glass rounded-3xl border border-slate-800 transition-all scroll-mt-48 sm:scroll-mt-36 ${className}`}
     >
       <div
         className={`flex items-center justify-between p-5 sm:p-6 select-none ${

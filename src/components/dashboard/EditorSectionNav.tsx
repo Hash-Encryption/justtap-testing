@@ -31,7 +31,7 @@ export function EditorSectionNav({
   return (
     <div
       data-testid="editor-section-nav-wrapper"
-      className={`sticky top-20 sm:top-24 z-30 flex justify-center w-full pointer-events-none py-1 ${className}`}
+      className={`sticky top-[148px] sm:top-24 z-30 flex justify-center w-full pointer-events-none py-1 transition-all ${className}`}
     >
       <nav
         data-testid="editor-section-nav"
