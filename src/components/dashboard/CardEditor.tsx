@@ -690,8 +690,11 @@ export function CardEditor({
 
   return (
     <div className="relative pb-24 space-y-6">
-      {/* TOP EDITOR TOOLBAR */}
-      <div className="justtap-glass rounded-2xl p-4 flex flex-col sm:flex-row items-center justify-between gap-4 border border-slate-800">
+      {/* TOP EDITOR TOOLBAR / FLOATING HOTBAR */}
+      <div
+        data-testid="editor-hotbar"
+        className="sticky top-4 z-40 justtap-glass rounded-2xl p-3 sm:p-4 flex flex-col sm:flex-row items-center justify-between gap-3 sm:gap-4 border border-slate-800/80 shadow-xl backdrop-blur-xl bg-slate-950/80"
+      >
         <div className="flex items-center space-x-3 rtl:space-x-reverse w-full sm:w-auto justify-between sm:justify-start">
           {onBackToDashboard && (
             <button
@@ -1304,7 +1307,7 @@ export function CardEditor({
                   {isProPreview
                     ? t("proPreviewNotLiveDesc")
                     : isDirty
-                      ? t("unsavedChanges")
+                      ? `${t("draftSavedLocally")} · ${t("changesNotPublished")}`
                       : isPublishedLive
                         ? `${t("saved")} · ${t("editorStatusLiveCard")}`
                         : t("editorStatusSavedDraft")}

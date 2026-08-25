@@ -80,8 +80,9 @@ export function EditorStatusBar({
       >
         <span className="h-2 w-2 rounded-full bg-amber-400 animate-pulse" />
         <span>
-          {t("unsavedChanges")}
-          {lastAutoSaved ? ` · ${t("autoSavedAt")} ${lastAutoSaved}` : ""}
+          {lastAutoSaved
+            ? `${t("draftSavedLocally")} · ${t("changesNotPublished")}`
+            : t("changesNotPublished")}
         </span>
       </div>
     );

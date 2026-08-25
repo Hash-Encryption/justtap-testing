@@ -48,16 +48,16 @@ const DISPLAY_RANGE_LABELS: Record<AnalyticsRange, string> = {
 
 const PRESENTATION_SOURCE_KEYS: Record<
   string,
-  { key: "sourceLink" | "sourceProfileQr" | "sourceJustTapCard"; icon: typeof Globe }
+  { key: "sourceLink" | "sourceJustTapCard"; icon: typeof Globe }
 > = {
   direct: { key: "sourceLink", icon: Globe },
-  profile_qr: { key: "sourceProfileQr", icon: QrCode },
+  profile_qr: { key: "sourceJustTapCard", icon: CreditCard },
   permanent_tag: { key: "sourceJustTapCard", icon: CreditCard },
 };
 
 const SOURCE_COLORS: Record<string, string> = {
   direct: "#a855f7", // Royal Purple
-  profile_qr: "#e6d5ac", // Champagne
+  profile_qr: "#38bdf8", // Sky
   permanent_tag: "#38bdf8", // Sky
 };
 
@@ -330,6 +330,40 @@ function AnalyticsContent({
     return data.traffic_sources.reduce((sum, item) => sum + item.count, 0);
   }, [data.traffic_sources]);
 
+  // User-facing presentation traffic sources: combines permanent_tag and profile_qr into JustTap Card, and direct into Link
+  const presentationTrafficSources = useMemo(() => {
+    const grouped = new Map<
+      string,
+      {
+        id: string;
+        key: "sourceLink" | "sourceJustTapCard";
+        count: number;
+        icon: typeof Globe;
+        color: string;
+      }
+    >();
+
+    for (const item of data.traffic_sources) {
+      const isCardSource = item.source === "permanent_tag" || item.source === "profile_qr";
+      const groupKey = isCardSource ? "justtap_card" : "direct";
+      const existing = grouped.get(groupKey);
+
+      if (existing) {
+        existing.count += item.count;
+      } else {
+        grouped.set(groupKey, {
+          id: groupKey,
+          key: isCardSource ? "sourceJustTapCard" : "sourceLink",
+          count: item.count,
+          icon: isCardSource ? CreditCard : Globe,
+          color: isCardSource ? "#38bdf8" : "#a855f7",
+        });
+      }
+    }
+
+    return Array.from(grouped.values()).filter((item) => item.count > 0);
+  }, [data.traffic_sources]);
+
   function getLocalizedActionLabel(action: string): string {
     const key = CANONICAL_ACTION_I18N_KEYS[action];
     if (key) {
@@ -539,9 +573,9 @@ function AnalyticsContent({
                       <ResponsiveContainer width="100%" height="100%">
                         <PieChart>
                           <Pie
-                            data={data.traffic_sources}
+                            data={presentationTrafficSources}
                             dataKey="count"
-                            nameKey="source"
+                            nameKey="id"
                             cx="50%"
                             cy="50%"
                             innerRadius={36}
@@ -549,12 +583,8 @@ function AnalyticsContent({
                             paddingAngle={3}
                             isAnimationActive={false}
                           >
-                            {data.traffic_sources.map((entry) => (
-                              <Cell
-                                key={entry.source}
-                                fill={SOURCE_COLORS[entry.source] || "#6b21a8"}
-                                stroke="transparent"
-                              />
+                            {presentationTrafficSources.map((entry) => (
+                              <Cell key={entry.id} fill={entry.color} stroke="transparent" />
                             ))}
                           </Pie>
                         </PieChart>
@@ -563,28 +593,23 @@ function AnalyticsContent({
 
                     {/* Breakdown List */}
                     <ul className="space-y-2.5">
-                      {data.traffic_sources.map((item) => {
-                        const presentation = PRESENTATION_SOURCE_KEYS[item.source] || {
-                          key: "sourceLink" as const,
-                          icon: Globe,
-                        };
-                        const Icon = presentation.icon;
-                        const label = t(presentation.key);
+                      {presentationTrafficSources.map((item) => {
+                        const Icon = item.icon;
+                        const label = t(item.key);
                         const percentage =
                           totalAttributedViews > 0
                             ? Math.round((item.count / totalAttributedViews) * 100)
                             : 0;
-                        const color = SOURCE_COLORS[item.source] || "#6b21a8";
 
                         return (
                           <li
-                            key={item.source}
+                            key={item.id}
                             className="flex items-center justify-between gap-3 text-xs"
                           >
                             <div className="flex items-center gap-2 min-w-0">
                               <span
                                 className="h-2 w-2 shrink-0 rounded-full"
-                                style={{ backgroundColor: color }}
+                                style={{ backgroundColor: item.color }}
                               />
                               <Icon className="h-3.5 w-3.5 text-slate-400 shrink-0" />
                               <span className="font-medium text-slate-200 truncate">{label}</span>

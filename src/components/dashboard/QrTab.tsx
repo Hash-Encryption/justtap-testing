@@ -18,11 +18,10 @@ interface QrTabProps {
 
 export function QrTab({ card, session, onTrialStarted, onUpgradeRequest }: QrTabProps) {
   const { t, lang } = useTranslation();
-  const [profileQrUrl, setProfileQrUrl] = useState<string>("");
+  const [cardQrUrl, setCardQrUrl] = useState<string>("");
   const [offlineQrUrl, setOfflineQrUrl] = useState<string>("");
-  const [permanentQrUrl, setPermanentQrUrl] = useState<string>("");
   const [permanentToken, setPermanentToken] = useState<string | null>(null);
-  const [activeQr, setActiveQr] = useState<"profile" | "offline" | "permanent">("profile");
+  const [activeQr, setActiveQr] = useState<"card" | "offline">("card");
   const [activePassType, setActivePassType] = useState<"digital" | "contact">("digital");
   const [upgradeOpen, setUpgradeOpen] = useState<boolean>(false);
   const [upgradeSource, setUpgradeSource] = useState<ProUpgradeSource>("qr_export");
@@ -31,7 +30,11 @@ export function QrTab({ card, session, onTrialStarted, onUpgradeRequest }: QrTab
 
   const appUrl = typeof window !== "undefined" ? window.location.origin : "https://justtap.app";
 
-  const cardProfileUrl = `${appUrl}/c/${card.slug}?jt_entry=profile_qr`;
+  // When a permanent tag token exists, the main JustTap Card QR automatically uses the permanent identity route internally
+  const cardTargetUrl = permanentToken
+    ? `${appUrl}/t/${permanentToken}`
+    : `${appUrl}/c/${card.slug}?jt_entry=profile_qr`;
+
   const offlineVCardData = buildVCard(card);
   const isPro = isProEntitled(card);
 
@@ -59,46 +62,33 @@ export function QrTab({ card, session, onTrialStarted, onUpgradeRequest }: QrTab
   }, [card.id]);
 
   useEffect(() => {
-    QRCode.toDataURL(cardProfileUrl, { margin: 1, width: 400 }, (err, url) => {
-      if (!err && url) setProfileQrUrl(url);
+    QRCode.toDataURL(cardTargetUrl, { margin: 1, width: 400 }, (err, url) => {
+      if (!err && url) setCardQrUrl(url);
     });
     QRCode.toDataURL(offlineVCardData, { margin: 1, width: 400 }, (err, url) => {
       if (!err && url) setOfflineQrUrl(url);
     });
-    if (permanentToken) {
-      const permUrl = `${appUrl}/t/${permanentToken}`;
-      QRCode.toDataURL(permUrl, { margin: 1, width: 400 }, (err, url) => {
-        if (!err && url) setPermanentQrUrl(url);
-      });
-    }
-  }, [cardProfileUrl, offlineVCardData, permanentToken, appUrl]);
+  }, [cardTargetUrl, offlineVCardData]);
 
-  const activeQrUrl =
-    activeQr === "profile"
-      ? profileQrUrl
-      : activeQr === "permanent" && permanentQrUrl
-        ? permanentQrUrl
-        : offlineQrUrl;
+  const activeQrUrl = activeQr === "card" ? cardQrUrl : offlineQrUrl;
 
-  const handleDownloadHighResQr = async (type: "profile" | "offline" | "permanent") => {
+  const handleDownloadHighResQr = async (type: "card" | "offline") => {
     if (!isPro) {
       setUpgradeSource("qr_export");
       setUpgradeOpen(true);
       onUpgradeRequest?.();
       return;
     }
-    const dataToEncode =
-      type === "profile"
-        ? cardProfileUrl
-        : type === "permanent" && permanentToken
-          ? `${appUrl}/t/${permanentToken}`
-          : offlineVCardData;
+    const dataToEncode = type === "card" ? cardTargetUrl : offlineVCardData;
 
     try {
       const highResDataUrl = await QRCode.toDataURL(dataToEncode, { margin: 2, width: 2000 });
       const link = document.createElement("a");
       link.href = highResDataUrl;
-      link.download = `JustTap_QR_${type}_${card.slug}_2000px.png`;
+      link.download =
+        type === "card"
+          ? `JustTap_QR_${card.slug}_2000px.png`
+          : `JustTap_QR_Offline_${card.slug}_2000px.png`;
       link.click();
     } catch (err) {
       console.error("High res QR error:", err);
@@ -265,12 +255,7 @@ export function QrTab({ card, session, onTrialStarted, onUpgradeRequest }: QrTab
   const cardDisplayTitle =
     lang === "ar" && card.title_ar ? card.title_ar : card.title || card.company || "";
 
-  const walletPassQrUrl =
-    activePassType === "contact"
-      ? offlineQrUrl
-      : permanentToken && permanentQrUrl
-        ? permanentQrUrl
-        : profileQrUrl;
+  const walletPassQrUrl = activePassType === "contact" ? offlineQrUrl : cardQrUrl;
 
   return (
     <div className="space-y-8 max-w-4xl mx-auto">
@@ -304,19 +289,21 @@ export function QrTab({ card, session, onTrialStarted, onUpgradeRequest }: QrTab
         <div className="flex flex-wrap justify-center gap-1.5 bg-slate-950/80 rounded-2xl p-1.5 border border-slate-800">
           <button
             type="button"
-            onClick={() => setActiveQr("profile")}
+            data-testid="qr-selector-card"
+            onClick={() => setActiveQr("card")}
             className={`flex items-center space-x-1.5 rtl:space-x-reverse px-4 py-2 rounded-xl text-xs font-bold transition-all ${
-              activeQr === "profile"
+              activeQr === "card"
                 ? "bg-purple-700 text-white shadow-md shadow-purple-700/30"
                 : "text-slate-400 hover:text-white"
             }`}
           >
             <Sparkles className="w-3.5 h-3.5" />
-            <span>{t("qrDynamicProfile")}</span>
+            <span>{t("qrJustTapCard")}</span>
           </button>
 
           <button
             type="button"
+            data-testid="qr-selector-offline"
             onClick={() => setActiveQr("offline")}
             className={`flex items-center space-x-1.5 rtl:space-x-reverse px-4 py-2 rounded-xl text-xs font-bold transition-all ${
               activeQr === "offline"
@@ -327,43 +314,10 @@ export function QrTab({ card, session, onTrialStarted, onUpgradeRequest }: QrTab
             <Zap className="w-3.5 h-3.5" />
             <span>{t("qrOfflineVCard")}</span>
           </button>
-
-          {permanentToken && (
-            <button
-              type="button"
-              onClick={() => setActiveQr("permanent")}
-              className={`flex items-center space-x-1.5 rtl:space-x-reverse px-4 py-2 rounded-xl text-xs font-bold transition-all ${
-                activeQr === "permanent"
-                  ? "bg-amber-600 text-white shadow-md shadow-amber-600/30"
-                  : "text-slate-400 hover:text-white"
-              }`}
-            >
-              <Lock className="w-3.5 h-3.5" />
-              <span>{t("qrPermanentTag")}</span>
-            </button>
-          )}
         </div>
 
         <p className="text-xs text-slate-400 text-center max-w-sm leading-relaxed">
-          {activeQr === "profile" ? (
-            <>
-              {t("qrDescDynamic")} (
-              <code className="text-purple-300" dir="ltr">
-                /c/{card.slug}
-              </code>
-              )
-            </>
-          ) : activeQr === "permanent" ? (
-            <>
-              {t("qrDescPermanent")} (
-              <code className="text-amber-300" dir="ltr">
-                /t/{permanentToken}
-              </code>
-              )
-            </>
-          ) : (
-            t("qrDescOffline")
-          )}
+          {activeQr === "card" ? t("qrDescCard") : t("qrDescOffline")}
         </p>
 
         {/* QR Display */}
@@ -382,7 +336,11 @@ export function QrTab({ card, session, onTrialStarted, onUpgradeRequest }: QrTab
           <div className="grid grid-cols-2 gap-2">
             <a
               href={activeQrUrl}
-              download={`JustTap_QR_${activeQr}_${card.slug}.png`}
+              download={
+                activeQr === "card"
+                  ? `JustTap_QR_${card.slug}.png`
+                  : `JustTap_QR_Offline_${card.slug}.png`
+              }
               className="py-2.5 px-3 bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs rounded-xl border border-slate-700 flex items-center justify-center space-x-1.5 rtl:space-x-reverse transition-colors"
             >
               <Download className="w-3.5 h-3.5" />
@@ -565,7 +523,7 @@ export function QrTab({ card, session, onTrialStarted, onUpgradeRequest }: QrTab
                 className="text-[9px] font-mono text-slate-500 truncate max-w-[200px]"
                 dir="ltr"
               >
-                {activePassType === "contact" ? "Offline vCard" : `/c/${card.slug || "justtap"}`}
+                {activePassType === "contact" ? "Offline Contact" : `/c/${card.slug || "justtap"}`}
               </span>
             </div>
 

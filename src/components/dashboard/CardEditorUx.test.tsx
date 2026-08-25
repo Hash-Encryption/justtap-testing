@@ -7,6 +7,8 @@ import { EditorSectionNav } from "./EditorSectionNav";
 import { EditorHistoryControls } from "./EditorHistoryControls";
 import { CollapsibleSection } from "./CollapsibleSection";
 import { PreviewFab } from "./PreviewFab";
+import { QrTab } from "./QrTab";
+import { AnalyticsTab } from "./AnalyticsTab";
 import { LanguageProvider } from "@/lib/i18n";
 import { extractVisualState, isSameVisualState } from "@/hooks/useEditorHistory";
 
@@ -167,7 +169,7 @@ describe("Card Editor UX Clarity & Polish Suite", () => {
       expect(html).not.toContain("Unsaved changes");
     });
 
-    it("13. renders Unsaved changes when isDirty is true", () => {
+    it("13. renders Draft saved locally · Changes not published when isDirty is true with auto-save", () => {
       const html = renderToStaticMarkup(
         <LanguageProvider defaultLang="en">
           <EditorStatusBar
@@ -181,8 +183,9 @@ describe("Card Editor UX Clarity & Polish Suite", () => {
           />
         </LanguageProvider>,
       );
-      expect(html).toContain("Unsaved Changes");
-      expect(html).toContain("Auto-saved 10:45 AM");
+      expect(html).toContain("Draft saved locally");
+      expect(html).toContain("Changes not published");
+      expect(html).not.toContain("Unsaved Changes · Auto-saved");
     });
 
     it("14. renders Pro Preview · Not published for Free users in Pro Preview", () => {
@@ -203,7 +206,7 @@ describe("Card Editor UX Clarity & Polish Suite", () => {
       expect(html).not.toContain("Live card");
     });
 
-    it("15. renders Saved draft · Not published for new/unpublished draft", () => {
+    it("15. renders Draft saved locally · Not published for new/unpublished draft", () => {
       const html = renderToStaticMarkup(
         <LanguageProvider defaultLang="en">
           <EditorStatusBar
@@ -217,7 +220,7 @@ describe("Card Editor UX Clarity & Polish Suite", () => {
           />
         </LanguageProvider>,
       );
-      expect(html).toContain("Saved draft · Not published");
+      expect(html).toContain("Draft saved locally · Not published");
     });
 
     it("16. renders Published temporary feedback and Publishing… state truthfully", () => {
@@ -440,6 +443,113 @@ describe("Card Editor UX Clarity & Polish Suite", () => {
       expect(html).toContain("معاينة PRO · هذه التغييرات ليست منشورة بعد");
       expect(html).toContain("تراجع");
       expect(html).toContain("إعادة");
+    });
+  });
+
+  // 29-31. Floating Hotbar & Preset Polish (Phase 1)
+  describe("Floating Hotbar & Preset Polish", () => {
+    it("29. renders floating editor hotbar with sticky classes and primary actions", () => {
+      const html = renderToStaticMarkup(
+        <LanguageProvider defaultLang="en">
+          <CardEditor
+            draft={baseFreeCard}
+            setDraft={() => {}}
+            userId="user-free-1"
+            isNew={false}
+            onSaved={() => {}}
+          />
+        </LanguageProvider>,
+      );
+      expect(html).toContain('data-testid="editor-hotbar"');
+      expect(html).toContain("sticky");
+      expect(html).toContain('data-testid="editor-status-bar"');
+    });
+
+    it("30. renders small persistent Selected indicator directly on the selected preset without an intrusive block", () => {
+      const html = renderToStaticMarkup(
+        <LanguageProvider defaultLang="en">
+          <CardEditor
+            draft={customFreeCard}
+            setDraft={() => {}}
+            userId="user-free-1"
+            isNew={false}
+            onSaved={() => {}}
+          />
+        </LanguageProvider>,
+      );
+      expect(html).toContain('data-testid="preset-button-executive_navy"');
+      expect(html).toContain("Selected");
+      expect(html).toContain("ring-2 ring-amber-400");
+    });
+
+    it("31. renders Arabic status bar truthfully for auto-saved drafts without contradictory messages", () => {
+      const html = renderToStaticMarkup(
+        <LanguageProvider defaultLang="ar">
+          <EditorStatusBar
+            isDirty={true}
+            isSaving={false}
+            isPublishing={false}
+            justPublished={false}
+            isProPreview={false}
+            isPublishedLive={false}
+            lastAutoSaved="10:45"
+          />
+        </LanguageProvider>,
+      );
+      expect(html).toContain("تم حفظ المسودة محلياً");
+      expect(html).toContain("تعديلات غير منشورة");
+      expect(html).not.toContain("تعديلات غير محفوظة");
+    });
+  });
+
+  // 32-35. QR & Analytics Product Simplification (Phase 1)
+  describe("QR & Analytics Product Simplification", () => {
+    it("32. renders QR hub with simplified 2-mode product model (JustTap Card and Offline Contact)", () => {
+      const html = renderToStaticMarkup(
+        <LanguageProvider defaultLang="en">
+          <QrTab card={baseFreeCard} />
+        </LanguageProvider>,
+      );
+      expect(html).toContain('data-testid="qr-selector-card"');
+      expect(html).toContain('data-testid="qr-selector-offline"');
+      expect(html).toContain("JustTap Card");
+      expect(html).toContain("Offline Contact");
+      expect(html).not.toContain("Permanent Tag QR");
+      expect(html).not.toContain("/t/:token");
+      expect(html).not.toContain("/t/{token}");
+    });
+
+    it("33. renders Arabic localized QR hub with natural simplified copy", () => {
+      const html = renderToStaticMarkup(
+        <LanguageProvider defaultLang="ar">
+          <QrTab card={baseFreeCard} />
+        </LanguageProvider>,
+      );
+      expect(html).toContain("بطاقة JustTap");
+      expect(html).toContain("جهة اتصال دون إنترنت");
+      expect(html).toContain("يفتح ملف بطاقة أعمالك الرقمية المباشرة على JustTap.");
+    });
+
+    it("34. renders Analytics traffic sources with simplified JustTap Card and Link labels", () => {
+      const html = renderToStaticMarkup(
+        <LanguageProvider defaultLang="en">
+          <AnalyticsTab cardId="free-card-1" isPro={false} />
+        </LanguageProvider>,
+      );
+      expect(html).toContain("JustTap Card");
+      expect(html).toContain("Link");
+      expect(html).not.toContain("Permanent Tag");
+      expect(html).not.toContain("Profile QR");
+    });
+
+    it("35. renders Arabic Analytics traffic sources with simplified labels", () => {
+      const html = renderToStaticMarkup(
+        <LanguageProvider defaultLang="ar">
+          <AnalyticsTab cardId="free-card-1" isPro={false} />
+        </LanguageProvider>,
+      );
+      expect(html).toContain("بطاقة JustTap");
+      expect(html).toContain("الرابط");
     });
   });
 });
