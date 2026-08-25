@@ -2882,8 +2882,8 @@ describe("Phase 6: Integrated Apple Wallet & Pro Discovery Experience", () => {
     expect(resolved.mode).toBe("classic_v2");
   });
 
-  // 157. Phase 7 — ProFeaturesTab properly renders with session and onTrialStarted props
-  it("157. Phase 7: ProFeaturesTab accepts session and onTrialStarted props without error", () => {
+  // 157. Phase 2 — ProFeaturesTab properly renders with session and onTrialStarted props
+  it("157. Phase 2: ProFeaturesTab accepts session and onTrialStarted props without error", () => {
     const mockSession = { access_token: "fake-jwt", user: { id: "user-1" } } as unknown as Session;
     const onTrialStarted = vi.fn();
     const html = renderToStaticMarkup(
@@ -2898,8 +2898,242 @@ describe("Phase 6: Integrated Apple Wallet & Pro Discovery Experience", () => {
       </LanguageProvider>,
     );
 
-    expect(html).toContain("Elevate Your Profile with Interactive Blocks");
-    expect(html).toContain("Video Intro Embed");
-    expect(html).toContain("Save &amp; Publish Special Features");
+    expect(html).toContain("Make Your Card Do More");
+    expect(html).toContain("Add a Video Introduction");
+    expect(html).toContain("Upgrade to Activate");
+  });
+
+  // 158. Phase 2 — Pro Features Tab renders customer-friendly titles without technical jargon
+  it("158. Phase 2: renders customer-friendly titles without technical jargon or acronyms", () => {
+    const html = renderToStaticMarkup(
+      <LanguageProvider>
+        <ProFeaturesTab card={baseFreeCard} userId="user-1" onChange={vi.fn()} />
+      </LanguageProvider>,
+    );
+
+    // Assert customer-friendly titles are present
+    expect(html).toContain("Make Your Card Do More");
+    expect(html).toContain("Add a Video Introduction");
+    expect(html).toContain("Share a PDF or Brochure");
+    expect(html).toContain("Let People Book You");
+    expect(html).toContain("Add a Main Action");
+    expect(html).toContain("New Connection Alerts");
+    expect(html).toContain("Advanced Integrations");
+    expect(html).toContain("Use Your Own Brand");
+
+    // Assert internal developer terminology and obsolete tags are removed
+    expect(html).not.toContain("Elevate Your Profile with Interactive Blocks");
+    expect(html).not.toContain("Video Intro Embed");
+    expect(html).not.toContain("PDF &amp; Document Attachment");
+    expect(html).not.toContain("Live Appointment Booking");
+    expect(html).not.toContain("Custom Call-To-Action (CTA) Button");
+    expect(html).not.toContain("(Main Feature)");
+    expect(html).not.toContain("Remove Platform Branding");
+  });
+
+  // 159. Phase 2 — Free card header renders PRO PREVIEW badge, trial CTA, and notice
+  it("159. Phase 2: Free card header renders PRO PREVIEW badge, trial CTA, and notice", () => {
+    const html = renderToStaticMarkup(
+      <LanguageProvider>
+        <ProFeaturesTab card={baseFreeCard} userId="user-1" onChange={vi.fn()} />
+      </LanguageProvider>,
+    );
+
+    expect(html).toContain("PRO PREVIEW");
+    expect(html).toContain("Start 7-Day Free Trial");
+    expect(html).toContain("You are previewing Pro features");
+  });
+
+  // 160. Phase 2 — Pro card header renders PRO ACTIVE badge, Pro status, and active notice
+  it("160. Phase 2: Pro card header renders PRO ACTIVE badge, Pro status, and active notice", () => {
+    const proCard: Card = {
+      ...baseFreeCard,
+      plan_tier: "pro",
+    };
+
+    const html = renderToStaticMarkup(
+      <LanguageProvider>
+        <ProFeaturesTab card={proCard} userId="user-1" onChange={vi.fn()} />
+      </LanguageProvider>,
+    );
+
+    expect(html).toContain("PRO ACTIVE");
+    expect(html).toContain("Pro Status: Active");
+    expect(html).toContain("These features can be published on your live card.");
+    expect(html).not.toContain("Start 7-Day Free Trial");
+  });
+
+  // 161. Phase 2 — Sticky action bar shows Upgrade to Activate for Free users
+  it("161. Phase 2: Sticky action bar shows Upgrade to Activate for Free users", () => {
+    const html = renderToStaticMarkup(
+      <LanguageProvider>
+        <ProFeaturesTab card={baseFreeCard} userId="user-1" onChange={vi.fn()} />
+      </LanguageProvider>,
+    );
+
+    expect(html).toContain("Previewing Pro features · Not live on public card");
+    expect(html).toContain("Upgrade to Activate");
+    expect(html).not.toContain("Save &amp; Publish Features");
+  });
+
+  // 162. Phase 2 — Sticky action bar shows Save & Publish Features for Pro users
+  it("162. Phase 2: Sticky action bar shows Save & Publish Features for Pro users", () => {
+    const proCard: Card = {
+      ...baseFreeCard,
+      plan_tier: "pro",
+    };
+
+    const html = renderToStaticMarkup(
+      <LanguageProvider>
+        <ProFeaturesTab card={proCard} userId="user-1" onChange={vi.fn()} />
+      </LanguageProvider>,
+    );
+
+    expect(html).toContain("Pro features active on your account");
+    expect(html).toContain("Save &amp; Publish Features");
+  });
+
+  // 163. Phase 2 — PDF feature displays document mockup card preview with default/custom label
+  it("163. Phase 2: PDF feature displays document mockup card preview with default/custom label", () => {
+    const customPdfCard: Card = {
+      ...baseFreeCard,
+      pro_features: {
+        pdf_label: "Summer 2026 Menu",
+        pdf_url: "https://example.com/menu.pdf",
+      },
+    };
+
+    const html = renderToStaticMarkup(
+      <LanguageProvider>
+        <ProFeaturesTab card={customPdfCard} userId="user-1" onChange={vi.fn()} />
+      </LanguageProvider>,
+    );
+
+    expect(html).toContain("Summer 2026 Menu");
+    expect(html).toContain("PDF Document");
+    expect(html).toContain("Open PDF →");
+  });
+
+  // 164. Phase 2 — Appointment Booking feature displays booking mockup card preview
+  it("164. Phase 2: Appointment Booking feature displays booking mockup card preview", () => {
+    const bookingCard: Card = {
+      ...baseFreeCard,
+      pro_features: {
+        booking_url: "https://calendly.com/acme/intro",
+      },
+    };
+
+    const html = renderToStaticMarkup(
+      <LanguageProvider>
+        <ProFeaturesTab card={bookingCard} userId="user-1" onChange={vi.fn()} />
+      </LanguageProvider>,
+    );
+
+    expect(html).toContain("Book a Meeting");
+    expect(html).toContain("https://calendly.com/acme/intro");
+    expect(html).toContain("Choose a time →");
+  });
+
+  // 165. Phase 2 — Main Action feature displays action button mockup preview
+  it("165. Phase 2: Main Action feature displays action button mockup preview", () => {
+    const ctaCard: Card = {
+      ...baseFreeCard,
+      pro_features: {
+        custom_cta_label: "Get Free Quote",
+        custom_cta_url: "https://example.com/quote",
+      },
+    };
+
+    const html = renderToStaticMarkup(
+      <LanguageProvider>
+        <ProFeaturesTab card={ctaCard} userId="user-1" onChange={vi.fn()} />
+      </LanguageProvider>,
+    );
+
+    expect(html).toContain("Get Free Quote");
+  });
+
+  // 166. Phase 2 — Connection Alerts feature displays sample alert card mockup
+  it("166. Phase 2: Connection Alerts feature displays sample alert card mockup", () => {
+    const html = renderToStaticMarkup(
+      <LanguageProvider>
+        <ProFeaturesTab card={baseFreeCard} userId="user-1" onChange={vi.fn()} />
+      </LanguageProvider>,
+    );
+
+    expect(html).toContain("New connection");
+    expect(html).toContain("Sarah shared her contact details");
+    expect(html).toContain("Just now");
+    expect(html).toContain("Sample Alert");
+  });
+
+  // 167. Phase 2 — Own Brand feature displays Before/After comparison previews
+  it("167. Phase 2: Own Brand feature displays Before/After comparison previews", () => {
+    const html = renderToStaticMarkup(
+      <LanguageProvider>
+        <ProFeaturesTab card={baseFreeCard} userId="user-1" onChange={vi.fn()} />
+      </LanguageProvider>,
+    );
+
+    expect(html).toContain("Before");
+    expect(html).toContain("Powered by JustTap");
+    expect(html).toContain("After");
+    expect(html).toContain("Your card only");
+  });
+
+  // 168. Phase 2 — Advanced Integrations renders collapsible container with aria-expanded
+  it("168. Phase 2: Advanced Integrations renders collapsible container with aria-expanded", () => {
+    const html = renderToStaticMarkup(
+      <LanguageProvider>
+        <ProFeaturesTab card={baseFreeCard} userId="user-1" onChange={vi.fn()} />
+      </LanguageProvider>,
+    );
+
+    expect(html).toContain("Advanced Integrations");
+    expect(html).toContain("Optional");
+    expect(html).toContain('aria-expanded="false"');
+  });
+
+  // 169. Phase 2 — Arabic localization renders full Arabic terminology without hard-coded English
+  it("169. Phase 2: Arabic localization renders full Arabic terminology", () => {
+    const html = renderToStaticMarkup(
+      <LanguageProvider defaultLang="ar">
+        <ProFeaturesTab card={baseFreeCard} userId="user-1" onChange={vi.fn()} />
+      </LanguageProvider>,
+    );
+
+    expect(html).toContain("اجعل بطاقتك تقدم المزيد");
+    expect(html).toContain("إضافة فيديو تعريفي");
+    expect(html).toContain("مشاركة ملف PDF أو بروشور");
+    expect(html).toContain("تمكين حجز المواعيد");
+    expect(html).toContain("إضافة زر إجراء رئيسي");
+    expect(html).toContain("تنبيهات جهات الاتصال الجديدة");
+    expect(html).toContain("التكاملات المتقدمة");
+    expect(html).toContain("استخدام هويتك الخاصة");
+    expect(html).toContain("ترقية للتفعيل");
+  });
+
+  // 170. Phase 2 — Public Card / Sandbox Isolation: Pro features on Free cards are NOT rendered on public view
+  it("170. Phase 2: Pro features on Free cards are isolated and NOT rendered on public CardView", () => {
+    const freeCardWithProConfig: Card = {
+      ...baseFreeCard,
+      plan_tier: "free",
+      pro_features: {
+        video_url: "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+        pdf_label: "Confidential Brochure",
+        pdf_url: "https://example.com/brochure.pdf",
+        booking_url: "https://calendly.com/alex/30min",
+        custom_cta_label: "VIP Access",
+        custom_cta_url: "https://example.com/vip",
+      },
+    };
+
+    const publicHtml = renderToStaticMarkup(<CardView card={freeCardWithProConfig} />);
+
+    // Free card on public view must NOT render pro video, pdf, booking, or custom CTA
+    expect(publicHtml).not.toContain("Confidential Brochure");
+    expect(publicHtml).not.toContain("https://calendly.com/alex/30min");
+    expect(publicHtml).not.toContain("VIP Access");
+    expect(publicHtml).not.toContain("https://www.youtube.com/embed/dQw4w9WgXcQ");
   });
 });
