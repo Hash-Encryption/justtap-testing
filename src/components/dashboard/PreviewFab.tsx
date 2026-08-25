@@ -36,10 +36,35 @@ export function PreviewFab({ targetId = "live-preview" }: Props) {
     const target = document.getElementById(targetId);
     if (!target) return;
     const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    target.scrollIntoView({
-      behavior: prefersReducedMotion ? "auto" : "smooth",
-      block: "start",
-    });
+    const targetRect = target.getBoundingClientRect();
+    const currentScrollY =
+      window.scrollY || window.pageYOffset || document.documentElement.scrollTop || 0;
+
+    const navWrapper = document.querySelector<HTMLElement>(
+      '[data-testid="editor-section-nav-wrapper"]',
+    );
+    const navRect = navWrapper?.getBoundingClientRect();
+    const clearance = (navRect && navRect.bottom > 0 ? navRect.bottom : 180) + 16;
+
+    const scrollParent = target.closest(
+      ".overflow-y-auto, [style*='overflow-y: auto']",
+    ) as HTMLElement | null;
+
+    if (scrollParent) {
+      const parentRect = scrollParent.getBoundingClientRect();
+      const targetScrollTop =
+        scrollParent.scrollTop + (targetRect.top - parentRect.top) - clearance;
+      scrollParent.scrollTo({
+        top: Math.max(0, targetScrollTop),
+        behavior: prefersReducedMotion ? "auto" : "smooth",
+      });
+    } else {
+      const targetY = currentScrollY + targetRect.top - clearance;
+      window.scrollTo({
+        top: Math.max(0, targetY),
+        behavior: prefersReducedMotion ? "auto" : "smooth",
+      });
+    }
   };
 
   if (!isVisible) return null;

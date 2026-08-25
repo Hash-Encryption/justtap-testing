@@ -212,7 +212,39 @@ export function CardEditor({
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [undo, redo]);
 
-  // Section observer for sticky section navigation
+  const hotbarRef = useRef<HTMLDivElement>(null);
+  const [navTopOffset, setNavTopOffset] = useState<number>(() => {
+    if (typeof window === "undefined") return 140;
+    return window.innerWidth >= 640 ? 88 : 140;
+  });
+  const isUserClickingRef = useRef(false);
+  const userClickTimerRef = useRef<number | null>(null);
+
+  // Dynamically measure editor hotbar geometry to position fixed section nav safely beneath it
+  useEffect(() => {
+    const updateOffset = () => {
+      if (!hotbarRef.current) return;
+      const rect = hotbarRef.current.getBoundingClientRect();
+      const computedBottom = rect.bottom > 0 ? rect.bottom : 16 + hotbarRef.current.offsetHeight;
+      const newTop = Math.round(computedBottom + 12);
+      setNavTopOffset((prev) => (Math.abs(prev - newTop) > 1 ? newTop : prev));
+    };
+
+    updateOffset();
+
+    const el = hotbarRef.current;
+    if (!el) return;
+
+    const ro = new ResizeObserver(() => updateOffset());
+    ro.observe(el);
+    window.addEventListener("resize", updateOffset);
+    return () => {
+      ro.disconnect();
+      window.removeEventListener("resize", updateOffset);
+    };
+  }, []);
+
+  // Section observer for scroll-spy section navigation
   useEffect(() => {
     const sectionIds: EditorSectionId[] = [
       "profile",
@@ -224,6 +256,7 @@ export function CardEditor({
 
     const observer = new IntersectionObserver(
       (entries) => {
+        if (isUserClickingRef.current) return;
         for (const entry of entries) {
           if (entry.isIntersecting) {
             const id = entry.target.id.replace("section-", "") as EditorSectionId;
@@ -234,7 +267,7 @@ export function CardEditor({
         }
       },
       {
-        rootMargin: "-20% 0px -60% 0px",
+        rootMargin: "-25% 0px -65% 0px",
         threshold: 0,
       },
     );
@@ -249,13 +282,40 @@ export function CardEditor({
 
   const handleSectionClick = (id: EditorSectionId) => {
     setActiveSection(id);
+    isUserClickingRef.current = true;
+    if (userClickTimerRef.current) window.clearTimeout(userClickTimerRef.current);
+    userClickTimerRef.current = window.setTimeout(() => {
+      isUserClickingRef.current = false;
+    }, 800);
+
     const el = document.getElementById(`section-${id}`);
     if (el) {
       const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-      el.scrollIntoView({
-        behavior: prefersReducedMotion ? "auto" : "smooth",
-        block: "start",
-      });
+      const elRect = el.getBoundingClientRect();
+      const currentScrollY =
+        window.scrollY || window.pageYOffset || document.documentElement.scrollTop || 0;
+
+      // Clearance for fixed hotbar + floating nav + safe buffer
+      const clearance = navTopOffset + 44 + 16;
+
+      const scrollParent = el.closest(
+        ".overflow-y-auto, [style*='overflow-y: auto']",
+      ) as HTMLElement | null;
+
+      if (scrollParent) {
+        const parentRect = scrollParent.getBoundingClientRect();
+        const targetScrollTop = scrollParent.scrollTop + (elRect.top - parentRect.top) - clearance;
+        scrollParent.scrollTo({
+          top: Math.max(0, targetScrollTop),
+          behavior: prefersReducedMotion ? "auto" : "smooth",
+        });
+      } else {
+        const targetScrollY = currentScrollY + elRect.top - clearance;
+        window.scrollTo({
+          top: Math.max(0, targetScrollY),
+          behavior: prefersReducedMotion ? "auto" : "smooth",
+        });
+      }
     }
   };
 
@@ -692,6 +752,7 @@ export function CardEditor({
     <div className="relative pb-24 space-y-6">
       {/* TOP EDITOR TOOLBAR / FLOATING HOTBAR */}
       <div
+        ref={hotbarRef}
         data-testid="editor-hotbar"
         className="sticky top-4 z-40 justtap-glass rounded-2xl p-3 sm:p-4 flex flex-col sm:flex-row items-center justify-between gap-3 sm:gap-4 border border-slate-800/80 shadow-xl backdrop-blur-xl bg-slate-950/80"
       >
@@ -787,12 +848,16 @@ export function CardEditor({
         </div>
       )}
 
-      {/* FLOATING STICKY SECTION NAVIGATION (Rendered above workbench so it appears above phone on mobile and floats centered across workbench) */}
+      {/* VIEWPORT-FIXED FLOATING SECTION NAVIGATION */}
       <EditorSectionNav
         activeSection={activeSection}
         onSectionClick={handleSectionClick}
         showColorsTab={draft.design_mode === "custom"}
+        topOffset={navTopOffset}
       />
+
+      {/* Flow Spacer placeholder so page content starts cleanly below floating controls */}
+      <div className="h-12 w-full" aria-hidden="true" />
 
       {/* WORKBENCH LAYOUT: Desktop Split / Mobile Stack */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">

@@ -134,7 +134,7 @@ describe("CardEditor Browser UX Suite", () => {
     expect(emeraldPreset?.getAttribute("aria-pressed")).toBe("false");
   });
 
-  it("ensures sticky section navigation uses sticky geometry, touch-friendly targets, and coexists with PreviewFab", async () => {
+  it("ensures floating section navigation uses fixed geometry, touch-friendly targets, and coexists with PreviewFab", async () => {
     renderEditor(testCard, "en");
     await nextPaint();
 
@@ -144,7 +144,7 @@ describe("CardEditor Browser UX Suite", () => {
     expect(navWrapper).not.toBeNull();
 
     const navComputed = window.getComputedStyle(navWrapper!);
-    expect(navComputed.position).toBe("sticky");
+    expect(navComputed.position).toBe("fixed");
     expect(Number(navComputed.zIndex)).toBeGreaterThanOrEqual(30);
 
     const navButtons = Array.from(
@@ -201,7 +201,7 @@ describe("CardEditor Browser UX Suite", () => {
     container.remove();
   });
 
-  it("proves sticky section nav does not overlap sticky hotbar when scrolling at mobile 375px, 390px, and 412px in EN and AR/RTL", async () => {
+  it("proves fixed section nav does not overlap sticky hotbar and maintains fixed viewport position when scrolling at mobile 375px, 390px, and 412px in EN and AR/RTL", async () => {
     for (const width of ["375px", "390px", "412px"]) {
       for (const lang of ["en" as const, "ar" as const]) {
         const container = document.createElement("div");
@@ -237,19 +237,75 @@ describe("CardEditor Browser UX Suite", () => {
         expect(hotbar).not.toBeNull();
         expect(navWrapper).not.toBeNull();
 
-        // Scroll container down 500px so both sticky elements reach their sticky positions
+        const initialNavRect = navWrapper!.getBoundingClientRect();
+
+        // Scroll container down 500px so content moves
         container.scrollTop = 500;
         await nextPaint();
 
-        const hotbarRect = hotbar!.getBoundingClientRect();
-        const navRect = navWrapper!.getBoundingClientRect();
+        const scrolledHotbarRect = hotbar!.getBoundingClientRect();
+        const scrolledNavRect = navWrapper!.getBoundingClientRect();
 
-        // Assert that the floating nav sits completely below the hotbar without overlapping
-        expect(navRect.top).toBeGreaterThanOrEqual(hotbarRect.bottom - 2);
+        // 1. Fixed positioning invariance: nav top remains at same viewport position
+        expect(Math.abs(scrolledNavRect.top - initialNavRect.top)).toBeLessThanOrEqual(2);
+
+        // 2. Hotbar non-overlap: floating nav sits cleanly below hotbar
+        expect(scrolledNavRect.top).toBeGreaterThanOrEqual(scrolledHotbarRect.bottom - 2);
 
         root?.unmount();
         container.remove();
       }
+    }
+  });
+
+  it("proves clicking section buttons triggers section jumping and sets active tab in EN and AR/RTL", async () => {
+    for (const lang of ["en" as const, "ar" as const]) {
+      const container = document.createElement("div");
+      container.id = "browser-test-root";
+      container.style.width = "375px";
+      container.style.height = "700px";
+      container.style.overflowY = "auto";
+      container.style.overflowX = "hidden";
+      document.body.appendChild(container);
+
+      root = createRoot(container);
+      flushSync(() => {
+        root?.render(
+          <LanguageProvider defaultLang={lang}>
+            <CardEditor
+              draft={testCard}
+              setDraft={() => {}}
+              userId="user-test-1"
+              isNew={false}
+              onSaved={() => {}}
+            />
+          </LanguageProvider>,
+        );
+      });
+      await nextPaint();
+
+      const contactBtn = container.querySelector<HTMLButtonElement>(
+        '[data-testid="editor-section-nav"] button[data-section-id="contact"]',
+      );
+      expect(contactBtn).not.toBeNull();
+
+      contactBtn?.click();
+      await nextPaint();
+
+      expect(contactBtn?.getAttribute("aria-current")).toBe("true");
+
+      const styleBtn = container.querySelector<HTMLButtonElement>(
+        '[data-testid="editor-section-nav"] button[data-section-id="style"]',
+      );
+      expect(styleBtn).not.toBeNull();
+
+      styleBtn?.click();
+      await nextPaint();
+
+      expect(styleBtn?.getAttribute("aria-current")).toBe("true");
+
+      root?.unmount();
+      container.remove();
     }
   });
 });
