@@ -262,7 +262,7 @@ describe("Card Editor UX Clarity & Polish Suite", () => {
     });
   });
 
-  // 17-18. Section Navigation
+  // 17-19. Section Navigation
   describe("Sticky Section Navigation", () => {
     it("17. renders section navigation items targeting correct editor areas", () => {
       const html = renderToStaticMarkup(
@@ -306,6 +306,41 @@ describe("Card Editor UX Clarity & Polish Suite", () => {
         </LanguageProvider>,
       );
       expect(html).not.toContain('data-section-id="colors"');
+    });
+
+    it("19B. renders EditorSectionNav above phone preview in CardEditor document order", () => {
+      const html = renderToStaticMarkup(
+        <LanguageProvider defaultLang="en">
+          <CardEditor
+            draft={baseFreeCard}
+            setDraft={() => {}}
+            userId="user-free-1"
+            isNew={false}
+            onSaved={() => {}}
+          />
+        </LanguageProvider>,
+      );
+      const navPos = html.indexOf('data-testid="editor-section-nav"');
+      const previewPos = html.indexOf('id="live-preview"');
+      expect(navPos).toBeGreaterThan(-1);
+      expect(previewPos).toBeGreaterThan(-1);
+      expect(navPos).toBeLessThan(previewPos);
+    });
+
+    it("19C. renders floating capsule container with sticky and backdrop styling", () => {
+      const html = renderToStaticMarkup(
+        <LanguageProvider defaultLang="en">
+          <EditorSectionNav
+            activeSection="profile"
+            onSectionClick={() => {}}
+            showColorsTab={true}
+          />
+        </LanguageProvider>,
+      );
+      expect(html).toContain('data-testid="editor-section-nav-wrapper"');
+      expect(html).toContain("sticky");
+      expect(html).toContain("rounded-full");
+      expect(html).toContain("backdrop-blur-xl");
     });
   });
 

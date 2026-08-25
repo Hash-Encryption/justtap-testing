@@ -66,9 +66,14 @@ Last updated: 2026-08-22
   - Redesigned Own Brand ("Use Your Own Brand" / "استخدام هويتك الخاصة") with Before/After comparison cards.
   - Added sticky action bar: Pro users see "Save & Publish Features", Free users see "Upgrade to Activate" (opening `ProUpgradeDialog` with source `pro_features_save`).
   - Added full bilingual English/Arabic localization with complete RTL support and zero hard-coded English in the UI (completed Phase 2 localization closure for all mini-preview badges, labels, and fallback examples).
-  - Comprehensive test suite in `ProUpgrade.test.tsx` (171 tests) and browser suite `ProFeaturesTab.browser.test.tsx` pass 100% (364 unit tests, 17 browser tests).
+  - Completed Final Pre-Release Editor Floating Nav UX Fix:
+    - Converted `EditorSectionNav` into a compact floating capsule toolbar with elevated glass backdrop blur (`rounded-full`, `shadow-2xl`, `bg-slate-950/85`).
+    - Positioned navigation above the workbench grid layout so on mobile (375px–412px) it appears cleanly ABOVE the phone preview, sticking as the user scrolls into the editing sections.
+    - Preserved seamless section jumping with 144px scroll-margin (`scroll-mt-36`) ensuring headings remain unobscured.
+    - Verified non-conflicting spatial coexistence with `PreviewFab`.
+  - Comprehensive test suite in `ProUpgrade.test.tsx` (171 tests), `CardEditorUx.test.tsx` (32 tests), and browser test suite across 6 files pass 100% (366 unit tests, 18 browser tests).
   - Clean TypeScript (`typecheck:v2`), ESLint (`lint:v2`), secret scan (`security:scan`), and production build (`build`).
 
 ## Release Readiness
 
-JustTap Pro is fully polished, verified, and release-ready across all desktop, mobile, English, Arabic, Free preview, and Pro active experiences. Release readiness revalidated following Phase 2 localization closure.
+JustTap Pro is fully polished, verified, and release-ready across all desktop, mobile, English, Arabic, Free preview, and Pro active experiences. Release readiness revalidated following Editor Floating Nav UX fix and Phase 2 localization closure.

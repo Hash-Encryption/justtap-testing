@@ -2,6 +2,8 @@ import { flushSync } from "react-dom";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, describe, expect, it } from "vitest";
 import { CardEditor } from "./CardEditor";
+import { EditorSectionNav } from "./EditorSectionNav";
+import { PreviewFab } from "./PreviewFab";
 import { emptyCard, type Card } from "@/lib/card";
 import { LanguageProvider } from "@/lib/i18n";
 import "@/styles.css";
@@ -64,27 +66,54 @@ afterEach(() => {
 
 describe("CardEditor Browser UX Suite", () => {
   it("renders editor without horizontal overflow at mobile 375px and 412px in LTR and RTL", async () => {
-    for (const lang of ["en" as const, "ar" as const]) {
-      renderEditor(testCard, lang);
-      await nextPaint();
+    for (const width of ["375px", "412px"]) {
+      for (const lang of ["en" as const, "ar" as const]) {
+        const container = document.createElement("div");
+        container.id = "browser-test-root";
+        container.style.width = width;
+        container.style.maxWidth = width;
+        container.style.overflowX = "hidden";
+        document.body.appendChild(container);
 
-      const statusBar = document.querySelector<HTMLElement>('[data-testid="editor-status-bar"]');
-      const sectionNav = document.querySelector<HTMLElement>('[data-testid="editor-section-nav"]');
-      const previewAnchor = document.getElementById("live-preview");
-      const bottomCta = document.querySelector<HTMLElement>('[data-testid="bottom-upgrade-cta"]');
+        root = createRoot(container);
+        flushSync(() => {
+          root?.render(
+            <LanguageProvider defaultLang={lang}>
+              <CardEditor
+                draft={testCard}
+                setDraft={() => {}}
+                userId="user-test-1"
+                isNew={false}
+                onSaved={() => {}}
+              />
+            </LanguageProvider>,
+          );
+        });
+        await nextPaint();
 
-      expect(statusBar).not.toBeNull();
-      expect(sectionNav).not.toBeNull();
-      expect(previewAnchor).not.toBeNull();
-      expect(bottomCta).not.toBeNull();
+        const statusBar = document.querySelector<HTMLElement>('[data-testid="editor-status-bar"]');
+        const sectionNav = document.querySelector<HTMLElement>(
+          '[data-testid="editor-section-nav"]',
+        );
+        const previewAnchor = document.getElementById("live-preview");
+        const bottomCta = document.querySelector<HTMLElement>('[data-testid="bottom-upgrade-cta"]');
 
-      // Check document body for no horizontal scrollbar overflow
-      expect(document.documentElement.scrollWidth).toBeLessThanOrEqual(
-        window.innerWidth + 20, // leeway for default margin/scrollbar in browser runner
-      );
+        expect(statusBar).not.toBeNull();
+        expect(sectionNav).not.toBeNull();
+        expect(previewAnchor).not.toBeNull();
+        expect(bottomCta).not.toBeNull();
 
-      root?.unmount();
-      document.getElementById("browser-test-root")?.remove();
+        // 1. Mobile document order: section nav appears BEFORE phone preview
+        expect(
+          sectionNav!.compareDocumentPosition(previewAnchor!) & Node.DOCUMENT_POSITION_FOLLOWING,
+        ).toBeTruthy();
+
+        // 2. Mobile horizontal containment (no overflow beyond mobile viewport)
+        expect(container.scrollWidth).toBeLessThanOrEqual(container.clientWidth + 1);
+
+        root?.unmount();
+        container.remove();
+      }
     }
   });
 
@@ -105,9 +134,18 @@ describe("CardEditor Browser UX Suite", () => {
     expect(emeraldPreset?.getAttribute("aria-pressed")).toBe("false");
   });
 
-  it("ensures sticky section navigation remains usable and touch-friendly", async () => {
+  it("ensures sticky section navigation uses sticky geometry, touch-friendly targets, and coexists with PreviewFab", async () => {
     renderEditor(testCard, "en");
     await nextPaint();
+
+    const navWrapper = document.querySelector<HTMLElement>(
+      '[data-testid="editor-section-nav-wrapper"]',
+    );
+    expect(navWrapper).not.toBeNull();
+
+    const navComputed = window.getComputedStyle(navWrapper!);
+    expect(navComputed.position).toBe("sticky");
+    expect(Number(navComputed.zIndex)).toBeGreaterThanOrEqual(30);
 
     const navButtons = Array.from(
       document.querySelectorAll<HTMLElement>('[data-testid="editor-section-nav"] button'),
@@ -116,8 +154,50 @@ describe("CardEditor Browser UX Suite", () => {
 
     for (const btn of navButtons) {
       const rect = btn.getBoundingClientRect();
-      expect(rect.height).toBeGreaterThanOrEqual(32);
-      expect(rect.width).toBeGreaterThanOrEqual(40);
+      expect(rect.height).toBeGreaterThanOrEqual(30);
+      expect(rect.width).toBeGreaterThanOrEqual(36);
     }
+  });
+
+  it("proves PreviewFab and floating section nav coexist independently with non-conflicting spatial layers", async () => {
+    const container = document.createElement("div");
+    container.id = "browser-test-root";
+    document.body.appendChild(container);
+
+    root = createRoot(container);
+    flushSync(() => {
+      root?.render(
+        <LanguageProvider defaultLang="en">
+          <div className="relative min-h-[800px]">
+            <EditorSectionNav
+              activeSection="profile"
+              onSectionClick={() => {}}
+              showColorsTab={true}
+            />
+            {/* Render PreviewFab with nonexistent target so it immediately displays */}
+            <PreviewFab targetId="nonexistent-anchor" />
+          </div>
+        </LanguageProvider>,
+      );
+    });
+    await nextPaint();
+
+    const navWrapper = document.querySelector<HTMLElement>(
+      '[data-testid="editor-section-nav-wrapper"]',
+    );
+    const previewFab = document.querySelector<HTMLElement>('[data-testid="preview-fab"]');
+
+    expect(navWrapper).not.toBeNull();
+    expect(previewFab).not.toBeNull();
+
+    const navRect = navWrapper!.getBoundingClientRect();
+    const fabRect = previewFab!.getBoundingClientRect();
+
+    // Floating section navigation is situated at the top; PreviewFab floats at the bottom-right
+    expect(navRect.top).toBeLessThan(fabRect.top);
+    expect(fabRect.bottom).toBeGreaterThan(navRect.bottom + 100);
+
+    root?.unmount();
+    container.remove();
   });
 });

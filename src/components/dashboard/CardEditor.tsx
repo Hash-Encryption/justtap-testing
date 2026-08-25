@@ -787,6 +787,13 @@ export function CardEditor({
         </div>
       )}
 
+      {/* FLOATING STICKY SECTION NAVIGATION (Rendered above workbench so it appears above phone on mobile and floats centered across workbench) */}
+      <EditorSectionNav
+        activeSection={activeSection}
+        onSectionClick={handleSectionClick}
+        showColorsTab={draft.design_mode === "custom"}
+      />
+
       {/* WORKBENCH LAYOUT: Desktop Split / Mobile Stack */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
         {/* LEFT COLUMN: Sticky Realistic Phone Preview */}
@@ -867,13 +874,6 @@ export function CardEditor({
 
         {/* RIGHT COLUMN: Editors, Section Nav & Controls */}
         <div className="lg:col-span-7 space-y-6">
-          {/* Sticky Section Navigation */}
-          <EditorSectionNav
-            activeSection={activeSection}
-            onSectionClick={handleSectionClick}
-            showColorsTab={draft.design_mode === "custom"}
-          />
-
           {/* SECTION 1: PROFILE & MEDIA */}
           <CollapsibleSection
             id="section-profile"
