@@ -327,7 +327,7 @@ describe("Card Editor UX Clarity & Polish Suite", () => {
       expect(navPos).toBeLessThan(previewPos);
     });
 
-    it("19C. renders floating capsule container with fixed and backdrop styling", () => {
+    it("19C. renders floating capsule container with sticky and backdrop styling", () => {
       const html = renderToStaticMarkup(
         <LanguageProvider defaultLang="en">
           <EditorSectionNav
@@ -338,7 +338,7 @@ describe("Card Editor UX Clarity & Polish Suite", () => {
         </LanguageProvider>,
       );
       expect(html).toContain('data-testid="editor-section-nav-wrapper"');
-      expect(html).toContain("fixed");
+      expect(html).toContain("sticky");
       expect(html).toContain("rounded-full");
       expect(html).toContain("backdrop-blur-xl");
     });

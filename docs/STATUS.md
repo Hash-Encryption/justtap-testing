@@ -66,14 +66,14 @@ Last updated: 2026-08-22
   - Redesigned Own Brand ("Use Your Own Brand" / "استخدام هويتك الخاصة") with Before/After comparison cards.
   - Added sticky action bar: Pro users see "Save & Publish Features", Free users see "Upgrade to Activate" (opening `ProUpgradeDialog` with source `pro_features_save`).
   - Added full bilingual English/Arabic localization with complete RTL support and zero hard-coded English in the UI (completed Phase 2 localization closure for all mini-preview badges, labels, and fallback examples).
-  - Completed Final Fixed Floating Editor Nav & Smart Section Jump UX:
-    - Converted `EditorSectionNav` into a true viewport-fixed floating control (`position: fixed`, `rounded-full`, `shadow-2xl`, `bg-slate-950/85`) that remains anchored on-screen while page content scrolls smoothly underneath.
-    - Added dynamic `ResizeObserver` hotbar measurement to position the floating navigation safely beneath `editor-hotbar` across mobile (375px–412px) and desktop viewports in EN and AR/RTL.
-    - Implemented controlled scrolling in `handleSectionClick` and `PreviewFab` accounting for top fixed obstruction so target headings land cleanly visible below the floating controls without being obscured.
-    - Added scroll-spy with click lock to keep active section tabs accurate without oscillation.
+  - Completed Final Mobile Natural-to-Sticky Editor Navigation & Smart Section Jump UX:
+    - Converted mobile editor hotbar to normal document flow (`relative sm:sticky sm:top-4`), allowing it to scroll away smoothly on mobile without competing with or occluding section navigation.
+    - Positioned `EditorSectionNav` naturally in document flow above phone preview with pure CSS sticky behavior (`sticky top-0 sm:top-24 z-30`), sticking smoothly when reaching the top of the viewport and releasing when scrolling back upward.
+    - Implemented dynamic clearance in `handleSectionClick` and `PreviewFab` accounting for nav height so target section titles and live preview land cleanly below the sticky navigation without being obscured.
+    - Preserved scroll-spy with click lock and internal horizontal scrolling inside the capsule for 375px–412px viewports.
   - Comprehensive test suite in `ProUpgrade.test.tsx` (171 tests), `CardEditorUx.test.tsx` (32 tests), and browser test suite across 6 files pass 100% (366 unit tests, 20 browser tests).
   - Clean TypeScript (`typecheck:v2`), ESLint (`lint:v2`), secret scan (`security:scan`), and production build (`build`).
 
 ## Release Readiness
 
-JustTap Pro is fully polished, verified, and release-ready across all desktop, mobile, English, Arabic, Free preview, and Pro active experiences. Release readiness revalidated following Fixed Floating Editor Navigation UX correction.
+JustTap Pro is fully polished, verified, and release-ready across all desktop, mobile, English, Arabic, Free preview, and Pro active experiences. Release readiness revalidated following Natural-to-Sticky Mobile Editor Navigation UX correction.

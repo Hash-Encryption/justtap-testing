@@ -8,7 +8,6 @@ type Props = {
   activeSection: EditorSectionId;
   onSectionClick: (id: EditorSectionId) => void;
   showColorsTab?: boolean;
-  topOffset?: number;
   className?: string;
 };
 
@@ -16,7 +15,6 @@ export function EditorSectionNav({
   activeSection,
   onSectionClick,
   showColorsTab = true,
-  topOffset,
   className = "",
 }: Props) {
   const { t } = useTranslation();
@@ -47,15 +45,10 @@ export function EditorSectionNav({
     }
   }, [activeSection]);
 
-  const styleTop = topOffset !== undefined ? `${topOffset}px` : undefined;
-
   return (
     <div
       data-testid="editor-section-nav-wrapper"
-      style={styleTop ? { top: styleTop } : undefined}
-      className={`fixed left-0 right-0 z-30 flex justify-center w-full pointer-events-none px-4 transition-[top] duration-150 ${
-        topOffset === undefined ? "top-[140px] sm:top-[88px]" : ""
-      } ${className}`}
+      className={`sticky top-0 sm:top-24 z-30 flex justify-center w-full pointer-events-none py-1.5 ${className}`}
     >
       <nav
         data-testid="editor-section-nav"

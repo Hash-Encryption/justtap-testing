@@ -134,7 +134,7 @@ describe("CardEditor Browser UX Suite", () => {
     expect(emeraldPreset?.getAttribute("aria-pressed")).toBe("false");
   });
 
-  it("ensures floating section navigation uses fixed geometry, touch-friendly targets, and coexists with PreviewFab", async () => {
+  it("ensures floating section navigation uses sticky geometry, touch-friendly targets, and coexists with PreviewFab", async () => {
     renderEditor(testCard, "en");
     await nextPaint();
 
@@ -144,7 +144,7 @@ describe("CardEditor Browser UX Suite", () => {
     expect(navWrapper).not.toBeNull();
 
     const navComputed = window.getComputedStyle(navWrapper!);
-    expect(navComputed.position).toBe("fixed");
+    expect(navComputed.position).toBe("sticky");
     expect(Number(navComputed.zIndex)).toBeGreaterThanOrEqual(30);
 
     const navButtons = Array.from(
@@ -201,7 +201,7 @@ describe("CardEditor Browser UX Suite", () => {
     container.remove();
   });
 
-  it("proves fixed section nav does not overlap sticky hotbar and maintains fixed viewport position when scrolling at mobile 375px, 390px, and 412px in EN and AR/RTL", async () => {
+  it("proves mobile section nav exhibits natural-to-sticky behavior (starts in flow, scrolls up, sticks at top, and releases when scrolling back)", async () => {
     for (const width of ["375px", "390px", "412px"]) {
       for (const lang of ["en" as const, "ar" as const]) {
         const container = document.createElement("div");
@@ -233,24 +233,49 @@ describe("CardEditor Browser UX Suite", () => {
         const navWrapper = container.querySelector<HTMLElement>(
           '[data-testid="editor-section-nav-wrapper"]',
         );
+        const preview = container.querySelector<HTMLElement>("#live-preview");
 
         expect(hotbar).not.toBeNull();
         expect(navWrapper).not.toBeNull();
+        expect(preview).not.toBeNull();
 
+        // 1. Initial document order: hotbar -> nav -> preview
+        const initialHotbarRect = hotbar!.getBoundingClientRect();
         const initialNavRect = navWrapper!.getBoundingClientRect();
+        const initialPreviewRect = preview!.getBoundingClientRect();
 
-        // Scroll container down 500px so content moves
-        container.scrollTop = 500;
+        expect(initialHotbarRect.top).toBeLessThan(initialNavRect.top);
+        expect(initialNavRect.top).toBeLessThan(initialPreviewRect.top);
+
+        // 2. Partial scroll: nav moves upward naturally with document flow before sticking
+        container.scrollTop = 40;
         await nextPaint();
+        const partialNavRect = navWrapper!.getBoundingClientRect();
+        expect(partialNavRect.top).toBeLessThan(initialNavRect.top);
 
-        const scrolledHotbarRect = hotbar!.getBoundingClientRect();
-        const scrolledNavRect = navWrapper!.getBoundingClientRect();
+        // 3. Significant scroll: hotbar scrolls away, nav sticks at the top
+        container.scrollTop = 300;
+        await nextPaint();
+        const stuckNavRect = navWrapper!.getBoundingClientRect();
+        const stuckHotbarRect = hotbar!.getBoundingClientRect();
+        const containerRect = container.getBoundingClientRect();
 
-        // 1. Fixed positioning invariance: nav top remains at same viewport position
-        expect(Math.abs(scrolledNavRect.top - initialNavRect.top)).toBeLessThanOrEqual(2);
+        // Nav is stuck at the container top (approx containerRect.top)
+        expect(Math.abs(stuckNavRect.top - containerRect.top)).toBeLessThanOrEqual(5);
+        // Mobile hotbar has scrolled away above the sticky nav
+        expect(stuckHotbarRect.bottom).toBeLessThanOrEqual(stuckNavRect.top + 5);
 
-        // 2. Hotbar non-overlap: floating nav sits cleanly below hotbar
-        expect(scrolledNavRect.top).toBeGreaterThanOrEqual(scrolledHotbarRect.bottom - 2);
+        // 4. Further scroll: nav remains stuck at top
+        container.scrollTop = 600;
+        await nextPaint();
+        const furtherNavRect = navWrapper!.getBoundingClientRect();
+        expect(Math.abs(furtherNavRect.top - containerRect.top)).toBeLessThanOrEqual(5);
+
+        // 5. Release on scroll back: scrolling back to 0 restores natural position
+        container.scrollTop = 0;
+        await nextPaint();
+        const restoredNavRect = navWrapper!.getBoundingClientRect();
+        expect(Math.abs(restoredNavRect.top - initialNavRect.top)).toBeLessThanOrEqual(2);
 
         root?.unmount();
         container.remove();

@@ -40,11 +40,10 @@ export function PreviewFab({ targetId = "live-preview" }: Props) {
     const currentScrollY =
       window.scrollY || window.pageYOffset || document.documentElement.scrollTop || 0;
 
-    const navWrapper = document.querySelector<HTMLElement>(
-      '[data-testid="editor-section-nav-wrapper"]',
-    );
-    const navRect = navWrapper?.getBoundingClientRect();
-    const clearance = (navRect && navRect.bottom > 0 ? navRect.bottom : 180) + 16;
+    const navEl = document.querySelector<HTMLElement>('[data-testid="editor-section-nav"]');
+    const navHeight = navEl ? navEl.getBoundingClientRect().height : 44;
+    const navRect = navEl?.getBoundingClientRect();
+    const clearance = Math.max(navHeight + 16, (navRect?.bottom || 0) + 16);
 
     const scrollParent = target.closest(
       ".overflow-y-auto, [style*='overflow-y: auto']",

@@ -212,37 +212,8 @@ export function CardEditor({
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [undo, redo]);
 
-  const hotbarRef = useRef<HTMLDivElement>(null);
-  const [navTopOffset, setNavTopOffset] = useState<number>(() => {
-    if (typeof window === "undefined") return 140;
-    return window.innerWidth >= 640 ? 88 : 140;
-  });
   const isUserClickingRef = useRef(false);
   const userClickTimerRef = useRef<number | null>(null);
-
-  // Dynamically measure editor hotbar geometry to position fixed section nav safely beneath it
-  useEffect(() => {
-    const updateOffset = () => {
-      if (!hotbarRef.current) return;
-      const rect = hotbarRef.current.getBoundingClientRect();
-      const computedBottom = rect.bottom > 0 ? rect.bottom : 16 + hotbarRef.current.offsetHeight;
-      const newTop = Math.round(computedBottom + 12);
-      setNavTopOffset((prev) => (Math.abs(prev - newTop) > 1 ? newTop : prev));
-    };
-
-    updateOffset();
-
-    const el = hotbarRef.current;
-    if (!el) return;
-
-    const ro = new ResizeObserver(() => updateOffset());
-    ro.observe(el);
-    window.addEventListener("resize", updateOffset);
-    return () => {
-      ro.disconnect();
-      window.removeEventListener("resize", updateOffset);
-    };
-  }, []);
 
   // Section observer for scroll-spy section navigation
   useEffect(() => {
@@ -295,8 +266,10 @@ export function CardEditor({
       const currentScrollY =
         window.scrollY || window.pageYOffset || document.documentElement.scrollTop || 0;
 
-      // Clearance for fixed hotbar + floating nav + safe buffer
-      const clearance = navTopOffset + 44 + 16;
+      const navEl = document.querySelector<HTMLElement>('[data-testid="editor-section-nav"]');
+      const navHeight = navEl ? navEl.getBoundingClientRect().height : 44;
+      const navRect = navEl?.getBoundingClientRect();
+      const clearance = Math.max(navHeight + 16, (navRect?.bottom || 0) + 16);
 
       const scrollParent = el.closest(
         ".overflow-y-auto, [style*='overflow-y: auto']",
@@ -752,9 +725,8 @@ export function CardEditor({
     <div className="relative pb-24 space-y-6">
       {/* TOP EDITOR TOOLBAR / FLOATING HOTBAR */}
       <div
-        ref={hotbarRef}
         data-testid="editor-hotbar"
-        className="sticky top-4 z-40 justtap-glass rounded-2xl p-3 sm:p-4 flex flex-col sm:flex-row items-center justify-between gap-3 sm:gap-4 border border-slate-800/80 shadow-xl backdrop-blur-xl bg-slate-950/80"
+        className="relative sm:sticky sm:top-4 z-40 justtap-glass rounded-2xl p-3 sm:p-4 flex flex-col sm:flex-row items-center justify-between gap-3 sm:gap-4 border border-slate-800/80 shadow-xl backdrop-blur-xl bg-slate-950/80"
       >
         <div className="flex items-center space-x-3 rtl:space-x-reverse w-full sm:w-auto justify-between sm:justify-start">
           {onBackToDashboard && (
@@ -848,16 +820,12 @@ export function CardEditor({
         </div>
       )}
 
-      {/* VIEWPORT-FIXED FLOATING SECTION NAVIGATION */}
+      {/* NATURAL-TO-STICKY SECTION NAVIGATION */}
       <EditorSectionNav
         activeSection={activeSection}
         onSectionClick={handleSectionClick}
         showColorsTab={draft.design_mode === "custom"}
-        topOffset={navTopOffset}
       />
-
-      {/* Flow Spacer placeholder so page content starts cleanly below floating controls */}
-      <div className="h-12 w-full" aria-hidden="true" />
 
       {/* WORKBENCH LAYOUT: Desktop Split / Mobile Stack */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
