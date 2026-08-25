@@ -373,7 +373,9 @@ export function ProFeaturesTab({ card, onChange, userId, session, onTrialStarted
             <div className="text-[10px] uppercase font-bold tracking-wider text-muted-foreground/70 mb-1.5 flex items-center justify-between">
               <span>{t("previewCard")}</span>
               <span className="text-[9px] font-normal text-muted-foreground/60">
-                {pro.video_url && getEmbedVideoUrl(pro.video_url) ? "Live Embed" : "Mockup"}
+                {pro.video_url && getEmbedVideoUrl(pro.video_url)
+                  ? t("livePreviewBadge")
+                  : t("exampleBadge")}
               </span>
             </div>
             {pro.video_url && getEmbedVideoUrl(pro.video_url) ? (
@@ -488,7 +490,9 @@ export function ProFeaturesTab({ card, onChange, userId, session, onTrialStarted
           <div className="md:col-span-5 flex flex-col justify-center">
             <div className="text-[10px] uppercase font-bold tracking-wider text-muted-foreground/70 mb-1.5 flex items-center justify-between">
               <span>{t("previewCard")}</span>
-              <span className="text-[9px] font-normal text-muted-foreground/60">Mockup</span>
+              <span className="text-[9px] font-normal text-muted-foreground/60">
+                {t("exampleBadge")}
+              </span>
             </div>
             <div className="flex flex-col justify-center rounded-2xl border border-border/70 bg-secondary/30 p-4 w-full">
               <div className="flex items-center justify-between gap-3">
@@ -500,7 +504,7 @@ export function ProFeaturesTab({ card, onChange, userId, session, onTrialStarted
                     <p className="text-xs font-semibold truncate text-foreground/90">
                       {pro.pdf_label?.trim() || t("pdfDefaultLabel")}
                     </p>
-                    <p className="text-[10px] text-muted-foreground">PDF Document</p>
+                    <p className="text-[10px] text-muted-foreground">{t("pdfDocumentBadge")}</p>
                   </div>
                 </div>
                 <span className="shrink-0 inline-flex items-center gap-1 rounded-lg bg-primary/15 px-2.5 py-1 text-[11px] font-semibold text-primary">
@@ -566,7 +570,9 @@ export function ProFeaturesTab({ card, onChange, userId, session, onTrialStarted
           <div className="md:col-span-5 flex flex-col justify-center">
             <div className="text-[10px] uppercase font-bold tracking-wider text-muted-foreground/70 mb-1.5 flex items-center justify-between">
               <span>{t("previewCard")}</span>
-              <span className="text-[9px] font-normal text-muted-foreground/60">Mockup</span>
+              <span className="text-[9px] font-normal text-muted-foreground/60">
+                {t("exampleBadge")}
+              </span>
             </div>
             <div className="flex flex-col justify-center rounded-2xl border border-border/70 bg-secondary/30 p-4 w-full">
               <div className="flex items-center justify-between gap-3">
@@ -579,7 +585,7 @@ export function ProFeaturesTab({ card, onChange, userId, session, onTrialStarted
                       {t("bookingActionLabel")}
                     </p>
                     <p className="text-[10px] text-muted-foreground truncate">
-                      {pro.booking_url?.trim() ? pro.booking_url : "calendly.com/..."}
+                      {pro.booking_url?.trim() ? pro.booking_url : t("bookingLinkExample")}
                     </p>
                   </div>
                 </div>
@@ -664,7 +670,9 @@ export function ProFeaturesTab({ card, onChange, userId, session, onTrialStarted
           <div className="md:col-span-5 flex flex-col justify-center">
             <div className="text-[10px] uppercase font-bold tracking-wider text-muted-foreground/70 mb-1.5 flex items-center justify-between">
               <span>{t("previewCard")}</span>
-              <span className="text-[9px] font-normal text-muted-foreground/60">Action Button</span>
+              <span className="text-[9px] font-normal text-muted-foreground/60">
+                {t("actionButtonBadge")}
+              </span>
             </div>
             <div className="flex flex-col items-center justify-center rounded-2xl border border-border/70 bg-secondary/30 p-4 w-full">
               <div className="w-full flex items-center justify-center">

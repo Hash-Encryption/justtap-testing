@@ -309,6 +309,8 @@ const translations = {
       "Unsupported video URL format. Please paste a valid YouTube, Loom, Vimeo, or Google Drive link.",
     videoPreviewExampleTitle: "Your introduction video",
     videoPreviewExampleBadge: "Live Video Preview",
+    livePreviewBadge: "Live preview",
+    exampleBadge: "Example",
     pdfDocTitle: "Share a PDF or Brochure",
     pdfDocDesc:
       "Attach a menu, brochure, catalog, portfolio, CV, or other PDF for visitors to download.",
@@ -320,6 +322,7 @@ const translations = {
     uploading: "Uploading…",
     pdfOpenAction: "Open PDF →",
     pdfDefaultLabel: "Company Brochure",
+    pdfDocumentBadge: "PDF document",
     bookingTitle: "Let People Book You",
     bookingDesc:
       "Add your booking link so visitors can schedule a meeting without searching for it.",
@@ -327,6 +330,7 @@ const translations = {
     bookingHelperHint: "Works with Calendly, SavvyCal, TidyCal, and other scheduling tools.",
     bookingActionLabel: "Book a Meeting",
     bookingChooseTime: "Choose a time →",
+    bookingLinkExample: "Your booking link",
     customCtaTitle: "Add a Main Action",
     customCtaDesc:
       "Give visitors one clear next step, such as viewing your portfolio, getting directions, making a payment, or visiting a website.",
@@ -336,6 +340,7 @@ const translations = {
     customCtaDestinationPlaceholder: "https://...",
     customCtaDefaultLabel: "View Portfolio",
     customCtaDefaultAction: "View Portfolio →",
+    actionButtonBadge: "Action button",
     emailAlertsTitle: "New Connection Alerts",
     emailAlertsDesc:
       "Receive an email when someone shares their details with you through your card.",
@@ -819,6 +824,8 @@ const translations = {
       "صيغة الفيديو غير مدعومة. يرجى إدخال رابط صالح من YouTube أو Loom أو Vimeo أو Google Drive.",
     videoPreviewExampleTitle: "الفيديو التعريفي الخاص بك",
     videoPreviewExampleBadge: "معاينة الفيديو",
+    livePreviewBadge: "معاينة مباشرة",
+    exampleBadge: "مثال توضيحي",
     pdfDocTitle: "مشاركة ملف PDF أو بروشور",
     pdfDocDesc:
       "أرفق قائمة طعام، بروشور الشركة، كتالوج، معرض أعمال، سيرة ذاتية، أو أي ملف PDF ليقوم الزوار بتحميله.",
@@ -830,12 +837,14 @@ const translations = {
     uploading: "جاري الرفع…",
     pdfOpenAction: "فتح ملف PDF ←",
     pdfDefaultLabel: "بروشور الشركة",
+    pdfDocumentBadge: "مستند PDF",
     bookingTitle: "تمكين حجز المواعيد",
     bookingDesc: "أضف رابط الحجز الخاص بك ليتمكن الزوار من جدولة موعد معك بسهولة.",
     bookingPlaceholder: "https://calendly.com/your-name/30min",
     bookingHelperHint: "متوافق مع Calendly و SavvyCal و TidyCal وأدوات الجدولة الأخرى.",
     bookingActionLabel: "حجز موعد",
     bookingChooseTime: "اختر موعداً ←",
+    bookingLinkExample: "رابط الحجز الخاص بك",
     customCtaTitle: "إضافة زر إجراء رئيسي",
     customCtaDesc:
       "امنح الزوار خطوة تالية واضحة، مثل استعراض أعمالك، معرفة الموقع، الدفع الإلكتروني، أو زيارة موقعك.",
@@ -845,6 +854,7 @@ const translations = {
     customCtaDestinationPlaceholder: "https://...",
     customCtaDefaultLabel: "استعراض الأعمال",
     customCtaDefaultAction: "استعراض الأعمال ←",
+    actionButtonBadge: "زر الإجراء",
     emailAlertsTitle: "تنبيهات جهات الاتصال الجديدة",
     emailAlertsDesc: "استلم بريداً إلكترونياً عند مشاركة أي شخص لبيانات تواصله عبر بطاقتك.",
     emailAlertsToggle: "تنبيهات التواصل",

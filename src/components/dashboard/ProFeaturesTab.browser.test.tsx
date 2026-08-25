@@ -70,9 +70,26 @@ describe("ProFeaturesTab Component — Browser & Mobile Regression", () => {
         expect(document.body.textContent).toMatch(/PRO PREVIEW/i);
         expect(document.body.textContent).toMatch(/Start 7-Day Free Trial/i);
         expect(document.body.textContent).toMatch(/Upgrade to Activate/i);
+        expect(document.body.textContent).toMatch(/Example/i);
+        expect(document.body.textContent).toMatch(/PDF document/i);
+        expect(document.body.textContent).toMatch(/Your booking link/i);
+        expect(document.body.textContent).toMatch(/Action button/i);
       } else {
         expect(document.body.textContent).toMatch(/اجعل بطاقتك تقدم المزيد/i);
         expect(document.body.textContent).toMatch(/ترقية للتفعيل/i);
+        expect(document.body.textContent).toMatch(/مثال توضيحي/i);
+        expect(document.body.textContent).toMatch(/مستند PDF/i);
+        expect(document.body.textContent).toMatch(/رابط الحجز الخاص بك/i);
+        expect(document.body.textContent).toMatch(/زر الإجراء/i);
+        expect(document.body.textContent).toMatch(/قبل/i);
+        expect(document.body.textContent).toMatch(/بعد/i);
+
+        // Assert zero English leakage in Arabic mode for newly introduced mini-preview labels
+        expect(document.body.textContent).not.toMatch(/Live Embed/i);
+        expect(document.body.textContent).not.toMatch(/Mockup/i);
+        expect(document.body.textContent).not.toMatch(/PDF Document/);
+        expect(document.body.textContent).not.toMatch(/calendly\.com\/\.\.\./i);
+        expect(document.body.textContent).not.toMatch(/Action Button/i);
       }
 
       // Assert no horizontal overflow

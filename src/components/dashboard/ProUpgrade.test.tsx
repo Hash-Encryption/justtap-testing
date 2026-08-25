@@ -3010,7 +3010,7 @@ describe("Phase 6: Integrated Apple Wallet & Pro Discovery Experience", () => {
     );
 
     expect(html).toContain("Summer 2026 Menu");
-    expect(html).toContain("PDF Document");
+    expect(html).toContain("PDF document");
     expect(html).toContain("Open PDF →");
   });
 
@@ -3135,5 +3135,64 @@ describe("Phase 6: Integrated Apple Wallet & Pro Discovery Experience", () => {
     expect(publicHtml).not.toContain("https://calendly.com/alex/30min");
     expect(publicHtml).not.toContain("VIP Access");
     expect(publicHtml).not.toContain("https://www.youtube.com/embed/dQw4w9WgXcQ");
+  });
+
+  // 171. Phase 2 — Mini-preview system localization & zero Arabic English leakage regression test
+  it("171. Phase 2: Mini-preview system renders proper EN/AR translations and eliminates English leakage in Arabic mode", () => {
+    const cardWithLiveVideo: Card = {
+      ...baseFreeCard,
+      pro_features: {
+        video_url: "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+      },
+    };
+
+    // 1. English mode assertions
+    const enHtml = renderToStaticMarkup(
+      <LanguageProvider defaultLang="en">
+        <ProFeaturesTab card={baseFreeCard} userId="user-1" onChange={vi.fn()} />
+      </LanguageProvider>,
+    );
+    expect(enHtml).toContain("Example");
+    expect(enHtml).toContain("PDF document");
+    expect(enHtml).toContain("Your booking link");
+    expect(enHtml).toContain("Action button");
+
+    const enLiveVideoHtml = renderToStaticMarkup(
+      <LanguageProvider defaultLang="en">
+        <ProFeaturesTab card={cardWithLiveVideo} userId="user-1" onChange={vi.fn()} />
+      </LanguageProvider>,
+    );
+    expect(enLiveVideoHtml).toContain("Live preview");
+
+    // 2. Arabic mode assertions
+    const arHtml = renderToStaticMarkup(
+      <LanguageProvider defaultLang="ar">
+        <ProFeaturesTab card={baseFreeCard} userId="user-1" onChange={vi.fn()} />
+      </LanguageProvider>,
+    );
+    expect(arHtml).toContain("مثال توضيحي");
+    expect(arHtml).toContain("مستند PDF");
+    expect(arHtml).toContain("رابط الحجز الخاص بك");
+    expect(arHtml).toContain("زر الإجراء");
+    expect(arHtml).toContain("تنبيه توضيحي");
+    expect(arHtml).toContain("قبل");
+    expect(arHtml).toContain("بعد");
+
+    const arLiveVideoHtml = renderToStaticMarkup(
+      <LanguageProvider defaultLang="ar">
+        <ProFeaturesTab card={cardWithLiveVideo} userId="user-1" onChange={vi.fn()} />
+      </LanguageProvider>,
+    );
+    expect(arLiveVideoHtml).toContain("معاينة مباشرة");
+
+    // 3. Negative assertions: Ensure old hardcoded English literals are completely absent in Arabic mode
+    expect(arHtml).not.toContain("Live Embed");
+    expect(arHtml).not.toContain("Mockup");
+    expect(arHtml).not.toContain("PDF Document");
+    expect(arHtml).not.toContain("calendly.com/...");
+    expect(arHtml).not.toContain("Action Button");
+    expect(arHtml).not.toContain("Sample Alert");
+    expect(arLiveVideoHtml).not.toContain("Live Embed");
+    expect(arLiveVideoHtml).not.toContain("Mockup");
   });
 });
