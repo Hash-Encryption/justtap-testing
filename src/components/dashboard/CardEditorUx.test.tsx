@@ -99,10 +99,12 @@ describe("Card Editor UX Clarity & Polish Suite", () => {
         </LanguageProvider>,
       );
 
-      // Executive Navy should be aria-pressed="true"
+      // Executive Navy should be aria-pressed="true" with visual ring and check marker, without persistent text
       expect(html).toContain('data-testid="preset-button-executive_navy"');
       expect(html).toContain('aria-pressed="true"');
-      expect(html).toContain("Selected");
+      expect(html).toContain("ring-2 ring-amber-400");
+      expect(html).toContain('data-testid="preset-selected-check"');
+      expect(html).not.toContain("Selected");
 
       // Other presets should be aria-pressed="false"
       expect(html).toContain('data-testid="preset-button-emerald_noir"');
@@ -131,9 +133,10 @@ describe("Card Editor UX Clarity & Polish Suite", () => {
       }
       // None of the preset buttons should have Selected indicator
       expect(html).not.toContain('aria-pressed="true"');
+      expect(html).not.toContain('data-testid="preset-selected-check"');
     });
 
-    it("9. provides accessible semantics and visible selected indicators in Arabic", () => {
+    it("9. provides accessible semantics and visual selected check marker in Arabic without literal Selected text", () => {
       const html = renderToStaticMarkup(
         <LanguageProvider defaultLang="ar">
           <CardEditor
@@ -145,7 +148,10 @@ describe("Card Editor UX Clarity & Polish Suite", () => {
           />
         </LanguageProvider>,
       );
-      expect(html).toContain("محدد");
+      expect(html).toContain('data-testid="preset-button-executive_navy"');
+      expect(html).toContain('aria-pressed="true"');
+      expect(html).toContain('data-testid="preset-selected-check"');
+      expect(html).not.toContain("محدد");
     });
   });
 
@@ -465,7 +471,7 @@ describe("Card Editor UX Clarity & Polish Suite", () => {
       expect(html).toContain('data-testid="editor-status-bar"');
     });
 
-    it("30. renders small persistent Selected indicator directly on the selected preset without an intrusive block", () => {
+    it("30. renders small check marker and ring highlight directly on the selected preset without persistent Selected / محدد text", () => {
       const html = renderToStaticMarkup(
         <LanguageProvider defaultLang="en">
           <CardEditor
@@ -478,8 +484,10 @@ describe("Card Editor UX Clarity & Polish Suite", () => {
         </LanguageProvider>,
       );
       expect(html).toContain('data-testid="preset-button-executive_navy"');
-      expect(html).toContain("Selected");
       expect(html).toContain("ring-2 ring-amber-400");
+      expect(html).toContain('data-testid="preset-selected-check"');
+      expect(html).not.toContain("Selected");
+      expect(html).not.toContain("محدد");
     });
 
     it("31. renders Arabic status bar truthfully for auto-saved drafts without contradictory messages", () => {

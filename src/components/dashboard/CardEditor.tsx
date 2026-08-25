@@ -1100,10 +1100,10 @@ export function CardEditor({
                         <div className="flex items-center justify-between">
                           <span className="text-xs font-bold text-white block">{preset.name}</span>
                           {isSelected && (
-                            <span className="inline-flex items-center gap-1 text-[10px] font-bold text-amber-300">
-                              <Check className="w-3 h-3 text-amber-400" />
-                              {t("selected")}
-                            </span>
+                            <Check
+                              data-testid="preset-selected-check"
+                              className="w-3.5 h-3.5 text-amber-400 shrink-0"
+                            />
                           )}
                         </div>
                         <div className="flex items-center space-x-1.5 rtl:space-x-reverse">
