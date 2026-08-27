@@ -342,7 +342,7 @@ function Dashboard() {
   ];
 
   return (
-    <div className="min-h-screen bg-[#08080A] text-slate-100 flex flex-col md:flex-row relative overflow-x-hidden font-sans">
+    <div className="min-h-screen bg-[#08080A] text-slate-100 flex flex-col md:flex-row relative overflow-x-clip font-sans">
       {/* Ambient Radial Purple Glow */}
       <div
         className="pointer-events-none absolute -top-40 left-1/2 -translate-x-1/2 w-[800px] h-[500px] opacity-30 blur-[120px] rounded-full"
@@ -443,7 +443,7 @@ function Dashboard() {
       </nav>
 
       {/* MAIN CONTENT AREA */}
-      <main className="flex-1 p-4 sm:p-8 max-w-6xl mx-auto w-full pb-28 md:pb-12">
+      <main className="flex-1 min-w-0 p-4 sm:p-8 max-w-6xl mx-auto w-full pb-28 md:pb-12">
         {/* MOBILE TOP HEADER BAR */}
         <div className="md:hidden flex items-center justify-between pb-6 mb-4 border-b border-slate-800">
           <Link to="/" className="font-display text-lg font-bold text-white">

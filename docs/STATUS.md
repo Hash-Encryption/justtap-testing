@@ -71,9 +71,14 @@ Last updated: 2026-08-22
     - Positioned `EditorSectionNav` naturally in document flow above phone preview with pure CSS sticky behavior (`sticky top-0 sm:top-24 z-30`), sticking smoothly when reaching the top of the viewport and releasing when scrolling back upward.
     - Implemented dynamic clearance in `handleSectionClick` and `PreviewFab` accounting for nav height so target section titles and live preview land cleanly below the sticky navigation without being obscured.
     - Preserved scroll-spy with click lock and internal horizontal scrolling inside the capsule for 375px–412px viewports.
-  - Comprehensive test suite in `ProUpgrade.test.tsx` (171 tests), `CardEditorUx.test.tsx` (32 tests), and browser test suite across 6 files pass 100% (366 unit tests, 20 browser tests).
+  - Completed Logged-In Editor Sticky Nav Integration Fix:
+    - Replaced `overflow-x-hidden` with `overflow-x-clip` on the logged-in dashboard root shell (`src/routes/dashboard.tsx`), eliminating ancestor scroll-container trapping that broke descendant `position: sticky` on mobile viewports.
+    - Added `min-w-0` to the dashboard main container for robust width safety without layout changes.
+    - Preserved natural-to-sticky behavior, dynamic clearance section jumping, scroll-spy, PreviewFab, and bottom nav coexistence across 375px, 390px, and 412px viewports in both English LTR and Arabic RTL.
+    - Added side-by-side Guest Sandbox vs Logged-In Dashboard regression tests in `CardEditorUx.browser.test.tsx` proving identical sticky nav functionality.
+  - Comprehensive test suite in `ProUpgrade.test.tsx` (171 tests), `CardEditorUx.test.tsx` (32 tests), and browser test suite across 6 files pass 100% (366 unit tests, 22 browser tests).
   - Clean TypeScript (`typecheck:v2`), ESLint (`lint:v2`), secret scan (`security:scan`), and production build (`build`).
 
 ## Release Readiness
 
-JustTap Pro is fully polished, verified, and release-ready across all desktop, mobile, English, Arabic, Free preview, and Pro active experiences. Release readiness revalidated following Natural-to-Sticky Mobile Editor Navigation UX correction.
+JustTap Pro is fully polished, verified, and release-ready across all desktop, mobile, English, Arabic, Free preview, and Pro active experiences. Release readiness revalidated following Logged-In Editor Sticky Nav Integration Fix.
