@@ -595,4 +595,130 @@ describe("Card Editor UX Clarity & Polish Suite", () => {
       expect(html).toContain("الرابط");
     });
   });
+
+  // 36-38. Dynamic Primary / Bilingual Language Mapping in Editor
+  describe("Dynamic Primary / Bilingual Language Mapping in Editor", () => {
+    const bilingualCard: Card = {
+      ...baseFreeCard,
+      full_name: "Ahmed Ali",
+      full_name_ar: "أحمد علي",
+      title: "Founder",
+      title_ar: "المؤسس",
+      bio: "Building modern products",
+      bio_ar: "أبني منتجات حديثة",
+      enable_arabic: true,
+    };
+
+    it("36. renders English primary inputs and Arabic secondary inputs when app language is English", () => {
+      const html = renderToStaticMarkup(
+        <LanguageProvider defaultLang="en">
+          <CardEditor
+            draft={bilingualCard}
+            setDraft={vi.fn()}
+            userId="user-free-1"
+            isNew={false}
+            onSaved={vi.fn()}
+          />
+        </LanguageProvider>,
+      );
+
+      // Section 5 Bilingual heading and description
+      expect(html).toContain("Arabic Version");
+      expect(html).toContain("Add the Arabic version of your card information.");
+
+      // Primary field labels and values
+      expect(html).toContain("Full name *");
+      expect(html).toContain("Job title");
+      expect(html).toContain("Bio");
+
+      // Secondary field labels
+      expect(html).toContain("Arabic Name");
+      expect(html).toContain("Arabic Job Title");
+      expect(html).toContain("Arabic Bio");
+
+      // Check values and directions in rendered inputs
+      expect(html).toContain('value="Ahmed Ali"');
+      expect(html).toContain('value="Founder"');
+      expect(html).toContain('value="أحمد علي"');
+      expect(html).toContain('value="المؤسس"');
+      expect(html).toContain('dir="ltr"');
+      expect(html).toContain('dir="rtl"');
+    });
+
+    it("37. renders Arabic primary inputs and English secondary inputs when app language is Arabic", () => {
+      const html = renderToStaticMarkup(
+        <LanguageProvider defaultLang="ar">
+          <CardEditor
+            draft={bilingualCard}
+            setDraft={vi.fn()}
+            userId="user-free-1"
+            isNew={false}
+            onSaved={vi.fn()}
+          />
+        </LanguageProvider>,
+      );
+
+      // Section 5 Bilingual heading and description in Arabic
+      expect(html).toContain("النسخة الإنجليزية");
+      expect(html).toContain("أضف النسخة الإنجليزية من معلومات بطاقتك.");
+
+      // Primary field labels in Arabic
+      expect(html).toContain("الاسم الكامل *");
+      expect(html).toContain("المسمى الوظيفي");
+      expect(html).toContain("نبذة تعريفية");
+
+      // Secondary field labels in Arabic
+      expect(html).toContain("الاسم بالإنجليزية");
+      expect(html).toContain("المسمى الوظيفي بالإنجليزية");
+      expect(html).toContain("النبذة التعريفية بالإنجليزية");
+
+      // Check values and directions
+      expect(html).toContain('value="أحمد علي"');
+      expect(html).toContain('value="المؤسس"');
+      expect(html).toContain('value="Ahmed Ali"');
+      expect(html).toContain('value="Founder"');
+      expect(html).toContain('dir="ltr"');
+      expect(html).toContain('dir="rtl"');
+    });
+
+    it("38. renders Guest Builder shell with correct dynamic language mapping without data leakage", () => {
+      const guestDraft: Card = {
+        ...baseFreeCard,
+        user_id: "guest",
+        full_name: "Guest User",
+        full_name_ar: "مستخدم ضيف",
+        enable_arabic: true,
+      };
+
+      const htmlEn = renderToStaticMarkup(
+        <LanguageProvider defaultLang="en">
+          <CardEditor
+            draft={guestDraft}
+            setDraft={vi.fn()}
+            userId="guest"
+            isNew={true}
+            onSaved={vi.fn()}
+          />
+        </LanguageProvider>,
+      );
+
+      expect(htmlEn).toContain('value="Guest User"');
+      expect(htmlEn).toContain('value="مستخدم ضيف"');
+
+      const htmlAr = renderToStaticMarkup(
+        <LanguageProvider defaultLang="ar">
+          <CardEditor
+            draft={guestDraft}
+            setDraft={vi.fn()}
+            userId="guest"
+            isNew={true}
+            onSaved={vi.fn()}
+          />
+        </LanguageProvider>,
+      );
+
+      expect(htmlAr).toContain('value="مستخدم ضيف"');
+      expect(htmlAr).toContain('value="Guest User"');
+    });
+  });
 });

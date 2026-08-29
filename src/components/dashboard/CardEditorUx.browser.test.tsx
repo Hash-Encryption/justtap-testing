@@ -649,4 +649,82 @@ describe("CardEditor Browser UX Suite", () => {
     root?.unmount();
     desktopContainer.remove();
   });
+
+  it("proves dynamic primary/bilingual field mapping, input directions, and zero overflow at 375px, 390px, and 412px in LTR and RTL", async () => {
+    const bilingualTestCard: Card = {
+      ...testCard,
+      full_name: "Browser Tester",
+      full_name_ar: "مختبر المتصفح",
+      title: "UX Specialist",
+      title_ar: "أخصائي تجربة مستخدم",
+      bio: "English bio copy",
+      bio_ar: "نص النبذة بالعربية",
+      enable_arabic: true,
+    };
+
+    const widths = [375, 390, 412];
+    const languages: Array<"en" | "ar"> = ["en", "ar"];
+
+    for (const lang of languages) {
+      for (const width of widths) {
+        const container = document.createElement("div");
+        container.id = `browser-test-${lang}-${width}`;
+        container.style.width = `${width}px`;
+        container.style.height = "800px";
+        container.style.overflowX = "hidden";
+        container.style.overflowY = "auto";
+        document.body.appendChild(container);
+
+        root = createRoot(container);
+        flushSync(() => {
+          root?.render(
+            <LoggedInDashboardShell lang={lang} rootOverflowClass="overflow-x-clip">
+              <CardEditor
+                draft={bilingualTestCard}
+                setDraft={() => {}}
+                userId="user-test-1"
+                isNew={false}
+                onSaved={() => {}}
+              />
+            </LoggedInDashboardShell>,
+          );
+        });
+        await nextPaint();
+
+        // 1. Verify no horizontal overflow
+        expect(container.scrollWidth).toBeLessThanOrEqual(width);
+
+        // 2. Query primary and bilingual inputs
+        const profileSection = container.querySelector<HTMLElement>("#section-profile");
+        const bilingualSection = container.querySelector<HTMLElement>("#section-bilingual");
+        expect(profileSection).not.toBeNull();
+        expect(bilingualSection).not.toBeNull();
+
+        const profileInputs = profileSection!.querySelectorAll<HTMLInputElement>("input");
+        const bilingualInputs = bilingualSection!.querySelectorAll<HTMLInputElement>("input");
+
+        // Primary name is the first text input in profile section
+        const primaryNameInput = profileInputs[0];
+        // In bilingual section, the first input is the checkbox (enable_arabic), second is secondary name
+        const secondaryNameInput = bilingualInputs[1];
+
+        if (lang === "en") {
+          // English app: primary is English (LTR), secondary is Arabic (RTL)
+          expect(primaryNameInput.value).toBe("Browser Tester");
+          expect(primaryNameInput.getAttribute("dir")).toBe("ltr");
+          expect(secondaryNameInput.value).toBe("مختبر المتصفح");
+          expect(secondaryNameInput.getAttribute("dir")).toBe("rtl");
+        } else {
+          // Arabic app: primary is Arabic (RTL), secondary is English (LTR)
+          expect(primaryNameInput.value).toBe("مختبر المتصفح");
+          expect(primaryNameInput.getAttribute("dir")).toBe("rtl");
+          expect(secondaryNameInput.value).toBe("Browser Tester");
+          expect(secondaryNameInput.getAttribute("dir")).toBe("ltr");
+        }
+
+        root?.unmount();
+        container.remove();
+      }
+    }
+  });
 });

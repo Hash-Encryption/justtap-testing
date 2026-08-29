@@ -49,6 +49,7 @@ import {
   writeCardDraft,
 } from "@/lib/card-draft";
 import { useTranslation } from "@/lib/i18n";
+import { getEditorLanguageConfig } from "@/lib/editor-language";
 import { ProUpgradeDialog, type ProUpgradeSource } from "./ProUpgradeDialog";
 import { PreviewFab } from "./PreviewFab";
 import { EditorStatusBar } from "./EditorStatusBar";
@@ -109,7 +110,8 @@ export function CardEditor({
   onSaved,
   onBackToDashboard,
 }: Props) {
-  const { t } = useTranslation();
+  const { lang, t } = useTranslation();
+  const langConfig = useMemo(() => getEditorLanguageConfig(lang), [lang]);
   const [saving, setSaving] = useState(false);
   const [justPublished, setJustPublished] = useState(false);
   const [deactivating, setDeactivating] = useState(false);
@@ -545,8 +547,9 @@ export function CardEditor({
 
   async function publishChanges(draftOverride?: typeof draft): Promise<void> {
     const d = draftOverride ?? draft;
-    if (!d.full_name.trim()) {
-      toast.error("Full name is required");
+    const hasName = Boolean(d.full_name?.trim() || d.full_name_ar?.trim());
+    if (!hasName) {
+      toast.error(lang === "ar" ? "الاسم مطلوب" : "Full name is required");
       return;
     }
     if (!d.phone.trim()) {
@@ -916,19 +919,24 @@ export function CardEditor({
           >
             <Input
               label={t("fullName")}
-              value={draft.full_name}
-              onChange={(v) => set("full_name", v)}
+              value={draft[langConfig.primary.fields.fullName] ?? ""}
+              onChange={(v) => set(langConfig.primary.fields.fullName, v)}
+              dir={langConfig.primary.dir}
+              placeholder={t(langConfig.primary.placeholders.fullNameKey)}
             />
             <Input
               label={t("cardLink")}
               value={draft.slug}
               onChange={(v) => set("slug", slugify(v))}
-              hint={`/c/${slugify(draft.slug || draft.full_name) || "your-name"}`}
+              dir="ltr"
+              hint={`/c/${slugify(draft.slug || draft.full_name || "") || "your-name"}`}
             />
             <Input
               label={t("jobTitle")}
-              value={draft.title ?? ""}
-              onChange={(v) => set("title", v)}
+              value={draft[langConfig.primary.fields.title] ?? ""}
+              onChange={(v) => set(langConfig.primary.fields.title, v)}
+              dir={langConfig.primary.dir}
+              placeholder={t(langConfig.primary.placeholders.jobTitleKey)}
             />
             <Input
               label={t("company")}
@@ -937,8 +945,10 @@ export function CardEditor({
             />
             <Input
               label={t("bio")}
-              value={draft.bio ?? ""}
-              onChange={(v) => set("bio", v)}
+              value={draft[langConfig.primary.fields.bio] ?? ""}
+              onChange={(v) => set(langConfig.primary.fields.bio, v)}
+              dir={langConfig.primary.dir}
+              placeholder={t(langConfig.primary.placeholders.bioKey)}
               textarea
             />
 
@@ -1284,45 +1294,59 @@ export function CardEditor({
             </div>
           </CollapsibleSection>
 
-          {/* SECTION 5: BILINGUAL (ARABIC) */}
+          {/* SECTION 5: BILINGUAL */}
           <CollapsibleSection
             id="section-bilingual"
             title={t("sectionNavBilingual")}
             icon={<Globe className="w-4 h-4" />}
             defaultOpen={true}
           >
-            <label className="flex items-center gap-2.5 text-sm text-slate-200">
-              <input
-                type="checkbox"
-                checked={draft.enable_arabic}
-                onChange={(e) => {
-                  set("enable_arabic", e.target.checked);
-                  setShowArabic(e.target.checked);
-                }}
-                className="h-4 w-4 accent-purple-600"
-              />
-              {t("enableArabicSwitch")}
-            </label>
-            {showArabic && (
-              <div className="space-y-4 pt-2" dir="rtl">
-                <Input
-                  label={t("arFullName")}
-                  value={draft.full_name_ar ?? ""}
-                  onChange={(v) => set("full_name_ar", v)}
-                />
-                <Input
-                  label={t("arJobTitle")}
-                  value={draft.title_ar ?? ""}
-                  onChange={(v) => set("title_ar", v)}
-                />
-                <Input
-                  label={t("arBio")}
-                  value={draft.bio_ar ?? ""}
-                  onChange={(v) => set("bio_ar", v)}
-                  textarea
-                />
+            <div className="space-y-4">
+              <div className="space-y-1">
+                <h4 className="text-sm font-semibold text-white">{t("bilingualSectionHeading")}</h4>
+                <p className="text-xs text-slate-400">{t("bilingualSectionDesc")}</p>
               </div>
-            )}
+
+              <label className="flex items-center gap-2.5 text-sm text-slate-200">
+                <input
+                  type="checkbox"
+                  checked={draft.enable_arabic}
+                  onChange={(e) => {
+                    set("enable_arabic", e.target.checked);
+                    setShowArabic(e.target.checked);
+                  }}
+                  className="h-4 w-4 accent-purple-600"
+                />
+                {t("enableArabicSwitch")}
+              </label>
+
+              {(showArabic || draft.enable_arabic) && (
+                <div className="space-y-4 pt-1">
+                  <Input
+                    label={t("secondaryFullName")}
+                    value={draft[langConfig.secondary.fields.fullName] ?? ""}
+                    onChange={(v) => set(langConfig.secondary.fields.fullName, v)}
+                    dir={langConfig.secondary.dir}
+                    placeholder={t(langConfig.secondary.placeholders.fullNameKey)}
+                  />
+                  <Input
+                    label={t("secondaryJobTitle")}
+                    value={draft[langConfig.secondary.fields.title] ?? ""}
+                    onChange={(v) => set(langConfig.secondary.fields.title, v)}
+                    dir={langConfig.secondary.dir}
+                    placeholder={t(langConfig.secondary.placeholders.jobTitleKey)}
+                  />
+                  <Input
+                    label={t("secondaryBio")}
+                    value={draft[langConfig.secondary.fields.bio] ?? ""}
+                    onChange={(v) => set(langConfig.secondary.fields.bio, v)}
+                    dir={langConfig.secondary.dir}
+                    placeholder={t(langConfig.secondary.placeholders.bioKey)}
+                    textarea
+                  />
+                </div>
+              )}
+            </div>
           </CollapsibleSection>
 
           {/* CONTEXTUAL PRIMARY BOTTOM ACTION */}
@@ -1507,12 +1531,16 @@ function Input({
   onChange,
   hint,
   textarea,
+  dir,
+  placeholder,
 }: {
   label: string;
   value: string;
   onChange: (v: string) => void;
   hint?: string;
   textarea?: boolean;
+  dir?: "ltr" | "rtl";
+  placeholder?: string;
 }) {
   return (
     <label className="block">
@@ -1522,12 +1550,16 @@ function Input({
           rows={3}
           value={value}
           onChange={(e) => onChange(e.target.value)}
+          dir={dir}
+          placeholder={placeholder}
           className="w-full rounded-xl border border-slate-800 bg-slate-950/80 px-4 py-3 text-sm text-slate-100 outline-none focus:border-purple-500"
         />
       ) : (
         <input
           value={value}
           onChange={(e) => onChange(e.target.value)}
+          dir={dir}
+          placeholder={placeholder}
           className="h-11 w-full rounded-xl border border-slate-800 bg-slate-950/80 px-4 text-sm text-slate-100 outline-none focus:border-purple-500"
         />
       )}
