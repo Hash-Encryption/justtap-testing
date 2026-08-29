@@ -479,7 +479,7 @@ describe("Card Editor UX Clarity & Polish Suite", () => {
       expect(html).toContain("التصميم");
       expect(html).toContain("الألوان");
       expect(html).toContain("الاتصال");
-      expect(html).toContain("اللغة العربية");
+      expect(html).toContain("ثنائي اللغة");
       expect(html).toContain("الترقية للنشر");
       expect(html).toContain("معاينة PRO · هذه التغييرات ليست منشورة بعد");
       expect(html).toContain("تراجع");
@@ -623,6 +623,7 @@ describe("Card Editor UX Clarity & Polish Suite", () => {
       );
 
       // Section 5 Bilingual heading and description
+      expect(html).toContain("Bilingual");
       expect(html).toContain("Arabic Version");
       expect(html).toContain("Add the Arabic version of your card information.");
 
@@ -661,6 +662,8 @@ describe("Card Editor UX Clarity & Polish Suite", () => {
       // Section 5 Bilingual heading and description in Arabic
       expect(html).toContain("النسخة الإنجليزية");
       expect(html).toContain("أضف النسخة الإنجليزية من معلومات بطاقتك.");
+      expect(html).toContain("ثنائي اللغة");
+      expect(html).not.toContain("اللغة العربية");
 
       // Primary field labels in Arabic
       expect(html).toContain("الاسم الكامل *");

@@ -547,9 +547,10 @@ export function CardEditor({
 
   async function publishChanges(draftOverride?: typeof draft): Promise<void> {
     const d = draftOverride ?? draft;
-    const hasName = Boolean(d.full_name?.trim() || d.full_name_ar?.trim());
-    if (!hasName) {
-      toast.error(lang === "ar" ? "الاسم مطلوب" : "Full name is required");
+    const primaryNameKey = langConfig.primary.fields.fullName;
+    const primaryName = d[primaryNameKey];
+    if (!primaryName?.trim()) {
+      toast.error(t("fullNameRequired"));
       return;
     }
     if (!d.phone.trim()) {
@@ -575,7 +576,7 @@ export function CardEditor({
 
     const slugResult = validateSlug(d.slug || d.full_name);
     if (!slugResult.valid) {
-      toast.error(slugValidationMessage(slugResult));
+      toast.error(slugValidationMessage(slugResult, lang));
       return;
     }
     const slug = slugResult.slug;
@@ -929,7 +930,8 @@ export function CardEditor({
               value={draft.slug}
               onChange={(v) => set("slug", slugify(v))}
               dir="ltr"
-              hint={`/c/${slugify(draft.slug || draft.full_name || "") || "your-name"}`}
+              placeholder="your-name"
+              hint={`${t("cardLinkFormatNotice")} /c/${slugify(draft.slug || draft.full_name || "") || "your-name"}`}
             />
             <Input
               label={t("jobTitle")}

@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { flushSync } from "react-dom";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, describe, expect, it } from "vitest";
@@ -146,6 +147,11 @@ afterEach(() => {
   root?.unmount();
   const el = document.getElementById("browser-test-root");
   if (el) el.remove();
+  try {
+    window.localStorage.clear();
+  } catch {
+    /* ignore */
+  }
 });
 
 describe("CardEditor Browser UX Suite", () => {
@@ -726,5 +732,357 @@ describe("CardEditor Browser UX Suite", () => {
         container.remove();
       }
     }
+  });
+
+  it("exercises the real save/publish path in English UI and preserves semantic columns", async () => {
+    const inputCard: Card = {
+      ...testCard,
+      id: "editor-browser-save-en",
+      design_mode: "classic_v2",
+      full_name: "Ahmed Ali",
+      full_name_ar: "أحمد علي",
+      title: "Founder",
+      title_ar: "المؤسس",
+      bio: "English bio",
+      bio_ar: "نبذة عربية",
+      slug: "ahmed-ali",
+      phone: "+966501234567",
+      enable_arabic: true,
+    };
+
+    let savedResult: Card | null = null;
+    const container = document.createElement("div");
+    container.id = "browser-save-en";
+    document.body.appendChild(container);
+
+    root = createRoot(container);
+    flushSync(() => {
+      root?.render(
+        <LanguageProvider defaultLang="en">
+          <CardEditor
+            draft={inputCard}
+            setDraft={() => {}}
+            userId="guest"
+            isNew={false}
+            onSaved={(card) => {
+              savedResult = card;
+            }}
+          />
+        </LanguageProvider>,
+      );
+    });
+    await nextPaint();
+
+    const publishBtn = container.querySelector<HTMLButtonElement>(
+      '[data-testid="top-publish-cta"]',
+    );
+    expect(publishBtn).not.toBeNull();
+
+    publishBtn?.click();
+    await nextPaint();
+
+    expect(savedResult).not.toBeNull();
+    expect(savedResult!.full_name).toBe("Ahmed Ali");
+    expect(savedResult!.full_name_ar).toBe("أحمد علي");
+    expect(savedResult!.title).toBe("Founder");
+    expect(savedResult!.title_ar).toBe("المؤسس");
+    expect(savedResult!.bio).toBe("English bio");
+    expect(savedResult!.bio_ar).toBe("نبذة عربية");
+    expect(savedResult!.slug).toBe("ahmed-ali");
+
+    root?.unmount();
+    container.remove();
+  });
+
+  it("exercises the real save/publish path in Arabic UI and preserves semantic columns without swapping", async () => {
+    const inputCard: Card = {
+      ...testCard,
+      id: "editor-browser-save-ar",
+      design_mode: "classic_v2",
+      full_name: "English Name",
+      full_name_ar: "الاسم بالعربي",
+      title: "English Title",
+      title_ar: "المسمى بالعربي",
+      bio: "English Bio",
+      bio_ar: "النبذة بالعربي",
+      slug: "ahmed-ali",
+      phone: "+966501234567",
+      enable_arabic: true,
+    };
+
+    let savedResult: Card | null = null;
+    const container = document.createElement("div");
+    container.id = "browser-save-ar";
+    document.body.appendChild(container);
+
+    function StatefulArabicEditor() {
+      const [draft, setDraft] = useState<Card>(inputCard);
+      return (
+        <LanguageProvider defaultLang="ar">
+          <CardEditor
+            draft={draft}
+            setDraft={setDraft}
+            userId="guest"
+            isNew={false}
+            onSaved={(card) => {
+              savedResult = card;
+            }}
+          />
+        </LanguageProvider>
+      );
+    }
+
+    root = createRoot(container);
+    flushSync(() => {
+      root?.render(<StatefulArabicEditor />);
+    });
+    await nextPaint();
+
+    const profileSection = container.querySelector<HTMLElement>("#section-profile");
+    const bilingualSection = container.querySelector<HTMLElement>("#section-bilingual");
+    expect(profileSection).not.toBeNull();
+    expect(bilingualSection).not.toBeNull();
+
+    const primaryInputs = profileSection!.querySelectorAll<HTMLInputElement>("input");
+    const secondaryInputs = bilingualSection!.querySelectorAll<HTMLInputElement>("input");
+
+    // Primary name input edits Arabic field (full_name_ar)
+    const primaryNameInput = primaryInputs[0];
+    // Secondary name input edits English field (full_name)
+    const secondaryNameInput = secondaryInputs[1];
+
+    const nativeSetter = Object.getOwnPropertyDescriptor(
+      window.HTMLInputElement.prototype,
+      "value",
+    )?.set;
+
+    flushSync(() => {
+      nativeSetter?.call(primaryNameInput, "أحمد محمد");
+      primaryNameInput.dispatchEvent(new Event("input", { bubbles: true }));
+      nativeSetter?.call(secondaryNameInput, "Ahmed Mohamed");
+      secondaryNameInput.dispatchEvent(new Event("input", { bubbles: true }));
+    });
+    await nextPaint();
+
+    const publishBtn = container.querySelector<HTMLButtonElement>(
+      '[data-testid="top-publish-cta"]',
+    );
+    expect(publishBtn).not.toBeNull();
+
+    publishBtn?.click();
+    await nextPaint();
+
+    expect(savedResult).not.toBeNull();
+    // English column retains English data
+    expect(savedResult!.full_name).toBe("Ahmed Mohamed");
+    // Arabic column retains Arabic data
+    expect(savedResult!.full_name_ar).toBe("أحمد محمد");
+    // Other fields preserve semantic identity without swapping
+    expect(savedResult!.title).toBe("English Title");
+    expect(savedResult!.title_ar).toBe("المسمى بالعربي");
+    expect(savedResult!.bio).toBe("English Bio");
+    expect(savedResult!.bio_ar).toBe("النبذة بالعربي");
+
+    root?.unmount();
+    container.remove();
+  });
+
+  it("enforces primary required name validation in English UI (English blank + Arabic populated -> blocked)", async () => {
+    const draft: Card = {
+      ...testCard,
+      id: "editor-browser-req-en",
+      design_mode: "classic_v2",
+      full_name: "",
+      full_name_ar: "أحمد علي",
+      slug: "ahmed-card",
+      phone: "+966501234567",
+      enable_arabic: true,
+    };
+
+    let savedCalled = false;
+    const container = document.createElement("div");
+    container.id = "browser-req-en";
+    document.body.appendChild(container);
+
+    root = createRoot(container);
+    flushSync(() => {
+      root?.render(
+        <LanguageProvider defaultLang="en">
+          <CardEditor
+            draft={draft}
+            setDraft={() => {}}
+            userId="guest"
+            isNew={false}
+            onSaved={() => {
+              savedCalled = true;
+            }}
+          />
+        </LanguageProvider>,
+      );
+    });
+    await nextPaint();
+
+    const publishBtn = container.querySelector<HTMLButtonElement>(
+      '[data-testid="top-publish-cta"]',
+    );
+    expect(publishBtn).not.toBeNull();
+
+    publishBtn?.click();
+    await nextPaint();
+
+    // Cannot publish because English primary name is empty
+    expect(savedCalled).toBe(false);
+
+    root?.unmount();
+    container.remove();
+  });
+
+  it("enforces primary required name validation in Arabic UI (Arabic blank + English populated -> blocked)", async () => {
+    const draft: Card = {
+      ...testCard,
+      id: "editor-browser-req-ar",
+      design_mode: "classic_v2",
+      full_name: "Ahmed Ali",
+      full_name_ar: "",
+      slug: "ahmed-card",
+      phone: "+966501234567",
+      enable_arabic: true,
+    };
+
+    let savedCalled = false;
+    const container = document.createElement("div");
+    container.id = "browser-req-ar";
+    document.body.appendChild(container);
+
+    root = createRoot(container);
+    flushSync(() => {
+      root?.render(
+        <LanguageProvider defaultLang="ar">
+          <CardEditor
+            draft={draft}
+            setDraft={() => {}}
+            userId="guest"
+            isNew={false}
+            onSaved={() => {
+              savedCalled = true;
+            }}
+          />
+        </LanguageProvider>,
+      );
+    });
+    await nextPaint();
+
+    const publishBtn = container.querySelector<HTMLButtonElement>(
+      '[data-testid="top-publish-cta"]',
+    );
+    expect(publishBtn).not.toBeNull();
+
+    publishBtn?.click();
+    await nextPaint();
+
+    // Cannot publish because Arabic primary name is empty
+    expect(savedCalled).toBe(false);
+
+    root?.unmount();
+    container.remove();
+  });
+
+  it("handles Arabic-first new card: explicit nickname passes, empty nickname is blocked", async () => {
+    // 1. Explicit nickname passes
+    const draftWithSlug: Card = {
+      ...testCard,
+      id: "editor-browser-slug-pass",
+      design_mode: "classic_v2",
+      full_name: "",
+      full_name_ar: "أحمد علي",
+      slug: "ahmed-card",
+      phone: "+966501234567",
+      enable_arabic: true,
+    };
+
+    let savedCardWithSlug: Card | null = null;
+    const container1 = document.createElement("div");
+    container1.id = "browser-slug-pass";
+    document.body.appendChild(container1);
+
+    root = createRoot(container1);
+    flushSync(() => {
+      root?.render(
+        <LanguageProvider defaultLang="ar">
+          <CardEditor
+            draft={draftWithSlug}
+            setDraft={() => {}}
+            userId="guest"
+            isNew={true}
+            onSaved={(card) => {
+              savedCardWithSlug = card;
+            }}
+          />
+        </LanguageProvider>,
+      );
+    });
+    await nextPaint();
+
+    const publishBtn1 = container1.querySelector<HTMLButtonElement>(
+      '[data-testid="top-publish-cta"]',
+    );
+    expect(publishBtn1).not.toBeNull();
+    publishBtn1?.click();
+    await nextPaint();
+
+    expect(savedCardWithSlug).not.toBeNull();
+    expect(savedCardWithSlug!.full_name_ar).toBe("أحمد علي");
+    expect(savedCardWithSlug!.full_name).toBe("");
+    expect(savedCardWithSlug!.slug).toBe("ahmed-card");
+
+    root?.unmount();
+    container1.remove();
+
+    // 2. Empty nickname is blocked (does NOT generate Arabic slug)
+    const draftWithoutSlug: Card = {
+      ...testCard,
+      id: "editor-browser-slug-block",
+      design_mode: "classic_v2",
+      full_name: "",
+      full_name_ar: "أحمد علي",
+      slug: "",
+      phone: "+966501234567",
+      enable_arabic: true,
+    };
+
+    let savedCardWithoutSlug: Card | null = null;
+    const container2 = document.createElement("div");
+    container2.id = "browser-slug-block";
+    document.body.appendChild(container2);
+
+    root = createRoot(container2);
+    flushSync(() => {
+      root?.render(
+        <LanguageProvider defaultLang="ar">
+          <CardEditor
+            draft={draftWithoutSlug}
+            setDraft={() => {}}
+            userId="guest"
+            isNew={true}
+            onSaved={(card) => {
+              savedCardWithoutSlug = card;
+            }}
+          />
+        </LanguageProvider>,
+      );
+    });
+    await nextPaint();
+
+    const publishBtn2 = container2.querySelector<HTMLButtonElement>(
+      '[data-testid="top-publish-cta"]',
+    );
+    expect(publishBtn2).not.toBeNull();
+    publishBtn2?.click();
+    await nextPaint();
+
+    expect(savedCardWithoutSlug).toBeNull();
+
+    root?.unmount();
+    container2.remove();
   });
 });

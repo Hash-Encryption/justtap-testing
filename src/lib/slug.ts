@@ -26,7 +26,23 @@ export function validateSlug(input: string): SlugValidationResult {
   return { valid: true, slug };
 }
 
-export function slugValidationMessage(result: Exclude<SlugValidationResult, { valid: true }>) {
+export function slugValidationMessage(
+  result: Exclude<SlugValidationResult, { valid: true }>,
+  lang: "en" | "ar" = "en",
+) {
+  if (lang === "ar") {
+    switch (result.reason) {
+      case "empty":
+        return "رابط البطاقة مطلوب.";
+      case "too_short":
+        return `يجب أن يتكون رابط البطاقة من ${SLUG_MIN_LENGTH} أحرف على الأقل.`;
+      case "too_long":
+        return `يجب ألا يتجاوز رابط البطاقة ${SLUG_MAX_LENGTH} حرفاً.`;
+      case "invalid":
+        return "استخدم الأحرف الإنجليزية الصغيرة والأرقام والشرطات فقط في رابط البطاقة.";
+    }
+  }
+
   switch (result.reason) {
     case "empty":
       return "A card URL is required.";

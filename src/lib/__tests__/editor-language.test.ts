@@ -5,6 +5,7 @@ import {
   type LocalizedCardKey,
 } from "../editor-language";
 import { emptyCard, type Card } from "../card";
+import { validateSlug, slugValidationMessage } from "../slug";
 
 describe("Dynamic Primary / Bilingual Language Mapping Unit Suite", () => {
   describe("English application locale", () => {
@@ -267,6 +268,84 @@ describe("Dynamic Primary / Bilingual Language Mapping Unit Suite", () => {
       expect(getLocalizedCardValue(partialCard, arConfig.secondary.fields.fullName)).toBe("Ahmed");
       expect(getLocalizedCardValue(partialCard, arConfig.secondary.fields.title)).toBe("Founder");
       expect(getLocalizedCardValue(partialCard, arConfig.secondary.fields.bio)).toBe("");
+    });
+  });
+
+  describe("Primary required name validation logic", () => {
+    it("requires English full_name when app language is English, even if Arabic secondary is populated", () => {
+      const enConfig = getEditorLanguageConfig("en");
+      const draftWithOnlyArabic: Card = {
+        ...emptyCard,
+        full_name: "",
+        full_name_ar: "أحمد علي",
+      };
+
+      const primaryNameKey = enConfig.primary.fields.fullName;
+      const primaryValue = draftWithOnlyArabic[primaryNameKey];
+
+      // Primary name is full_name for English app, which is empty -> fails requirement
+      expect(primaryNameKey).toBe("full_name");
+      expect(primaryValue?.trim()).toBeFalsy();
+    });
+
+    it("requires Arabic full_name_ar when app language is Arabic, even if English secondary is populated", () => {
+      const arConfig = getEditorLanguageConfig("ar");
+      const draftWithOnlyEnglish: Card = {
+        ...emptyCard,
+        full_name: "Ahmed Ali",
+        full_name_ar: "",
+      };
+
+      const primaryNameKey = arConfig.primary.fields.fullName;
+      const primaryValue = draftWithOnlyEnglish[primaryNameKey];
+
+      // Primary name is full_name_ar for Arabic app, which is empty -> fails requirement
+      expect(primaryNameKey).toBe("full_name_ar");
+      expect(primaryValue?.trim()).toBeFalsy();
+    });
+  });
+
+  describe("Arabic-first new card URL slug validation edge cases", () => {
+    it("passes slug validation when explicit valid nickname/slug is provided without English name", () => {
+      const draft: Card = {
+        ...emptyCard,
+        full_name: "",
+        full_name_ar: "أحمد علي",
+        slug: "ahmed-card",
+      };
+
+      // Valid explicit slug passes
+      const result = validateSlug(draft.slug || draft.full_name);
+      expect(result).toEqual({ valid: true, slug: "ahmed-card" });
+    });
+
+    it("rejects slug validation and requires card link when both slug and English name are empty", () => {
+      const draft: Card = {
+        ...emptyCard,
+        full_name: "",
+        full_name_ar: "أحمد علي",
+        slug: "",
+      };
+
+      // Slug validation fails without English fallback
+      const result = validateSlug(draft.slug || draft.full_name);
+      expect(result.valid).toBe(false);
+      if (!result.valid) {
+        expect(result.reason).toBe("empty");
+        expect(slugValidationMessage(result, "ar")).toBe("رابط البطاقة مطلوب.");
+        expect(slugValidationMessage(result, "en")).toBe("A card URL is required.");
+      }
+    });
+
+    it("rejects Arabic characters typed into slug and returns localized error without transliterating", () => {
+      const result = validateSlug("أحمد-علي");
+      expect(result.valid).toBe(false);
+      if (!result.valid) {
+        expect(result.reason).toBe("invalid");
+        expect(slugValidationMessage(result, "ar")).toBe(
+          "استخدم الأحرف الإنجليزية الصغيرة والأرقام والشرطات فقط في رابط البطاقة.",
+        );
+      }
     });
   });
 });
