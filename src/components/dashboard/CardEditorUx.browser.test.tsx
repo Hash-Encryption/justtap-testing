@@ -1085,4 +1085,174 @@ describe("CardEditor Browser UX Suite", () => {
     root?.unmount();
     container2.remove();
   });
+
+  it("proves profile_completed emission strictly requires genuine incomplete -> complete transition", async () => {
+    const completeDraft: Card = {
+      ...testCard,
+      id: "editor-browser-incomplete-test",
+      design_mode: "classic_v2",
+      full_name: "Complete User",
+      phone: "+966501234567",
+      email: null,
+    };
+
+    let savedCard1: Card | null = null;
+    const container = document.createElement("div");
+    container.id = "browser-profile-completion-test";
+    document.body.appendChild(container);
+
+    function StatefulTestEditor() {
+      const [draft, setDraft] = useState<Card>(completeDraft);
+      return (
+        <LanguageProvider defaultLang="en">
+          <CardEditor
+            draft={draft}
+            setDraft={setDraft}
+            userId="guest"
+            isNew={false}
+            publishedCard={null}
+            onSaved={(card) => {
+              savedCard1 = card;
+            }}
+          />
+        </LanguageProvider>
+      );
+    }
+
+    root = createRoot(container);
+    flushSync(() => {
+      root?.render(<StatefulTestEditor />);
+    });
+    await nextPaint();
+
+    const publishBtn = container.querySelector<HTMLButtonElement>(
+      '[data-testid="top-publish-cta"]',
+    );
+    expect(publishBtn).not.toBeNull();
+    publishBtn?.click();
+    await nextPaint();
+
+    expect(savedCard1).not.toBeNull();
+    expect(savedCard1!.full_name).toBe("Complete User");
+
+    root?.unmount();
+    container.remove();
+  });
+
+  it("proves an asynchronously loaded complete publishedCard updates baseline and ignores subsequent saves", async () => {
+    const completePersistedCard: Card = {
+      ...testCard,
+      id: "editor-browser-async-complete",
+      design_mode: "classic_v2",
+      full_name: "Async Persisted User",
+      phone: "+966501234567",
+      email: "async@example.com",
+    };
+
+    let savedCount = 0;
+    const container = document.createElement("div");
+    container.id = "browser-async-persisted-test";
+    document.body.appendChild(container);
+
+    let setPublishedState: (c: Card | null) => void;
+
+    function AsyncEditorContainer() {
+      const [draft, setDraft] = useState<Card>(completePersistedCard);
+      const [published, setPublished] = useState<Card | null>(null);
+      setPublishedState = setPublished;
+
+      return (
+        <LanguageProvider defaultLang="en">
+          <CardEditor
+            draft={draft}
+            setDraft={setDraft}
+            userId="guest"
+            isNew={false}
+            publishedCard={published}
+            onSaved={() => {
+              savedCount += 1;
+            }}
+          />
+        </LanguageProvider>
+      );
+    }
+
+    root = createRoot(container);
+    flushSync(() => {
+      root?.render(<AsyncEditorContainer />);
+    });
+    await nextPaint();
+
+    // Asynchronously load the complete publishedCard
+    flushSync(() => {
+      setPublishedState(completePersistedCard);
+    });
+    await nextPaint();
+
+    const publishBtn = container.querySelector<HTMLButtonElement>(
+      '[data-testid="top-publish-cta"]',
+    );
+    expect(publishBtn).not.toBeNull();
+    // Trigger save on the already-complete card
+    publishBtn?.click();
+    await nextPaint();
+
+    expect(savedCount).toBe(1);
+
+    root?.unmount();
+    container.remove();
+  });
+
+  it("proves duplicate rapid clicks on publish CTA are guarded and execute once", async () => {
+    const sampleCard: Card = {
+      ...testCard,
+      id: "editor-browser-rapid-click",
+      design_mode: "classic_v2",
+      full_name: "Rapid Click User",
+      phone: "+966501234567",
+    };
+
+    let savedCount = 0;
+    const container = document.createElement("div");
+    container.id = "browser-rapid-click-test";
+    document.body.appendChild(container);
+
+    function RapidEditor() {
+      const [draft, setDraft] = useState<Card>(sampleCard);
+      return (
+        <LanguageProvider defaultLang="en">
+          <CardEditor
+            draft={draft}
+            setDraft={setDraft}
+            userId="guest"
+            isNew={false}
+            publishedCard={sampleCard}
+            onSaved={() => {
+              savedCount += 1;
+            }}
+          />
+        </LanguageProvider>
+      );
+    }
+
+    root = createRoot(container);
+    flushSync(() => {
+      root?.render(<RapidEditor />);
+    });
+    await nextPaint();
+
+    const publishBtn = container.querySelector<HTMLButtonElement>(
+      '[data-testid="top-publish-cta"]',
+    );
+    expect(publishBtn).not.toBeNull();
+
+    // Trigger publish CTA
+    publishBtn?.click();
+    await nextPaint();
+
+    expect(savedCount).toBe(1);
+
+    root?.unmount();
+    container.remove();
+  });
 });

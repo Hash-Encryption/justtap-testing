@@ -20,6 +20,7 @@ import {
   DESIGN_PRESET_PALETTES,
   FINISHES,
   FONT_OPTIONS,
+  isCardProfileComplete,
   isValidHexColor,
   PATTERNS,
   RADIUS_OPTIONS,
@@ -37,6 +38,7 @@ import { Dropzone } from "./Dropzone";
 import { sanitizePhone, sanitizeText, sanitizeUrl } from "@/lib/sanitization";
 import { slugValidationMessage, validateSlug } from "@/lib/slug";
 import { saveCardRecord } from "@/lib/card-save";
+import { trackCardEditStarted, trackProfileCompleted } from "@/lib/product-events";
 import {
   canPersistCardDraft,
   clearCardDraft,
@@ -213,6 +215,23 @@ export function CardEditor({
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [undo, redo]);
+
+  const hasTrackedEditStartedRef = useRef(false);
+  const lastPersistedCardRef = useRef<Card | null>(publishedCard ?? null);
+  const isSavingRef = useRef(false);
+
+  useEffect(() => {
+    if (publishedCard) {
+      lastPersistedCardRef.current = publishedCard;
+    }
+  }, [publishedCard]);
+
+  useEffect(() => {
+    if (!hasTrackedEditStartedRef.current) {
+      hasTrackedEditStartedRef.current = true;
+      void trackCardEditStarted(draft.id, draft.is_active);
+    }
+  }, [draft.id, draft.is_active]);
 
   const isUserClickingRef = useRef(false);
   const userClickTimerRef = useRef<number | null>(null);
@@ -546,166 +565,179 @@ export function CardEditor({
   };
 
   async function publishChanges(draftOverride?: typeof draft): Promise<void> {
-    const d = draftOverride ?? draft;
-    const primaryNameKey = langConfig.primary.fields.fullName;
-    const primaryName = d[primaryNameKey];
-    if (!primaryName?.trim()) {
-      toast.error(t("fullNameRequired"));
-      return;
-    }
-    if (!d.phone.trim()) {
-      toast.error("Phone number is required");
-      return;
-    }
-
-    // Validate 5 color controls against 6-digit hex format
-    const colorsToValidate = [
-      { name: "Background", val: d.bg_color || "#08080A" },
-      { name: "Surface", val: d.surface_color || "#121216" },
-      { name: "Primary Accent", val: d.accent_color || "#6B21A8" },
-      { name: "Champagne Accent", val: d.champagne_accent || "#E6D5AC" },
-      { name: "Text Color", val: d.text_color || "#FAFAFA" },
-    ];
-
-    for (const c of colorsToValidate) {
-      if (!isValidHexColor(c.val)) {
-        toast.error(`Invalid ${c.name} color format. Please use 6-digit hex (e.g. #6B21A8)`);
+    if (isSavingRef.current || saving) return;
+    isSavingRef.current = true;
+    setSaving(true);
+    try {
+      const d = draftOverride ?? draft;
+      const primaryNameKey = langConfig.primary.fields.fullName;
+      const primaryName = d[primaryNameKey];
+      if (!primaryName?.trim()) {
+        toast.error(t("fullNameRequired"));
         return;
       }
-    }
+      if (!d.phone.trim()) {
+        toast.error("Phone number is required");
+        return;
+      }
 
-    const slugResult = validateSlug(d.slug || d.full_name);
-    if (!slugResult.valid) {
-      toast.error(slugValidationMessage(slugResult, lang));
-      return;
-    }
-    const slug = slugResult.slug;
+      // Validate 5 color controls against 6-digit hex format
+      const colorsToValidate = [
+        { name: "Background", val: d.bg_color || "#08080A" },
+        { name: "Surface", val: d.surface_color || "#121216" },
+        { name: "Primary Accent", val: d.accent_color || "#6B21A8" },
+        { name: "Champagne Accent", val: d.champagne_accent || "#E6D5AC" },
+        { name: "Text Color", val: d.text_color || "#FAFAFA" },
+      ];
 
-    // Intercept client-side: Free users previewing Custom Creator cannot persist Pro styling to Supabase
-    if (d.design_mode === "custom" && !isProEntitled(d)) {
-      setUpgradeSource("publish_attempt");
-      setUpgradeModalOpen(true);
-      return;
-    }
+      for (const c of colorsToValidate) {
+        if (!isValidHexColor(c.val)) {
+          toast.error(`Invalid ${c.name} color format. Please use 6-digit hex (e.g. #6B21A8)`);
+          return;
+        }
+      }
 
-    if (userId === "guest") {
+      const slugResult = validateSlug(d.slug || d.full_name);
+      if (!slugResult.valid) {
+        toast.error(slugValidationMessage(slugResult, lang));
+        return;
+      }
+      const slug = slugResult.slug;
+
+      // Intercept client-side: Free users previewing Custom Creator cannot persist Pro styling to Supabase
+      if (d.design_mode === "custom" && !isProEntitled(d)) {
+        setUpgradeSource("publish_attempt");
+        setUpgradeModalOpen(true);
+        return;
+      }
+
+      if (userId === "guest") {
+        try {
+          writeCardDraft(window.localStorage, userId, { ...d, slug });
+        } catch {
+          /* ignore */
+        }
+        onSaved({ ...d, slug });
+        return;
+      }
+
+      const avatar_url = await uploadDataUrlIfNeeded(d.avatar_url, userId, "avatar");
+      const logo_url = await uploadDataUrlIfNeeded(d.logo_url, userId, "logo");
+
+      const sanitizedSocialLinks = {
+        linkedin: sanitizeUrl(d.social_links?.linkedin) || "",
+        instagram: sanitizeUrl(d.social_links?.instagram) || "",
+        twitter: sanitizeUrl(d.social_links?.twitter) || "",
+        website: sanitizeUrl(d.social_links?.website) || "",
+      };
+
+      const payload = {
+        user_id: userId,
+        slug,
+        full_name: sanitizeText(d.full_name, 100),
+        phone: sanitizePhone(d.phone),
+        email: d.email ? sanitizeText(d.email, 100) : null,
+        title: d.title ? sanitizeText(d.title, 100) : null,
+        company: d.company ? sanitizeText(d.company, 100) : null,
+        bio: d.bio ? sanitizeText(d.bio, 1000) : null,
+        avatar_url: avatar_url ? sanitizeUrl(avatar_url) : null,
+        logo_url: logo_url ? sanitizeUrl(logo_url) : null,
+        show_logo_badge: d.show_logo_badge,
+        design_mode: d.design_mode || "classic_v2",
+        header_pattern: d.header_pattern || "wave",
+        accent_color: d.accent_color || "#6B21A8",
+        bg_color: d.bg_color || "#08080A",
+        surface_color: d.surface_color || "#121216",
+        champagne_accent: d.champagne_accent || "#E6D5AC",
+        text_color: d.text_color || "#FAFAFA",
+        surface_finish: d.surface_finish || "matte",
+        border_radius: d.border_radius || "minimal",
+        font_family: d.font_family || "Outfit",
+        whatsapp_phone: d.whatsapp_phone ? sanitizePhone(d.whatsapp_phone) : null,
+        whatsapp_message: d.whatsapp_message ? sanitizeText(d.whatsapp_message, 250) : null,
+        enable_arabic: d.enable_arabic,
+        full_name_ar: d.full_name_ar ? sanitizeText(d.full_name_ar, 100) : null,
+        title_ar: d.title_ar ? sanitizeText(d.title_ar, 100) : null,
+        bio_ar: d.bio_ar ? sanitizeText(d.bio_ar, 1000) : null,
+        social_links: sanitizedSocialLinks,
+        pro_features: d.pro_features ?? {},
+      };
+
+      if (!isNew && !d.id) {
+        setSaving(false);
+        toast.error("This card cannot be updated because its identifier is missing.");
+        return;
+      }
+
+      const result = await saveCardRecord<Card>(
+        { isNew, cardId: d.id, userId, payload },
+        {
+          async insert(cardPayload) {
+            const { data, error } = await supabase
+              .from("cards")
+              .insert(cardPayload)
+              .select()
+              .single();
+            return { data: data as Card | null, error };
+          },
+          async update(cardId, ownerId, cardPayload) {
+            const { data, error } = await supabase
+              .from("cards")
+              .update(cardPayload)
+              .eq("id", cardId)
+              .eq("user_id", ownerId)
+              .select()
+              .single();
+            return { data: data as Card | null, error };
+          },
+        },
+        (error) => console.error("[card-editor] Save failed", error),
+      );
+
+      setSaving(false);
       try {
-        writeCardDraft(window.localStorage, userId, { ...d, slug });
+        reconcileCardDraftAfterSave(
+          window.localStorage,
+          userId,
+          draftCardId,
+          result.status === "saved",
+        );
       } catch {
         /* ignore */
       }
-      onSaved({ ...d, slug });
-      return;
-    }
+      if (result.status !== "saved") {
+        toast.error(
+          result.status === "duplicate_slug"
+            ? "This URL is already taken."
+            : result.status === "invalid_slug"
+              ? "The card URL is invalid."
+              : "We couldn't save your card. Please try again.",
+        );
+        return;
+      }
 
-    setSaving(true);
-    const avatar_url = await uploadDataUrlIfNeeded(d.avatar_url, userId, "avatar");
-    const logo_url = await uploadDataUrlIfNeeded(d.logo_url, userId, "logo");
+      skipFlushRef.current = true;
+      setLastAutoSaved(null);
+      setJustPublished(true);
+      if (justPublishedTimerRef.current) {
+        window.clearTimeout(justPublishedTimerRef.current);
+      }
+      justPublishedTimerRef.current = window.setTimeout(() => {
+        setJustPublished(false);
+      }, 3500);
 
-    const sanitizedSocialLinks = {
-      linkedin: sanitizeUrl(d.social_links?.linkedin) || "",
-      instagram: sanitizeUrl(d.social_links?.instagram) || "",
-      twitter: sanitizeUrl(d.social_links?.twitter) || "",
-      website: sanitizeUrl(d.social_links?.website) || "",
-    };
-
-    const payload = {
-      user_id: userId,
-      slug,
-      full_name: sanitizeText(d.full_name, 100),
-      phone: sanitizePhone(d.phone),
-      email: d.email ? sanitizeText(d.email, 100) : null,
-      title: d.title ? sanitizeText(d.title, 100) : null,
-      company: d.company ? sanitizeText(d.company, 100) : null,
-      bio: d.bio ? sanitizeText(d.bio, 1000) : null,
-      avatar_url: avatar_url ? sanitizeUrl(avatar_url) : null,
-      logo_url: logo_url ? sanitizeUrl(logo_url) : null,
-      show_logo_badge: d.show_logo_badge,
-      design_mode: d.design_mode || "classic_v2",
-      header_pattern: d.header_pattern || "wave",
-      accent_color: d.accent_color || "#6B21A8",
-      bg_color: d.bg_color || "#08080A",
-      surface_color: d.surface_color || "#121216",
-      champagne_accent: d.champagne_accent || "#E6D5AC",
-      text_color: d.text_color || "#FAFAFA",
-      surface_finish: d.surface_finish || "matte",
-      border_radius: d.border_radius || "minimal",
-      font_family: d.font_family || "Outfit",
-      whatsapp_phone: d.whatsapp_phone ? sanitizePhone(d.whatsapp_phone) : null,
-      whatsapp_message: d.whatsapp_message ? sanitizeText(d.whatsapp_message, 250) : null,
-      enable_arabic: d.enable_arabic,
-      full_name_ar: d.full_name_ar ? sanitizeText(d.full_name_ar, 100) : null,
-      title_ar: d.title_ar ? sanitizeText(d.title_ar, 100) : null,
-      bio_ar: d.bio_ar ? sanitizeText(d.bio_ar, 1000) : null,
-      social_links: sanitizedSocialLinks,
-      pro_features: d.pro_features ?? {},
-    };
-
-    if (!isNew && !d.id) {
+      toast.success(isNew ? "Card published live!" : "Published changes live!");
+      const wasComplete = isCardProfileComplete(lastPersistedCardRef.current);
+      const isNowComplete = isCardProfileComplete(result.card);
+      if (!wasComplete && isNowComplete) {
+        void trackProfileCompleted(result.card.id, result.card.is_active);
+      }
+      lastPersistedCardRef.current = result.card;
+      onSaved(result.card);
+    } finally {
+      isSavingRef.current = false;
       setSaving(false);
-      toast.error("This card cannot be updated because its identifier is missing.");
-      return;
     }
-
-    const result = await saveCardRecord<Card>(
-      { isNew, cardId: d.id, userId, payload },
-      {
-        async insert(cardPayload) {
-          const { data, error } = await supabase
-            .from("cards")
-            .insert(cardPayload)
-            .select()
-            .single();
-          return { data: data as Card | null, error };
-        },
-        async update(cardId, ownerId, cardPayload) {
-          const { data, error } = await supabase
-            .from("cards")
-            .update(cardPayload)
-            .eq("id", cardId)
-            .eq("user_id", ownerId)
-            .select()
-            .single();
-          return { data: data as Card | null, error };
-        },
-      },
-      (error) => console.error("[card-editor] Save failed", error),
-    );
-
-    setSaving(false);
-    try {
-      reconcileCardDraftAfterSave(
-        window.localStorage,
-        userId,
-        draftCardId,
-        result.status === "saved",
-      );
-    } catch {
-      /* ignore */
-    }
-    if (result.status !== "saved") {
-      toast.error(
-        result.status === "duplicate_slug"
-          ? "This URL is already taken."
-          : result.status === "invalid_slug"
-            ? "The card URL is invalid."
-            : "We couldn't save your card. Please try again.",
-      );
-      return;
-    }
-
-    skipFlushRef.current = true;
-    setLastAutoSaved(null);
-    setJustPublished(true);
-    if (justPublishedTimerRef.current) {
-      window.clearTimeout(justPublishedTimerRef.current);
-    }
-    justPublishedTimerRef.current = window.setTimeout(() => {
-      setJustPublished(false);
-    }, 3500);
-
-    toast.success(isNew ? "Card published live!" : "Published changes live!");
-    onSaved(result.card);
   }
 
   if (hydratedDraftKey !== draftKey) {

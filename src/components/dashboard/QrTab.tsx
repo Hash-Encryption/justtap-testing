@@ -6,6 +6,7 @@ import { buildVCard, type Card } from "@/lib/card";
 import { supabase } from "@/lib/supabase";
 import { useTranslation } from "@/lib/i18n";
 import { isProEntitled } from "@/lib/card-design";
+import { trackFeatureUsed } from "@/lib/product-events";
 import type { Session } from "@supabase/supabase-js";
 import { ProUpgradeDialog, type ProUpgradeSource } from "./ProUpgradeDialog";
 
@@ -89,6 +90,7 @@ export function QrTab({ card, session, onTrialStarted, onUpgradeRequest }: QrTab
         type === "card"
           ? `JustTap_QR_${card.slug}_2000px.png`
           : `JustTap_QR_Offline_${card.slug}_2000px.png`;
+      void trackFeatureUsed("qr_export");
       link.click();
     } catch (err) {
       console.error("High res QR error:", err);

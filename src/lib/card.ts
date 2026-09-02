@@ -340,3 +340,13 @@ export function formatWhatsAppNumber(
 
   return cleaned;
 }
+
+/** Returns true if the card profile has both a full name and at least one contact method (phone or email). */
+export function isCardProfileComplete(card?: Partial<Card> | null): boolean {
+  if (!card) return false;
+  const hasName = Boolean(card.full_name && card.full_name.trim().length > 0);
+  const hasContact = Boolean(
+    (card.phone && card.phone.trim().length > 0) || (card.email && card.email.trim().length > 0),
+  );
+  return hasName && hasContact;
+}

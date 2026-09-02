@@ -7,6 +7,7 @@ import { startProTrial } from "@/lib/billing";
 import type { Session } from "@supabase/supabase-js";
 
 import { useTranslation } from "@/lib/i18n";
+import { trackProPreviewInteraction } from "@/lib/product-events";
 
 export type ProUpgradeSource =
   | "publish_attempt"
@@ -70,6 +71,8 @@ export function ProUpgradeDialogBody({
   const paletteName = matchedPreset?.name || "Custom Palette";
 
   async function handleTrialClick() {
+    void trackProPreviewInteraction("trial_cta_click", "start_trial");
+
     if (!session) {
       toast.error(t("signInToStartTrial"));
       return;

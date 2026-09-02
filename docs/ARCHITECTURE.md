@@ -92,16 +92,20 @@ authenticated customer
 
 The editor may control editable presentation and contact data. It must not control paid entitlement, subscription state, administrative roles, or other trusted fields.
 
-### Admin
+### Admin & Operations Portal
 
 ```text
 authenticated administrator
-  -> server/database-verified authorization (public.user_roles)
-  -> privileged SECURITY DEFINER RPC / server API
-  -> audited Supabase operation
+  -> server/database-verified authorization (public.user_roles.role = 'admin')
+  -> privileged SECURITY DEFINER RPC with audit logging (public.admin_audit_log)
+  -> structured operations projection (getOperations / getUserDetail)
 ```
 
-Admin authority is verified strictly against `public.user_roles` (`role = 'admin'`) and enforced inside privileged database RPC functions (`admin_provision_nfc_tag`, `admin_assign_nfc_tag`, `admin_update_tag_status`, `admin_get_nfc_inventory`, `admin_search_cards_for_assignment`). Permanent physical NFC 32-character tokens are generated cryptographically on the server (`generate_nfc_token()`) and remain immutable. Non-admin users and anonymous callers are denied with error `42501`.
+Admin authority is verified strictly against `public.user_roles` (`role = 'admin'`) via the database helper `require_admin()` and enforced inside privileged database RPC functions. The legacy environment-token gateway (`/api/admin-auth`) has been eliminated. Non-admin users receive an accessible 403 Forbidden denial and anonymous callers are prompted to sign in.
+
+Administrative mutations (`admin_create_profile`, `admin_create_card`, `admin_set_entitlement`, `admin_set_card_active`, `admin_delete_card`, `admin_delete_profile`, `admin_provision_nfc_tag_audited`, `admin_assign_nfc_tag_audited`, `admin_update_tag_status_audited`) record an immutable, append-only row in `public.admin_audit_log` with an explicit reason requirement and sanitization against sensitive key leakage. Profile deletion is truthfully constrained to deleting the client profile row without deleting the Supabase Auth user.
+
+Product telemetry (`public.product_events`) is isolated from public visitor metrics (`public.card_analytics`), validated against an allowlisted schema, and deduplicated at the database boundary via `event_id`. Permanent physical NFC tokens are masked in operations views. Details are documented in [PRODUCT-EVENTS.md](./PRODUCT-EVENTS.md).
 
 ### Server APIs
 

@@ -2,7 +2,7 @@ import React, { createContext, useContext, useEffect, useState } from "react";
 
 export type Language = "en" | "ar";
 
-const translations = {
+export const translations = {
   en: {
     // Navigation & Common
     appName: "JustTap",
@@ -532,6 +532,183 @@ const translations = {
     pageNotFoundDesc: "The page you're looking for doesn't exist or has been moved.",
     pageDidntLoad: "This page didn't load",
     pageDidntLoadDesc: "Something went wrong on our end. You can try refreshing or head back home.",
+
+    // Admin Operations Portal (Phase 2)
+    adminTitle: "Admin Operations Portal",
+    adminSubtitle: "System overview, accounts, card operations, product analytics, and audit log.",
+    adminTabOverview: "Overview",
+    adminTabUsers: "Client Profiles",
+    adminTabCards: "Digital Cards",
+    adminTabConnections: "Connections",
+    adminTabAnalytics: "Analytics",
+    adminTabAudit: "Audit Log",
+    adminTabNfc: "NFC Operations",
+
+    // Overview KPIs
+    adminTotalUsers: "Total Registered Users",
+    adminNewUsers: "New Users (Period)",
+    adminActivatedUsers: "Activated Users",
+    adminLiveCards: "Live Cards",
+    adminInactiveCards: "Inactive Cards",
+    adminConnectionsPeriod: "Connections (Period)",
+    adminTrialsEndingSoon: "Trials Ending Soon (≤3d)",
+    adminTierDistribution: "Tier Distribution",
+    adminTierFree: "Free",
+    adminTierTrial: "Trial",
+    adminTierPro: "Pro",
+    adminTierEnterprise: "Enterprise",
+    adminActivatedFilter: "Activated",
+    adminNotActivatedFilter: "Not Activated",
+    adminAllFilter: "All",
+
+    // Date Range & Search
+    adminSearchPlaceholder: "Search by name, email, slug or user ID...",
+    adminDateRange7d: "Last 7 Days",
+    adminDateRange30d: "Last 30 Days",
+    adminDateRange90d: "Last 90 Days",
+    adminDateRange365d: "Last Year",
+
+    // User Operations
+    adminCreateProfileTitle: "Create Client Profile",
+    adminCreateProfileBtn: "Create Profile",
+    adminUserNameCol: "Name & Email",
+    adminUserCardsCol: "Cards (Live/Total)",
+    adminUserConnectionsCol: "Connections",
+    adminUserTierCol: "Plan Tier",
+    adminUserTrialCol: "Trial Status",
+    adminUserCreatedCol: "Registered",
+    adminUserActionsCol: "Actions",
+    adminViewUserDetail: "View Details",
+    adminChangeEntitlement: "Change Entitlement",
+    adminDeleteProfile: "Delete Profile",
+    adminNoUsersFound: "No user profiles match your search criteria.",
+
+    // User Detail Drawer/Modal
+    adminUserDetailTitle: "User Support Detail",
+    adminProfileSection: "Profile Overview",
+    adminUserId: "User ID",
+    adminPhone: "Phone",
+    adminTrialUsed: "Trial Used",
+    adminYes: "Yes",
+    adminNo: "No",
+    adminOwnedCardsSection: "Owned Cards",
+    adminNoCardsFound: "No cards owned by this user.",
+    adminProductActivitySection: "Recent Product Activity",
+    adminNoProductActivity: "No product activity recorded yet.",
+    adminUserAuditSection: "Administrative History",
+    adminNoUserAudit: "No audit records for this user.",
+
+    // Card Operations
+    adminCreateCardTitle: "Create Digital Card",
+    adminCreateCardBtn: "Create Card",
+    adminCardOwnerCol: "Owner",
+    adminCardNameCol: "Card Name & Slug",
+    adminCardTimestampsCol: "Lifecycle Timestamps",
+    adminCardStatusCol: "Status",
+    adminCardStatsCol: "Scans / Saves / Leads",
+    adminCardNfcCol: "Active NFC Token",
+    adminCardActionsCol: "Actions",
+    adminToggleActiveBtn: "Toggle Active",
+    adminDeleteCardBtn: "Delete Card",
+    adminNoCardsMatch: "No digital cards match your search criteria.",
+    adminPublishedAt: "Published",
+    adminUpdatedAt: "Updated",
+    adminCreatedAt: "Created",
+    adminNotTrackedYet: "Not tracked yet — collection begins from this testing release.",
+
+    // Connections Summary
+    adminConnectionsTitle: "Connections Operations Summary",
+    adminConnectionsTotal: "Total Connections in Selected Range",
+    adminConnectionsNotice:
+      "Connection messages, private notes, and visitor contact details are confidential and excluded from operations reporting.",
+    adminComparisonUnavailable: "Period comparison is not tracked yet.",
+
+    // Super Admin Analytics Tab
+    adminProductAnalyticsTitle: "Analytics",
+    adminAnalyticsDesc:
+      "App-wide activity, user lifecycle metrics, feature engagement, and product events.",
+    adminCollectionStarted: "Collection Started",
+    adminDau: "Daily Active Users (DAU)",
+    adminWau: "Weekly Active Users (WAU)",
+    adminMau: "Monthly Active Users (MAU)",
+    adminTotalEventsCount: "Events in Selected Period",
+    adminAnalyticsActivityTrend: "Active User Engagement",
+    adminAnalyticsBreakdownTitle: "Tier & Feature Adoption Breakdowns",
+    adminAnalyticsProPreview: "Pro Preview & Upgrade Engagement",
+    adminAnalyticsFeatureAdoption: "Core Feature Usage",
+    adminAnalyticsGenuineUpgradeIntent: "Genuine Upgrade Intent (Paid CTAs)",
+    adminAnalyticsNoUpgradeIntentYet:
+      "No paid upgrade clicks recorded yet (checkout is disabled in testing).",
+    adminAnalyticsNoRecentEvents: "No product events recorded in the selected period.",
+    adminEventDistribution: "Event Breakdown",
+    adminRecentEventsStream: "Recent Product Events",
+    adminEventNameCol: "Event Name",
+    adminEventFeatureCol: "Feature",
+    adminEventSourceCol: "Source",
+    adminEventTimeCol: "Timestamp",
+    adminPublicVisitorsDisclaimer:
+      "Public card visitors are tracked in card_analytics and never counted as owner product activity.",
+    adminFunnelStages: "Product Funnel & Journey Stages (Event Occurrences)",
+    adminStageSignup: "Account Created (Signup)",
+    adminStageCardCreated: "Card Created",
+    adminStageCardPublished: "Card Published",
+    adminStageTrialStarted: "Trial Started",
+    adminStagePaidUpgrade: "Paid Upgrade",
+    adminStageUnavailableNotice:
+      "Unavailable — checkout and paid billing flows are not implemented in testing.",
+
+    // Audit Log
+    adminAuditTitle: "Append-Only Administrative Audit Log",
+    adminAuditTimeCol: "Timestamp",
+    adminAuditActorCol: "Actor",
+    adminAuditActionCol: "Action",
+    adminAuditTargetCol: "Target",
+    adminAuditResultCol: "Result",
+    adminAuditSummaryCol: "Change Summary",
+    adminNoAuditRecords: "No audit records found.",
+
+    // NFC Operations
+    adminNfcProvisionTitle: "Provision Blank NFC Tag",
+    adminNfcProvisionBtn: "Provision Tag",
+    adminNfcAssignTitle: "Assign NFC Tag to Card",
+    adminNfcAssignBtn: "Assign",
+    adminNfcReassignBtn: "Reassign",
+    adminNfcTokenCol: "Token",
+    adminNfcCardCol: "Assigned Card",
+    adminNfcStatusCol: "Tag Status",
+    adminNfcCreatedCol: "Provisioned",
+    adminNfcAssignedCol: "Assigned",
+    adminNfcRevokeBtn: "Revoke Tag",
+    adminNfcActivateBtn: "Activate",
+    adminNfcDeactivateBtn: "Deactivate",
+    adminNfcRevokeWarning: "Revoking an NFC tag is permanent and cannot be undone. Are you sure?",
+
+    // Mutation Safeguards & Modals
+    adminReasonRequired: "Support / Audit Reason (Required)",
+    adminReasonPlaceholder: "e.g., Customer requested plan upgrade via support ticket #123",
+    adminConfirmEntitlementTitle: "Change Client Entitlement",
+    adminConfirmEntitlementDesc: "Update paid plan tier. This will record an audit trail event.",
+    adminConfirmCardStatusTitle: "Change Card Active State",
+    adminConfirmCardStatusDesc: "Activate or deactivate public accessibility of this card.",
+    adminConfirmDeleteCardTitle: "Delete Digital Card",
+    adminConfirmDeleteCardDesc:
+      "This will permanently remove this card. To confirm, type the exact card slug below:",
+    adminConfirmDeleteCardPlaceholder: "Type card slug here",
+    adminConfirmDeleteProfileTitle: "Delete Client Profile",
+    adminConfirmDeleteProfileDesc:
+      "This will remove the client profile row. Note: This does NOT delete the Supabase Auth account or owned cards. To confirm, type the client email below:",
+    adminConfirmDeleteProfilePlaceholder: "Type client email here",
+    adminMismatchError: "Confirmation value did not match.",
+    adminReasonMissingError: "A short support reason is required.",
+
+    // Authorization & Gateways
+    adminAccessDeniedTitle: "Access Denied — Administrator Required",
+    adminAccessDeniedDesc:
+      "Your account does not have administrator privileges. Only authorized operators with role 'admin' can view this portal.",
+    adminSignInRequiredTitle: "Administrator Sign-In Required",
+    adminSignInRequiredDesc:
+      "Please sign in with an authorized administrator account to access operations.",
+    adminReturnToDashboard: "Return to User Dashboard",
   },
   ar: {
     // Navigation & Common
@@ -1052,6 +1229,182 @@ const translations = {
     pageNotFoundDesc: "الصفحة التي تبحث عنها غير موجودة أو تم نقلها.",
     pageDidntLoad: "تعذر تحميل هذه الصفحة",
     pageDidntLoadDesc: "حدث خطأ غير متوقع. يمكنك إعادة التحديث أو العودة للرئيسية.",
+
+    // Admin Operations Portal (Phase 2)
+    adminTitle: "بوابة العمليات والإدارة",
+    adminSubtitle: "نظرة عامة على النظام، الحسابات، عمليات البطاقات، تحليلات المنتج، وسجل التدقيق.",
+    adminTabOverview: "نظرة عامة",
+    adminTabUsers: "ملفات العملاء",
+    adminTabCards: "البطاقات الرقمية",
+    adminTabConnections: "جهات الاتصال",
+    adminTabAnalytics: "التحليلات",
+    adminTabAudit: "سجل التدقيق",
+    adminTabNfc: "عمليات NFC",
+
+    // Overview KPIs
+    adminTotalUsers: "إجمالي المستخدمين المسجلين",
+    adminNewUsers: "مستخدمون جدد (خلال الفترة)",
+    adminActivatedUsers: "المستخدمون النشطون",
+    adminLiveCards: "بطاقات منشورة ونشطة",
+    adminInactiveCards: "بطاقات غير نشطة",
+    adminConnectionsPeriod: "جهات الاتصال (خلال الفترة)",
+    adminTrialsEndingSoon: "فترات تجريبية تنتهي قريباً (≤3 أيام)",
+    adminTierDistribution: "توزيع الباقات",
+    adminTierFree: "مجاني",
+    adminTierTrial: "تجريبي",
+    adminTierPro: "احترافي (Pro)",
+    adminTierEnterprise: "مؤسسات",
+    adminActivatedFilter: "نشط",
+    adminNotActivatedFilter: "غير نشط",
+    adminAllFilter: "الكل",
+
+    // Date Range & Search
+    adminSearchPlaceholder: "البحث بالاسم، البريد، المعرف أو كود المستخدم...",
+    adminDateRange7d: "آخر 7 أيام",
+    adminDateRange30d: "آخر 30 يوماً",
+    adminDateRange90d: "آخر 90 يوماً",
+    adminDateRange365d: "آخر سنة",
+
+    // User Operations
+    adminCreateProfileTitle: "إنشاء ملف عميل جديد",
+    adminCreateProfileBtn: "إنشاء الملف",
+    adminUserNameCol: "الاسم والبريد",
+    adminUserCardsCol: "البطاقات (النشطة/الإجمالي)",
+    adminUserConnectionsCol: "جهات الاتصال",
+    adminUserTierCol: "الباقة",
+    adminUserTrialCol: "حالة التجربة",
+    adminUserCreatedCol: "تاريخ التسجيل",
+    adminUserActionsCol: "الإجراءات",
+    adminViewUserDetail: "عرض التفاصيل",
+    adminChangeEntitlement: "تعديل الباقة",
+    adminDeleteProfile: "حذف ملف العميل",
+    adminNoUsersFound: "لا توجد ملفات عملاء مطابقة لمعايير البحث.",
+
+    // User Detail Drawer/Modal
+    adminUserDetailTitle: "تفاصيل دعم المستخدم",
+    adminProfileSection: "نظرة عامة على الملف",
+    adminUserId: "معرف المستخدم",
+    adminPhone: "الهاتف",
+    adminTrialUsed: "تم استخدام التجربة",
+    adminYes: "نعم",
+    adminNo: "لا",
+    adminOwnedCardsSection: "البطاقات المملوكة",
+    adminNoCardsFound: "لا توجد بطاقات مملوكة لهذا المستخدم.",
+    adminProductActivitySection: "نشاط المنتج الأخير",
+    adminNoProductActivity: "لم يتم تسجيل أي نشاط للمنتج حتى الآن.",
+    adminUserAuditSection: "سجل التدقيق الإداري",
+    adminNoUserAudit: "لا توجد سجلات تدقيق لهذا المستخدم.",
+
+    // Card Operations
+    adminCreateCardTitle: "إنشاء بطاقة رقمية",
+    adminCreateCardBtn: "إنشاء البطاقة",
+    adminCardOwnerCol: "المالك",
+    adminCardNameCol: "اسم البطاقة والرابط",
+    adminCardTimestampsCol: "التواريخ ومراحل النشر",
+    adminCardStatusCol: "الحالة",
+    adminCardStatsCol: "المشاهدات / الحفظ / العملاء",
+    adminCardNfcCol: "رمز NFC النشط",
+    adminCardActionsCol: "الإجراءات",
+    adminToggleActiveBtn: "تبديل الحالة",
+    adminDeleteCardBtn: "حذف البطاقة",
+    adminNoCardsMatch: "لا توجد بطاقات رقمية مطابقة للبحث.",
+    adminPublishedAt: "تاريخ النشر",
+    adminUpdatedAt: "آخر تحديث",
+    adminCreatedAt: "تاريخ الإنشاء",
+    adminNotTrackedYet: "لم يتم التتبع بعد — تبدأ المجموعة من إصدار الاختبار هذا.",
+
+    // Connections Summary
+    adminConnectionsTitle: "ملخص عمليات جهات الاتصال",
+    adminConnectionsTotal: "إجمالي جهات الاتصال في الفترة المحددة",
+    adminConnectionsNotice:
+      "رسائل جهات الاتصال والملاحظات الشخصية للزوار سرية ومستبعدة من تقارير العمليات.",
+    adminComparisonUnavailable: "المقارنة مع الفترة السابقة غير متتبعة بعد.",
+
+    // Super Admin Analytics Tab
+    adminProductAnalyticsTitle: "التحليلات",
+    adminAnalyticsDesc:
+      "النشاط على مستوى التطبيق، مقاييس دورة حياة المستخدم، تفاعل الميزات، وأحداث المنتج.",
+    adminCollectionStarted: "بدء جمع البيانات",
+    adminDau: "المستخدمون النشطون يومياً (DAU)",
+    adminWau: "المستخدمون النشطون أسبوعياً (WAU)",
+    adminMau: "المستخدمون النشطون شهرياً (MAU)",
+    adminTotalEventsCount: "الأحداث في الفترة المحددة",
+    adminAnalyticsActivityTrend: "تفاعل المستخدمين النشطين",
+    adminAnalyticsBreakdownTitle: "تفاصيل الاشتراكات وتفاعل الميزات",
+    adminAnalyticsProPreview: "معاينة Pro والتفاعل مع الترقية",
+    adminAnalyticsFeatureAdoption: "استخدام الميزات الأساسية",
+    adminAnalyticsGenuineUpgradeIntent: "نية الترقية الفعلية (أزرار الترقية المدفوعة)",
+    adminAnalyticsNoUpgradeIntentYet:
+      "لم يتم تسجيل أي نقرات ترقية مدفوعة بعد (الدفع معطل في بيئة الاختبار).",
+    adminAnalyticsNoRecentEvents: "لم يتم تسجيل أي أحداث منتج خلال الفترة المحددة.",
+    adminEventDistribution: "تفصيل الأحداث",
+    adminRecentEventsStream: "أحدث أحداث المنتج",
+    adminEventNameCol: "اسم الحدث",
+    adminEventFeatureCol: "الميزة",
+    adminEventSourceCol: "المصدر",
+    adminEventTimeCol: "الوقت",
+    adminPublicVisitorsDisclaimer:
+      "يتم تتبع زوار البطاقات العامة في تحليلات البطاقة ولا يتم احتسابهم أبداً كنشاط منتج للمالك.",
+    adminFunnelStages: "مسار ومراحل تجربة المنتج (تكرارات الأحداث)",
+    adminStageSignup: "إنشاء الحساب",
+    adminStageCardCreated: "إنشاء البطاقة",
+    adminStageCardPublished: "نشر البطاقة",
+    adminStageTrialStarted: "بدء التجربة المجانية",
+    adminStagePaidUpgrade: "الترقية المدفوعة",
+    adminStageUnavailableNotice:
+      "غير متاح — مسارات الدفع والترقية المدفوعة غير مطبقة في بيئة الاختبار.",
+
+    // Audit Log
+    adminAuditTitle: "سجل التدقيق الإداري غير القابل للتعديل",
+    adminAuditTimeCol: "الوقت",
+    adminAuditActorCol: "المسؤول",
+    adminAuditActionCol: "الإجراء",
+    adminAuditTargetCol: "الهدف",
+    adminAuditResultCol: "النتيجة",
+    adminAuditSummaryCol: "ملخص التغيير",
+    adminNoAuditRecords: "لا توجد سجلات تدقيق.",
+
+    // NFC Operations
+    adminNfcProvisionTitle: "تهيئة شريحة NFC فارغة",
+    adminNfcProvisionBtn: "تهيئة الشريحة",
+    adminNfcAssignTitle: "ربط شريحة NFC ببطاقة",
+    adminNfcAssignBtn: "ربط",
+    adminNfcReassignBtn: "إعادة الربط",
+    adminNfcTokenCol: "الرمز",
+    adminNfcCardCol: "البطاقة المرتبطة",
+    adminNfcStatusCol: "حالة الشريحة",
+    adminNfcCreatedCol: "تاريخ التهيئة",
+    adminNfcAssignedCol: "تاريخ الربط",
+    adminNfcRevokeBtn: "إلغاء الشريحة",
+    adminNfcActivateBtn: "تفعيل",
+    adminNfcDeactivateBtn: "تعطيل",
+    adminNfcRevokeWarning: "إلغاء شريحة NFC إجراء نهائي ولا يمكن التراجع عنه. هل أنت متأكد؟",
+
+    // Mutation Safeguards & Modals
+    adminReasonRequired: "سبب الإجراء للتدقيق (مطلوب)",
+    adminReasonPlaceholder: "مثال: طلب العميل ترقية الباقة عبر تذكرة الدعم #123",
+    adminConfirmEntitlementTitle: "تعديل باقة العميل",
+    adminConfirmEntitlementDesc: "تحديث باقة العميل. سيتم تسجيل هذا الإجراء في سجل التدقيق.",
+    adminConfirmCardStatusTitle: "تغيير حالة نشاط البطاقة",
+    adminConfirmCardStatusDesc: "تفعيل أو تعطيل إمكانية الوصول العام لهذه البطاقة.",
+    adminConfirmDeleteCardTitle: "حذف البطاقة الرقمية",
+    adminConfirmDeleteCardDesc:
+      "سيتم حذف هذه البطاقة نهائياً. للتأكيد، يرجى كتابة الرابط المختصر للبطاقة أدناه:",
+    adminConfirmDeleteCardPlaceholder: "اكتب الرابط المختصر للبطاقة هنا",
+    adminConfirmDeleteProfileTitle: "حذف ملف العميل",
+    adminConfirmDeleteProfileDesc:
+      "سيتم حذف سجل ملف العميل. ملاحظة: هذا الإجراء لا يحذف حساب المصادقة (Auth) ولا البطاقات المملوكة. للتأكيد، يرجى كتابة بريد العميل أدناه:",
+    adminConfirmDeleteProfilePlaceholder: "اكتب بريد العميل هنا",
+    adminMismatchError: "قيمة التأكيد غير متطابقة.",
+    adminReasonMissingError: "يلزم تقديم سبب مختصر للإجراء.",
+
+    // Authorization & Gateways
+    adminAccessDeniedTitle: "تم رفض الوصول — مطلوب تصريح مسؤول",
+    adminAccessDeniedDesc:
+      "حسابك الحالي لا يمتلك صلاحيات المسؤول. فقط المشغلون المعتمدون بدور 'admin' يمكنهم الوصول لهذه البوابة.",
+    adminSignInRequiredTitle: "تسجيل الدخول كمسؤول مطلوب",
+    adminSignInRequiredDesc: "يرجى تسجيل الدخول باستخدام حساب مسؤول معتمد للوصول إلى العمليات.",
+    adminReturnToDashboard: "العودة إلى لوحة التحكم",
   },
 };
 

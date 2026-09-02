@@ -1,14 +1,38 @@
 # JustTap V2 Status
 
-Last updated: 2026-08-22
+Last updated: 2026-08-30
 
 ## Current phase
 
-7-Day Pro Trial (real server/database-controlled). Implements trusted `start_pro_trial()` SECURITY DEFINER RPC, versioned migration `20260822000000_trial_entitlement.sql`, TanStack server route `/api/trial-start`, `src/lib/billing.ts` client integration point, `isProEntitled()` helper replacing all `isPro` inline checks, trial status badge using trusted `trial_ends_at`, and updated CTA copy across all Pro upgrade surfaces. All 33 `ProUpgrade.test.tsx` tests pass (142 total unit tests passed). TypeScript clean, ESLint 0 errors, production build succeeded. Awaiting user approval before checkpoint commit.
+Phase 2: Administrative Operations Portal, Product Analytics, and Privileged Telemetry (Testing-First). Status: `PHASE_2_CHECKPOINT_COMMITTED` (Authenticated Account Matrix: `MANUAL_DEPLOYED_VERIFICATION_PENDING`).
 
 ## Completed
 
 - Established TanStack Start as the sole V2 target and froze the Next.js tree.
+- Added architecture, plan, decisions, security, status, and repository inventory documents.
+- Recorded the retirement of all demo-card and Pro Demo Mode behavior.
+- Committed approved Phase 00 checkpoint as `9609dea`.
+- Made TanStack `/c/$slug` the only public-card route and moved slug lookup into one server-only resolver.
+- Passed Phase 01 acceptance and Phase 02 schema / versioned migration `20260811193000_phase02_cards_rls.sql` with owner RLS, narrow RPC, and client entitlement triggers at checkpoint `0f57b7cf2e3a1d0111ad55cacc54c72d5ebb187a`.
+- Added Phase 03 migration `20260811220000_phase03_nfc_tags.sql` introducing `public.nfc_tags`, CSPRNG 32-char tokens, tag immutability, assignment timestamp triggers, and `get_public_card_by_tag_token` RPC at checkpoint `f36faf245818a0dc770cccb28dbe3bad9769ae96`.
+- Completed Phase 04 Authentication & Account Model at checkpoint `518310d`.
+- Completed Phase 05 Admin Authority & NFC Tag Provisioning:
+  - Database migration `20260812000000_phase05_admin_provisioning.sql` introducing server-side CSPRNG token generation (`generate_nfc_token()`), privileged RPCs (`admin_provision_nfc_tag`, `admin_assign_nfc_tag`, `admin_update_tag_status`, `admin_get_nfc_inventory`, `admin_search_cards_for_assignment`).
+  - Strict database-level authorization: `has_role(auth.uid(), 'admin')` enforced inside `SECURITY DEFINER` RPCs with `42501` exception on unauthorized access.
+  - Admin UI in `src/routes/admin.tsx` equipped with NFC Inventory & Provisioning tab.
+  - Reassignment model preserves permanent token while updating target card and timestamp.
+  - Narrow inventory & card search projections preventing private customer data leakage.
+- Completed and approved Phase 06 Dashboard + CardEditor + QR / Export at checkpoint `ca0e754329a43bea67f34e26a89d08d2300aa4a4`.
+- Completed Phase 07 Public Card Renderer implementation.
+- Completed Testing-First Phase 2: Administrative Operations Portal, Product Analytics, and Privileged Telemetry:
+  - Validated and restored authoritative migration `20260829010000_operations_product_analytics.sql` containing `require_admin()` authorization, `admin_audit_log`, `product_events`, forward-only timestamps (`cards.published_at`), and 12 audited RPC functions.
+  - Fully removed legacy environment-token gateway (`src/routes/api/admin-auth.ts`) and removed all `ADMIN_USERNAME`/`ADMIN_PASSWORD` login forms from `/admin`.
+  - Rebuilt `/admin` surface in `src/routes/admin.tsx` with strict `useAuth` + `useIsAdmin` (checking `public.user_roles`) protection, returning accessible unauthenticated and 403 Forbidden views when appropriate.
+  - Implemented 7 operational tabs: Operations Overview (KPIs & tier distribution), Client Profiles (with truth-in-labeling "Delete Profile" and directory filters), Digital Cards (with `published_at` vs `Not tracked yet — collection begins from this testing release.`), Connections Summary (aggregate totals only, privacy-safe exclusion of visitor notes/messages), Product Analytics (DAU/WAU/MAU, event breakdown, recent stream, journey funnel with unavailable stages explicitly labeled), Append-Only Audit Log, and Preserved NFC Operations.
+  - Implemented privacy-safe telemetry module `src/lib/product-events.ts` with database-enforced metadata schema, `event_id` deduplication, and genuine trigger points in `CardEditor.tsx`, `ProFeaturesTab.tsx`, and `ProUpgradeDialog.tsx` (where trial CTA emits `pro_preview_interaction` and never `pro_upgrade_clicked`).
+  - Added comprehensive English & Arabic localization across all operational surfaces.
+  - Authored contract document `docs/PRODUCT-EVENTS.md` confirming no approved retention pruning period exists.
+  - All 36 unit tests pass (`operations.test.ts`, `product-events.test.ts`, `admin-portal.test.tsx`), Vite production build clean, TypeScript clean.
 - Added architecture, plan, decisions, security, status, and repository inventory documents.
 - Recorded the retirement of all demo-card and Pro Demo Mode behavior.
 - Committed approved Phase 00 checkpoint as `9609dea`.

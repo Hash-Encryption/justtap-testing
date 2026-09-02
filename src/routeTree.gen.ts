@@ -14,7 +14,6 @@ import { Route as AdminRouteImport } from './routes/admin'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as BuilderRouteImport } from './routes/builder'
 import { Route as DashboardRouteImport } from './routes/dashboard'
-import { Route as ApiAdminAuthRouteImport } from './routes/api/admin-auth'
 import { Route as ApiLeadEmailRouteImport } from './routes/api/lead-email'
 import { Route as ApiLeadWebhookRouteImport } from './routes/api/lead-webhook'
 import { Route as ApiTrialStartRouteImport } from './routes/api/trial-start'
@@ -47,11 +46,6 @@ const BuilderRoute = BuilderRouteImport.update({
 const DashboardRoute = DashboardRouteImport.update({
   id: '/dashboard',
   path: '/dashboard',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ApiAdminAuthRoute = ApiAdminAuthRouteImport.update({
-  id: '/api/admin-auth',
-  path: '/api/admin-auth',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiLeadEmailRoute = ApiLeadEmailRouteImport.update({
@@ -101,7 +95,6 @@ export interface FileRoutesByFullPath {
   '/auth': typeof AuthRoute
   '/builder': typeof BuilderRoute
   '/dashboard': typeof DashboardRoute
-  '/api/admin-auth': typeof ApiAdminAuthRoute
   '/api/lead-email': typeof ApiLeadEmailRoute
   '/api/lead-webhook': typeof ApiLeadWebhookRoute
   '/api/trial-start': typeof ApiTrialStartRoute
@@ -117,7 +110,6 @@ export interface FileRoutesByTo {
   '/auth': typeof AuthRoute
   '/builder': typeof BuilderRoute
   '/dashboard': typeof DashboardRoute
-  '/api/admin-auth': typeof ApiAdminAuthRoute
   '/api/lead-email': typeof ApiLeadEmailRoute
   '/api/lead-webhook': typeof ApiLeadWebhookRoute
   '/api/trial-start': typeof ApiTrialStartRoute
@@ -134,7 +126,6 @@ export interface FileRoutesById {
   '/auth': typeof AuthRoute
   '/builder': typeof BuilderRoute
   '/dashboard': typeof DashboardRoute
-  '/api/admin-auth': typeof ApiAdminAuthRoute
   '/api/lead-email': typeof ApiLeadEmailRoute
   '/api/lead-webhook': typeof ApiLeadWebhookRoute
   '/api/trial-start': typeof ApiTrialStartRoute
@@ -152,7 +143,6 @@ export interface FileRouteTypes {
     | '/auth'
     | '/builder'
     | '/dashboard'
-    | '/api/admin-auth'
     | '/api/lead-email'
     | '/api/lead-webhook'
     | '/api/trial-start'
@@ -168,7 +158,6 @@ export interface FileRouteTypes {
     | '/auth'
     | '/builder'
     | '/dashboard'
-    | '/api/admin-auth'
     | '/api/lead-email'
     | '/api/lead-webhook'
     | '/api/trial-start'
@@ -184,7 +173,6 @@ export interface FileRouteTypes {
     | '/auth'
     | '/builder'
     | '/dashboard'
-    | '/api/admin-auth'
     | '/api/lead-email'
     | '/api/lead-webhook'
     | '/api/trial-start'
@@ -201,7 +189,6 @@ export interface RootRouteChildren {
   AuthRoute: typeof AuthRoute
   BuilderRoute: typeof BuilderRoute
   DashboardRoute: typeof DashboardRoute
-  ApiAdminAuthRoute: typeof ApiAdminAuthRoute
   ApiLeadEmailRoute: typeof ApiLeadEmailRoute
   ApiLeadWebhookRoute: typeof ApiLeadWebhookRoute
   ApiTrialStartRoute: typeof ApiTrialStartRoute
@@ -247,13 +234,6 @@ declare module '@tanstack/react-router' {
       path: '/dashboard'
       fullPath: '/dashboard'
       preLoaderRoute: typeof DashboardRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/admin-auth': {
-      id: '/api/admin-auth'
-      path: '/api/admin-auth'
-      fullPath: '/api/admin-auth'
-      preLoaderRoute: typeof ApiAdminAuthRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/lead-email': {
@@ -321,7 +301,6 @@ const rootRouteChildren: RootRouteChildren = {
   AuthRoute: AuthRoute,
   BuilderRoute: BuilderRoute,
   DashboardRoute: DashboardRoute,
-  ApiAdminAuthRoute: ApiAdminAuthRoute,
   ApiLeadEmailRoute: ApiLeadEmailRoute,
   ApiLeadWebhookRoute: ApiLeadWebhookRoute,
   ApiTrialStartRoute: ApiTrialStartRoute,

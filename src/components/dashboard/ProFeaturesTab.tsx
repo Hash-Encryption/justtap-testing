@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Bell,
   Calendar,
@@ -21,6 +21,11 @@ import { sanitizeText, sanitizeUrl } from "@/lib/sanitization";
 import { isProEntitled } from "@/lib/card-design";
 import { useTranslation } from "@/lib/i18n";
 import { ProUpgradeDialog, type ProUpgradeSource } from "./ProUpgradeDialog";
+import {
+  trackProFeatureView,
+  trackProPreviewConfigured,
+  trackProPreviewStarted,
+} from "@/lib/product-events";
 import type { Session } from "@supabase/supabase-js";
 
 type Props = {
@@ -52,7 +57,15 @@ export function ProFeaturesTab({ card, onChange, userId, session, onTrialStarted
     Boolean(pro.enable_lead_webhook || pro.webhook_url),
   );
 
+  useEffect(() => {
+    void trackProFeatureView("pro_features");
+    if (!isPro) {
+      void trackProPreviewStarted("pro_features");
+    }
+  }, [isPro]);
+
   const updatePro = <K extends keyof ProFeatures>(key: K, value: ProFeatures[K]) => {
+    void trackProPreviewConfigured(String(key));
     const updatedPro = {
       ...defaultProFeatures,
       ...(typeof card?.pro_features === "object" && card?.pro_features !== null
