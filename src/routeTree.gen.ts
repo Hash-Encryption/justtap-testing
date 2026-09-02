@@ -10,10 +10,12 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AccountRouteImport } from './routes/account'
 import { Route as AdminRouteImport } from './routes/admin'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as BuilderRouteImport } from './routes/builder'
 import { Route as DashboardRouteImport } from './routes/dashboard'
+import { Route as ApiAccountDeleteRouteImport } from './routes/api/account-delete'
 import { Route as ApiLeadEmailRouteImport } from './routes/api/lead-email'
 import { Route as ApiLeadWebhookRouteImport } from './routes/api/lead-webhook'
 import { Route as ApiTrialStartRouteImport } from './routes/api/trial-start'
@@ -26,6 +28,11 @@ import { Route as ApiWalletSlugRouteImport } from './routes/api/wallet.$slug'
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AccountRoute = AccountRouteImport.update({
+  id: '/account',
+  path: '/account',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AdminRoute = AdminRouteImport.update({
@@ -46,6 +53,11 @@ const BuilderRoute = BuilderRouteImport.update({
 const DashboardRoute = DashboardRouteImport.update({
   id: '/dashboard',
   path: '/dashboard',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiAccountDeleteRoute = ApiAccountDeleteRouteImport.update({
+  id: '/api/account-delete',
+  path: '/api/account-delete',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiLeadEmailRoute = ApiLeadEmailRouteImport.update({
@@ -91,10 +103,12 @@ const ApiWalletSlugRoute = ApiWalletSlugRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/account': typeof AccountRoute
   '/admin': typeof AdminRoute
   '/auth': typeof AuthRoute
   '/builder': typeof BuilderRoute
   '/dashboard': typeof DashboardRoute
+  '/api/account-delete': typeof ApiAccountDeleteRoute
   '/api/lead-email': typeof ApiLeadEmailRoute
   '/api/lead-webhook': typeof ApiLeadWebhookRoute
   '/api/trial-start': typeof ApiTrialStartRoute
@@ -106,10 +120,12 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/account': typeof AccountRoute
   '/admin': typeof AdminRoute
   '/auth': typeof AuthRoute
   '/builder': typeof BuilderRoute
   '/dashboard': typeof DashboardRoute
+  '/api/account-delete': typeof ApiAccountDeleteRoute
   '/api/lead-email': typeof ApiLeadEmailRoute
   '/api/lead-webhook': typeof ApiLeadWebhookRoute
   '/api/trial-start': typeof ApiTrialStartRoute
@@ -122,10 +138,12 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/account': typeof AccountRoute
   '/admin': typeof AdminRoute
   '/auth': typeof AuthRoute
   '/builder': typeof BuilderRoute
   '/dashboard': typeof DashboardRoute
+  '/api/account-delete': typeof ApiAccountDeleteRoute
   '/api/lead-email': typeof ApiLeadEmailRoute
   '/api/lead-webhook': typeof ApiLeadWebhookRoute
   '/api/trial-start': typeof ApiTrialStartRoute
@@ -139,10 +157,12 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/account'
     | '/admin'
     | '/auth'
     | '/builder'
     | '/dashboard'
+    | '/api/account-delete'
     | '/api/lead-email'
     | '/api/lead-webhook'
     | '/api/trial-start'
@@ -154,10 +174,12 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/account'
     | '/admin'
     | '/auth'
     | '/builder'
     | '/dashboard'
+    | '/api/account-delete'
     | '/api/lead-email'
     | '/api/lead-webhook'
     | '/api/trial-start'
@@ -169,10 +191,12 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/'
+    | '/account'
     | '/admin'
     | '/auth'
     | '/builder'
     | '/dashboard'
+    | '/api/account-delete'
     | '/api/lead-email'
     | '/api/lead-webhook'
     | '/api/trial-start'
@@ -185,10 +209,12 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AccountRoute: typeof AccountRoute
   AdminRoute: typeof AdminRoute
   AuthRoute: typeof AuthRoute
   BuilderRoute: typeof BuilderRoute
   DashboardRoute: typeof DashboardRoute
+  ApiAccountDeleteRoute: typeof ApiAccountDeleteRoute
   ApiLeadEmailRoute: typeof ApiLeadEmailRoute
   ApiLeadWebhookRoute: typeof ApiLeadWebhookRoute
   ApiTrialStartRoute: typeof ApiTrialStartRoute
@@ -206,6 +232,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/account': {
+      id: '/account'
+      path: '/account'
+      fullPath: '/account'
+      preLoaderRoute: typeof AccountRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/admin': {
@@ -234,6 +267,13 @@ declare module '@tanstack/react-router' {
       path: '/dashboard'
       fullPath: '/dashboard'
       preLoaderRoute: typeof DashboardRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/account-delete': {
+      id: '/api/account-delete'
+      path: '/api/account-delete'
+      fullPath: '/api/account-delete'
+      preLoaderRoute: typeof ApiAccountDeleteRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/lead-email': {
@@ -297,10 +337,12 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AccountRoute: AccountRoute,
   AdminRoute: AdminRoute,
   AuthRoute: AuthRoute,
   BuilderRoute: BuilderRoute,
   DashboardRoute: DashboardRoute,
+  ApiAccountDeleteRoute: ApiAccountDeleteRoute,
   ApiLeadEmailRoute: ApiLeadEmailRoute,
   ApiLeadWebhookRoute: ApiLeadWebhookRoute,
   ApiTrialStartRoute: ApiTrialStartRoute,

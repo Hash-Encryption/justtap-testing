@@ -17,6 +17,7 @@ import {
   Layers,
   Loader2,
   Lock,
+  Package,
   Plus,
   Power,
   Radio,
@@ -41,19 +42,24 @@ import { slugify, type PlanTier } from "@/lib/card";
 import { slugValidationMessage, validateSlug } from "@/lib/slug";
 import {
   adminAssignNfcTag,
+  adminAssignOrderNfc,
+  adminCompleteOrder,
   adminCreateCard,
   adminCreateProfile,
   adminDeleteCard,
   adminDeleteProfile,
+  adminGetOrders,
   adminProvisionNfcTag,
   adminSetCardActive,
   adminSetEntitlement,
+  adminUpdateOrderFulfillment,
   adminUpdateTagStatus,
   getOperations,
   getUserDetail,
   maskNfcToken,
   type AdminAuditRow,
   type AdminCardRow,
+  type AdminOrderRow,
   type AdminUserRow,
   type OperationsData,
   type UserDetailData,
@@ -161,6 +167,35 @@ function AdminPage() {
   const [provisionCardId, setProvisionCardId] = useState("");
   const [provisioning, setProvisioning] = useState(false);
 
+  // Card Orders & NFC Tab state
+  const [nfcSubTab, setNfcSubTab] = useState<"orders" | "nfc_tags">("orders");
+  const [orders, setOrders] = useState<AdminOrderRow[]>([]);
+  const [loadingOrders, setLoadingOrders] = useState(false);
+  const [orderFulfillmentFilter, setOrderFulfillmentFilter] = useState<string>("all");
+  const [orderPaymentFilter, setOrderPaymentFilter] = useState<string>("paid");
+  const [orderSearchQuery, setOrderSearchQuery] = useState("");
+
+  // Order mutation modals
+  const [assignOrderNfcModal, setAssignOrderNfcModal] = useState<{
+    order: AdminOrderRow;
+    nfcToken: string;
+    submitting: boolean;
+  } | null>(null);
+
+  const [updateOrderFulfillmentModal, setUpdateOrderFulfillmentModal] = useState<{
+    order: AdminOrderRow;
+    nextStatus: string;
+    carrier: string;
+    trackingNumber: string;
+    adminNotes: string;
+    submitting: boolean;
+  } | null>(null);
+
+  const [completeOrderModal, setCompleteOrderModal] = useState<{
+    order: AdminOrderRow;
+    submitting: boolean;
+  } | null>(null);
+
   const loadData = useCallback(
     async (isManualRefresh = false) => {
       if (isManualRefresh) setRefreshing(true);
@@ -189,11 +224,89 @@ function AdminPage() {
     [dateRange, searchQuery],
   );
 
+  const loadOrders = useCallback(async () => {
+    setLoadingOrders(true);
+    const res = await adminGetOrders({
+      search: orderSearchQuery.trim() || undefined,
+      fulfillment_status: orderFulfillmentFilter === "all" ? undefined : orderFulfillmentFilter,
+      payment_status: orderPaymentFilter === "all" ? undefined : orderPaymentFilter,
+    });
+    setLoadingOrders(false);
+    if (res.error) {
+      toast.error(res.error);
+    } else {
+      setOrders(res.data);
+    }
+  }, [orderSearchQuery, orderFulfillmentFilter, orderPaymentFilter]);
+
   useEffect(() => {
     if (isAdmin) {
       void loadData();
     }
   }, [isAdmin, loadData]);
+
+  useEffect(() => {
+    if (isAdmin && activeTab === "nfc") {
+      void loadOrders();
+    }
+  }, [isAdmin, activeTab, loadOrders]);
+
+  async function handleAssignOrderNfcSubmit() {
+    if (!assignOrderNfcModal) return;
+    if (!assignOrderNfcModal.nfcToken.trim()) {
+      toast.error("NFC token is required");
+      return;
+    }
+    setAssignOrderNfcModal((prev) => (prev ? { ...prev, submitting: true } : null));
+    const res = await adminAssignOrderNfc({
+      orderId: assignOrderNfcModal.order.id,
+      nfcToken: assignOrderNfcModal.nfcToken.trim(),
+    });
+    setAssignOrderNfcModal(null);
+    if (res.error) {
+      toast.error(res.error);
+    } else {
+      toast.success("NFC tag successfully assigned to order!");
+      void loadOrders();
+      void loadData();
+    }
+  }
+
+  async function handleUpdateOrderFulfillmentSubmit() {
+    if (!updateOrderFulfillmentModal) return;
+    setUpdateOrderFulfillmentModal((prev) => (prev ? { ...prev, submitting: true } : null));
+    const res = await adminUpdateOrderFulfillment({
+      orderId: updateOrderFulfillmentModal.order.id,
+      fulfillmentStatus: updateOrderFulfillmentModal.nextStatus,
+      carrier: updateOrderFulfillmentModal.carrier || undefined,
+      trackingNumber: updateOrderFulfillmentModal.trackingNumber || undefined,
+      adminNotes: updateOrderFulfillmentModal.adminNotes || undefined,
+    });
+    setUpdateOrderFulfillmentModal(null);
+    if (res.error) {
+      toast.error(res.error);
+    } else {
+      toast.success("Order fulfillment updated!");
+      void loadOrders();
+      void loadData();
+    }
+  }
+
+  async function handleCompleteOrderSubmit() {
+    if (!completeOrderModal) return;
+    setCompleteOrderModal((prev) => (prev ? { ...prev, submitting: true } : null));
+    const res = await adminCompleteOrder({
+      orderId: completeOrderModal.order.id,
+    });
+    setCompleteOrderModal(null);
+    if (res.error) {
+      toast.error(res.error);
+    } else {
+      toast.success("Order successfully completed and verified!");
+      void loadOrders();
+      void loadData();
+    }
+  }
 
   // Load user support detail
   const handleOpenUserDetail = useCallback(async (userId: string) => {
@@ -1887,99 +2000,558 @@ function AdminPage() {
           </div>
         )}
 
-        {/* TAB 7: NFC OPERATIONS */}
+        {/* TAB 7: NFC OPERATIONS & CARD COMMERCE */}
         {activeTab === "nfc" && (
           <div className="space-y-6">
-            {/* Provision NFC Tag Form */}
-            <div className="rounded-2xl border border-border bg-card p-5 space-y-4 shadow-sm">
-              <div className="flex items-center gap-2 border-b border-border pb-3">
-                <Tag className="h-4 w-4 text-primary" />
-                <h2 className="font-display text-sm font-bold text-foreground">
-                  {t("adminNfcProvisionTitle")}
-                </h2>
-              </div>
-              <div className="flex flex-col sm:flex-row gap-3 items-center">
-                <select
-                  value={provisionCardId}
-                  onChange={(e) => setProvisionCardId(e.target.value)}
-                  className="h-10 w-full sm:w-80 rounded-xl border border-border bg-background px-3 text-xs font-semibold focus:ring-2 focus:ring-primary/40 outline-none"
-                >
-                  <option value="">-- Optional: Pre-assign to Digital Card --</option>
-                  {operations?.cards.map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.full_name} (/c/{c.slug})
-                    </option>
-                  ))}
-                </select>
-
-                <button
-                  type="button"
-                  onClick={handleProvisionNfc}
-                  disabled={provisioning}
-                  className="inline-flex h-10 w-full sm:w-auto items-center justify-center gap-2 rounded-xl bg-primary px-5 text-xs font-bold text-primary-foreground hover:opacity-90 transition-opacity disabled:opacity-50"
-                >
-                  {provisioning ? (
-                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                  ) : (
-                    <Plus className="h-3.5 w-3.5" />
-                  )}
-                  <span>{t("adminNfcProvisionBtn")}</span>
-                </button>
-              </div>
+            {/* Sub-tab switcher */}
+            <div className="flex items-center gap-2 border-b border-border pb-3">
+              <button
+                type="button"
+                onClick={() => setNfcSubTab("orders")}
+                className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all ${
+                  nfcSubTab === "orders"
+                    ? "bg-primary text-primary-foreground shadow-sm"
+                    : "bg-muted/50 text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                <Package className="h-3.5 w-3.5" />
+                <span>
+                  {t("adminTabCardOrders")} ({orders.length})
+                </span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setNfcSubTab("nfc_tags")}
+                className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all ${
+                  nfcSubTab === "nfc_tags"
+                    ? "bg-primary text-primary-foreground shadow-sm"
+                    : "bg-muted/50 text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                <Tag className="h-3.5 w-3.5" />
+                <span>{t("adminTabNfcCards")}</span>
+              </button>
             </div>
 
-            {/* NFC Cards with Active Tags List */}
-            <div className="rounded-2xl border border-border bg-card p-5 space-y-4 shadow-sm">
-              <h3 className="font-display text-sm font-bold text-foreground">
-                Card NFC Tag Assignments
-              </h3>
-              <div className="overflow-x-auto">
-                <table className="w-full text-xs text-left rtl:text-right">
-                  <thead className="border-b border-border bg-muted/60 text-[10px] font-semibold text-muted-foreground uppercase">
-                    <tr>
-                      <th className="px-4 py-2.5">Card</th>
-                      <th className="px-4 py-2.5">Owner</th>
-                      <th className="px-4 py-2.5">Active Token</th>
-                      <th className="px-4 py-2.5 text-right rtl:text-left">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-border">
-                    {operations?.cards.map((card) => (
-                      <tr key={card.id} className="hover:bg-muted/30 transition-colors">
-                        <td className="px-4 py-3 font-semibold text-foreground">
-                          {card.full_name} (/c/{card.slug})
-                        </td>
-                        <td className="px-4 py-3 text-muted-foreground">
-                          {card.owner_name || "-"}
-                        </td>
-                        <td className="px-4 py-3 font-mono">
-                          {maskNfcToken(card.active_nfc_token)}
-                        </td>
-                        <td className="px-4 py-3 text-right rtl:text-left">
-                          {card.active_nfc_token && (
-                            <button
-                              type="button"
-                              onClick={() =>
-                                setNfcRevokeModal({
-                                  token: card.active_nfc_token!,
-                                  submitting: false,
-                                })
-                              }
-                              className="rounded-lg border border-destructive/40 bg-destructive/10 px-2.5 py-1 text-[11px] font-semibold text-destructive hover:bg-destructive/20 transition-colors"
-                            >
-                              {t("adminNfcRevokeBtn")}
-                            </button>
-                          )}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+            {/* SUBTAB 1: CARD ORDERS */}
+            {nfcSubTab === "orders" && (
+              <div className="space-y-4">
+                {/* Orders Filter Toolbar */}
+                <div className="rounded-2xl border border-border bg-card p-4 space-y-3 shadow-sm">
+                  <div className="flex flex-col sm:flex-row gap-3 items-center justify-between">
+                    <div className="relative w-full sm:w-80">
+                      <Search className="absolute left-3 rtl:left-auto rtl:right-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                      <input
+                        type="text"
+                        placeholder="Search order #, customer, card, token..."
+                        value={orderSearchQuery}
+                        onChange={(e) => setOrderSearchQuery(e.target.value)}
+                        className="h-9 w-full rounded-xl border border-border bg-background pl-9 rtl:pl-3 rtl:pr-9 text-xs focus:ring-2 focus:ring-primary/40 outline-none"
+                      />
+                    </div>
+
+                    <div className="flex flex-wrap gap-2 w-full sm:w-auto items-center">
+                      {/* Payment filter (defaults to paid) */}
+                      <select
+                        value={orderPaymentFilter}
+                        onChange={(e) => setOrderPaymentFilter(e.target.value)}
+                        className="h-9 rounded-xl border border-border bg-background px-3 text-xs font-medium focus:ring-2 focus:ring-primary/40 outline-none"
+                      >
+                        <option value="paid">{t("adminPaidOrdersOnly")}</option>
+                        <option value="pending">{t("adminPendingCheckouts")}</option>
+                        <option value="all">{t("adminAllOrders")}</option>
+                      </select>
+
+                      {/* Fulfillment filter */}
+                      <select
+                        value={orderFulfillmentFilter}
+                        onChange={(e) => setOrderFulfillmentFilter(e.target.value)}
+                        className="h-9 rounded-xl border border-border bg-background px-3 text-xs font-medium focus:ring-2 focus:ring-primary/40 outline-none"
+                      >
+                        <option value="all">All Fulfillment Statuses</option>
+                        <option value="new">New / Received</option>
+                        <option value="preparing">Preparing</option>
+                        <option value="ready">Ready</option>
+                        <option value="shipped">Shipped</option>
+                        <option value="completed">Completed</option>
+                        <option value="cancelled">Cancelled</option>
+                      </select>
+
+                      <button
+                        type="button"
+                        onClick={() => void loadOrders()}
+                        disabled={loadingOrders}
+                        className="h-9 px-3 rounded-xl border border-border bg-background text-xs font-semibold hover:bg-muted/60 transition-colors flex items-center gap-1.5"
+                      >
+                        <RefreshCw
+                          className={`h-3.5 w-3.5 ${loadingOrders ? "animate-spin" : ""}`}
+                        />
+                        <span>Refresh</span>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Orders Queue Table */}
+                <div className="rounded-2xl border border-border bg-card overflow-hidden shadow-sm">
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-xs text-left rtl:text-right">
+                      <thead className="border-b border-border bg-muted/60 text-[10px] font-semibold text-muted-foreground uppercase">
+                        <tr>
+                          <th className="px-4 py-3">{t("adminOrderNumber")}</th>
+                          <th className="px-4 py-3">Customer & Recipient</th>
+                          <th className="px-4 py-3">Digital Card</th>
+                          <th className="px-4 py-3">Product / Total</th>
+                          <th className="px-4 py-3">Statuses</th>
+                          <th className="px-4 py-3">NFC Tag</th>
+                          <th className="px-4 py-3 text-right rtl:text-left">Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-border">
+                        {loadingOrders ? (
+                          <tr>
+                            <td colSpan={7} className="px-4 py-8 text-center text-muted-foreground">
+                              <Loader2 className="h-5 w-5 animate-spin mx-auto mb-2 text-primary" />
+                              <span>Loading orders queue...</span>
+                            </td>
+                          </tr>
+                        ) : orders.length === 0 ? (
+                          <tr>
+                            <td colSpan={7} className="px-4 py-8 text-center text-muted-foreground">
+                              No orders found matching the filter criteria.
+                            </td>
+                          </tr>
+                        ) : (
+                          orders.map((o) => (
+                            <tr key={o.id} className="hover:bg-muted/30 transition-colors">
+                              <td className="px-4 py-3 font-mono font-bold text-primary">
+                                {o.order_number}
+                                <div className="text-[10px] text-muted-foreground font-normal">
+                                  {new Date(o.created_at).toLocaleDateString()}
+                                </div>
+                              </td>
+
+                              <td className="px-4 py-3">
+                                <div className="font-semibold text-foreground">
+                                  {o.recipient_name}
+                                </div>
+                                <div className="text-muted-foreground text-[11px]">
+                                  {o.recipient_phone}
+                                </div>
+                                <div className="text-muted-foreground text-[10px] truncate max-w-[180px]">
+                                  {o.shipping_address}, {o.city}
+                                </div>
+                              </td>
+
+                              <td className="px-4 py-3">
+                                <div className="font-semibold text-foreground">
+                                  {o.card_name_snapshot}
+                                </div>
+                                <div className="text-muted-foreground text-[10px] font-mono">
+                                  /c/{o.card_slug_snapshot}
+                                </div>
+                                <div className="text-muted-foreground text-[9px] font-mono">
+                                  Token: {o.digital_card_token_snapshot.slice(0, 10)}…
+                                </div>
+                              </td>
+
+                              <td className="px-4 py-3">
+                                <div className="font-medium text-foreground">
+                                  {o.product_variant}
+                                </div>
+                                <div className="font-mono font-bold text-primary">
+                                  {o.total.toFixed(2)} {o.currency}
+                                </div>
+                              </td>
+
+                              <td className="px-4 py-3 space-y-1">
+                                <div>
+                                  <span
+                                    className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase ${
+                                      o.payment_status === "paid"
+                                        ? "bg-emerald-500/20 text-emerald-600"
+                                        : "bg-amber-500/20 text-amber-600"
+                                    }`}
+                                  >
+                                    {o.payment_status}
+                                  </span>
+                                </div>
+                                <div>
+                                  <span
+                                    className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase ${
+                                      o.fulfillment_status === "completed"
+                                        ? "bg-emerald-500/20 text-emerald-600"
+                                        : o.fulfillment_status === "shipped"
+                                          ? "bg-blue-500/20 text-blue-600"
+                                          : "bg-purple-500/20 text-purple-600"
+                                    }`}
+                                  >
+                                    {o.fulfillment_status}
+                                  </span>
+                                </div>
+                              </td>
+
+                              <td className="px-4 py-3 font-mono text-[11px]">
+                                {o.nfc_token_snapshot ? (
+                                  <span className="text-emerald-600 font-semibold">
+                                    {maskNfcToken(o.nfc_token_snapshot)}
+                                  </span>
+                                ) : (
+                                  <span className="text-muted-foreground italic">Unassigned</span>
+                                )}
+                              </td>
+
+                              <td className="px-4 py-3 text-right rtl:text-left space-x-1.5 rtl:space-x-reverse">
+                                {/* Assign NFC Button */}
+                                {!o.nfc_token_snapshot &&
+                                  o.fulfillment_status !== "cancelled" &&
+                                  o.fulfillment_status !== "completed" && (
+                                    <button
+                                      type="button"
+                                      onClick={() =>
+                                        setAssignOrderNfcModal({
+                                          order: o,
+                                          nfcToken: "",
+                                          submitting: false,
+                                        })
+                                      }
+                                      className="rounded-lg border border-primary/40 bg-primary/10 px-2.5 py-1 text-[11px] font-semibold text-primary hover:bg-primary/20 transition-colors"
+                                    >
+                                      {t("adminAssignNfcTag")}
+                                    </button>
+                                  )}
+
+                                {/* Update Fulfillment Button */}
+                                {o.fulfillment_status !== "completed" &&
+                                  o.fulfillment_status !== "cancelled" && (
+                                    <button
+                                      type="button"
+                                      onClick={() =>
+                                        setUpdateOrderFulfillmentModal({
+                                          order: o,
+                                          nextStatus: o.fulfillment_status,
+                                          carrier: o.carrier || "",
+                                          trackingNumber: o.tracking_number || "",
+                                          adminNotes: o.admin_notes || "",
+                                          submitting: false,
+                                        })
+                                      }
+                                      className="rounded-lg border border-border bg-muted/60 px-2.5 py-1 text-[11px] font-semibold text-foreground hover:bg-muted transition-colors"
+                                    >
+                                      Fulfillment
+                                    </button>
+                                  )}
+
+                                {/* Complete Order Authoritative Gateway */}
+                                {o.payment_status === "paid" &&
+                                  o.nfc_token_snapshot &&
+                                  o.fulfillment_status !== "completed" && (
+                                    <button
+                                      type="button"
+                                      onClick={() =>
+                                        setCompleteOrderModal({
+                                          order: o,
+                                          submitting: false,
+                                        })
+                                      }
+                                      className="rounded-lg bg-emerald-600 px-2.5 py-1 text-[11px] font-bold text-white hover:bg-emerald-500 transition-colors inline-flex items-center gap-1"
+                                    >
+                                      <CheckCircle2 className="h-3 w-3" />
+                                      <span>{t("adminCompleteOrder")}</span>
+                                    </button>
+                                  )}
+                              </td>
+                            </tr>
+                          ))
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
               </div>
-            </div>
+            )}
+
+            {/* SUBTAB 2: NFC REGISTRY & PROVISIONING */}
+            {nfcSubTab === "nfc_tags" && (
+              <div className="space-y-6">
+                {/* Provision NFC Tag Form */}
+                <div className="rounded-2xl border border-border bg-card p-5 space-y-4 shadow-sm">
+                  <div className="flex items-center gap-2 border-b border-border pb-3">
+                    <Tag className="h-4 w-4 text-primary" />
+                    <h2 className="font-display text-sm font-bold text-foreground">
+                      {t("adminNfcProvisionTitle")}
+                    </h2>
+                  </div>
+                  <div className="flex flex-col sm:flex-row gap-3 items-center">
+                    <select
+                      value={provisionCardId}
+                      onChange={(e) => setProvisionCardId(e.target.value)}
+                      className="h-10 w-full sm:w-80 rounded-xl border border-border bg-background px-3 text-xs font-semibold focus:ring-2 focus:ring-primary/40 outline-none"
+                    >
+                      <option value="">-- Optional: Pre-assign to Digital Card --</option>
+                      {operations?.cards.map((c) => (
+                        <option key={c.id} value={c.id}>
+                          {c.full_name} (/c/{c.slug})
+                        </option>
+                      ))}
+                    </select>
+
+                    <button
+                      type="button"
+                      onClick={handleProvisionNfc}
+                      disabled={provisioning}
+                      className="inline-flex h-10 w-full sm:w-auto items-center justify-center gap-2 rounded-xl bg-primary px-5 text-xs font-bold text-primary-foreground hover:opacity-90 transition-opacity disabled:opacity-50"
+                    >
+                      {provisioning ? (
+                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      ) : (
+                        <Plus className="h-3.5 w-3.5" />
+                      )}
+                      <span>{t("adminNfcProvisionBtn")}</span>
+                    </button>
+                  </div>
+                </div>
+
+                {/* NFC Cards with Active Tags List */}
+                <div className="rounded-2xl border border-border bg-card p-5 space-y-4 shadow-sm">
+                  <h3 className="font-display text-sm font-bold text-foreground">
+                    Card NFC Tag Assignments
+                  </h3>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-xs text-left rtl:text-right">
+                      <thead className="border-b border-border bg-muted/60 text-[10px] font-semibold text-muted-foreground uppercase">
+                        <tr>
+                          <th className="px-4 py-2.5">Card</th>
+                          <th className="px-4 py-2.5">Owner</th>
+                          <th className="px-4 py-2.5">Active Token</th>
+                          <th className="px-4 py-2.5 text-right rtl:text-left">Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-border">
+                        {operations?.cards.map((card) => (
+                          <tr key={card.id} className="hover:bg-muted/30 transition-colors">
+                            <td className="px-4 py-3 font-semibold text-foreground">
+                              {card.full_name} (/c/{card.slug})
+                            </td>
+                            <td className="px-4 py-3 text-muted-foreground">
+                              {card.owner_name || "-"}
+                            </td>
+                            <td className="px-4 py-3 font-mono">
+                              {maskNfcToken(card.active_nfc_token)}
+                            </td>
+                            <td className="px-4 py-3 text-right rtl:text-left">
+                              {card.active_nfc_token && (
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    setNfcRevokeModal({
+                                      token: card.active_nfc_token!,
+                                      submitting: false,
+                                    })
+                                  }
+                                  className="rounded-lg border border-destructive/40 bg-destructive/10 px-2.5 py-1 text-[11px] font-semibold text-destructive hover:bg-destructive/20 transition-colors"
+                                >
+                                  {t("adminNfcRevokeBtn")}
+                                </button>
+                              )}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         )}
       </main>
+
+      {/* MODAL: ASSIGN NFC TAG TO ORDER */}
+      {assignOrderNfcModal && (
+        <div className="fixed inset-0 z-50 grid place-items-center bg-black/60 backdrop-blur-sm p-4">
+          <div className="w-full max-w-md rounded-2xl border border-border bg-card p-6 shadow-xl space-y-4">
+            <h3 className="text-sm font-bold text-foreground">
+              Assign NFC Tag to Order {assignOrderNfcModal.order.order_number}
+            </h3>
+            <p className="text-xs text-muted-foreground">
+              Enter the 32-character CSPRNG NFC token to link to this order's digital card (
+              {assignOrderNfcModal.order.card_name_snapshot}):
+            </p>
+            <input
+              type="text"
+              placeholder="32-character token..."
+              value={assignOrderNfcModal.nfcToken}
+              onChange={(e) =>
+                setAssignOrderNfcModal((prev) =>
+                  prev ? { ...prev, nfcToken: e.target.value } : null,
+                )
+              }
+              className="w-full h-10 rounded-xl border border-border bg-background px-3 text-xs font-mono focus:ring-2 focus:ring-primary/40 outline-none"
+            />
+            <div className="flex justify-end gap-2 pt-2">
+              <button
+                type="button"
+                onClick={() => setAssignOrderNfcModal(null)}
+                disabled={assignOrderNfcModal.submitting}
+                className="px-4 py-2 rounded-xl text-xs font-medium text-muted-foreground hover:bg-muted"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleAssignOrderNfcSubmit}
+                disabled={assignOrderNfcModal.submitting || !assignOrderNfcModal.nfcToken.trim()}
+                className="px-4 py-2 rounded-xl text-xs font-bold bg-primary text-primary-foreground hover:opacity-90"
+              >
+                {assignOrderNfcModal.submitting ? "Assigning..." : "Assign Tag"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL: UPDATE ORDER FULFILLMENT */}
+      {updateOrderFulfillmentModal && (
+        <div className="fixed inset-0 z-50 grid place-items-center bg-black/60 backdrop-blur-sm p-4">
+          <div className="w-full max-w-md rounded-2xl border border-border bg-card p-6 shadow-xl space-y-4">
+            <h3 className="text-sm font-bold text-foreground">
+              Update Fulfillment for {updateOrderFulfillmentModal.order.order_number}
+            </h3>
+            <div className="space-y-3 text-xs">
+              <div className="space-y-1">
+                <label className="font-medium text-foreground">Fulfillment Status</label>
+                <select
+                  value={updateOrderFulfillmentModal.nextStatus}
+                  onChange={(e) =>
+                    setUpdateOrderFulfillmentModal((prev) =>
+                      prev ? { ...prev, nextStatus: e.target.value } : null,
+                    )
+                  }
+                  className="w-full h-9 rounded-xl border border-border bg-background px-3 text-xs font-semibold focus:ring-2 focus:ring-primary/40 outline-none"
+                >
+                  <option value="new">New</option>
+                  <option value="preparing">Preparing / Encoding</option>
+                  <option value="ready">Ready</option>
+                  <option value="shipped">Shipped</option>
+                  <option value="cancelled">Cancelled</option>
+                </select>
+              </div>
+
+              <div className="space-y-1">
+                <label className="font-medium text-foreground">{t("adminCarrier")}</label>
+                <input
+                  type="text"
+                  placeholder={t("adminCarrierPlaceholder")}
+                  value={updateOrderFulfillmentModal.carrier}
+                  onChange={(e) =>
+                    setUpdateOrderFulfillmentModal((prev) =>
+                      prev ? { ...prev, carrier: e.target.value } : null,
+                    )
+                  }
+                  className="w-full h-9 rounded-xl border border-border bg-background px-3 text-xs focus:ring-2 focus:ring-primary/40 outline-none"
+                />
+              </div>
+
+              <div className="space-y-1">
+                <label className="font-medium text-foreground">{t("adminTrackingNumber")}</label>
+                <input
+                  type="text"
+                  placeholder={t("adminTrackingPlaceholder")}
+                  value={updateOrderFulfillmentModal.trackingNumber}
+                  onChange={(e) =>
+                    setUpdateOrderFulfillmentModal((prev) =>
+                      prev ? { ...prev, trackingNumber: e.target.value } : null,
+                    )
+                  }
+                  className="w-full h-9 rounded-xl border border-border bg-background px-3 text-xs focus:ring-2 focus:ring-primary/40 outline-none"
+                />
+              </div>
+
+              <div className="space-y-1">
+                <label className="font-medium text-foreground">Admin Notes</label>
+                <textarea
+                  rows={2}
+                  value={updateOrderFulfillmentModal.adminNotes}
+                  onChange={(e) =>
+                    setUpdateOrderFulfillmentModal((prev) =>
+                      prev ? { ...prev, adminNotes: e.target.value } : null,
+                    )
+                  }
+                  placeholder="Internal production notes..."
+                  className="w-full rounded-xl border border-border bg-background p-2.5 text-xs focus:ring-2 focus:ring-primary/40 outline-none resize-none"
+                />
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-2 pt-2">
+              <button
+                type="button"
+                onClick={() => setUpdateOrderFulfillmentModal(null)}
+                disabled={updateOrderFulfillmentModal.submitting}
+                className="px-4 py-2 rounded-xl text-xs font-medium text-muted-foreground hover:bg-muted"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleUpdateOrderFulfillmentSubmit}
+                disabled={updateOrderFulfillmentModal.submitting}
+                className="px-4 py-2 rounded-xl text-xs font-bold bg-primary text-primary-foreground hover:opacity-90"
+              >
+                {updateOrderFulfillmentModal.submitting ? "Saving..." : "Save Fulfillment"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL: COMPLETE ORDER CONFIRMATION */}
+      {completeOrderModal && (
+        <div className="fixed inset-0 z-50 grid place-items-center bg-black/60 backdrop-blur-sm p-4">
+          <div className="w-full max-w-md rounded-2xl border border-emerald-500/30 bg-card p-6 shadow-xl space-y-4">
+            <div className="flex items-center gap-2 text-emerald-600">
+              <CheckCircle2 className="h-5 w-5" />
+              <h3 className="text-sm font-bold text-foreground">Complete Order</h3>
+            </div>
+            <p className="text-xs text-muted-foreground leading-relaxed">
+              {t("adminCompleteOrderConfirm").replace(
+                "{orderNumber}",
+                completeOrderModal.order.order_number,
+              )}
+            </p>
+            <div className="p-3 rounded-xl bg-muted/40 text-xs space-y-1">
+              <div>
+                <strong>Order:</strong> {completeOrderModal.order.order_number}
+              </div>
+              <div>
+                <strong>Card:</strong> {completeOrderModal.order.card_name_snapshot}
+              </div>
+              <div>
+                <strong>NFC Tag:</strong> {completeOrderModal.order.nfc_token_snapshot}
+              </div>
+            </div>
+            <div className="flex justify-end gap-2 pt-2">
+              <button
+                type="button"
+                onClick={() => setCompleteOrderModal(null)}
+                disabled={completeOrderModal.submitting}
+                className="px-4 py-2 rounded-xl text-xs font-medium text-muted-foreground hover:bg-muted"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleCompleteOrderSubmit}
+                disabled={completeOrderModal.submitting}
+                className="px-4 py-2 rounded-xl text-xs font-bold bg-emerald-600 text-white hover:bg-emerald-500 flex items-center gap-1.5"
+              >
+                {completeOrderModal.submitting ? "Completing..." : "Complete Order"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* USER DETAIL MODAL / DRAWER */}
       {detailUserId && (

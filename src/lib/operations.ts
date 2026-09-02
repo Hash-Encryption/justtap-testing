@@ -382,3 +382,122 @@ export async function adminUpdateTagStatus(params: {
     return { success: false, error: (err as Error).message || "Failed to update tag status" };
   }
 }
+
+export interface AdminOrderRow {
+  id: string;
+  order_number: string;
+  user_id: string | null;
+  card_id: string | null;
+  customer_name: string;
+  customer_email: string;
+  customer_phone: string | null;
+  card_name_snapshot: string;
+  card_slug_snapshot: string;
+  digital_card_token_snapshot: string;
+  product_name: string;
+  product_variant: string;
+  sku: string;
+  quantity: number;
+  recipient_name: string;
+  recipient_phone: string;
+  shipping_address: string;
+  city: string;
+  postal_code: string | null;
+  delivery_instructions: string | null;
+  subtotal: number;
+  total: number;
+  currency: string;
+  payment_status: string;
+  fulfillment_status: string;
+  payment_provider: string | null;
+  payment_reference: string | null;
+  nfc_tag_id: string | null;
+  nfc_token_snapshot: string | null;
+  active_nfc_token: string | null;
+  carrier: string | null;
+  tracking_number: string | null;
+  admin_notes: string | null;
+  created_at: string;
+  shipped_at: string | null;
+  completed_at: string | null;
+}
+
+export async function adminGetOrders(params?: {
+  search?: string;
+  fulfillment_status?: string;
+  payment_status?: string;
+}): Promise<{ data: AdminOrderRow[]; error: string | null }> {
+  try {
+    const { data, error } = await supabase.rpc("admin_get_orders", {
+      _search: params?.search || null,
+      _fulfillment_status: params?.fulfillment_status || null,
+      _payment_status: params?.payment_status || "paid",
+    });
+
+    if (error) return { data: [], error: error.message };
+    return { data: (data as AdminOrderRow[]) || [], error: null };
+  } catch (err: unknown) {
+    return { data: [], error: (err as Error).message || "Failed to fetch orders" };
+  }
+}
+
+export async function adminAssignOrderNfc(params: {
+  orderId: string;
+  nfcToken: string;
+  releaseId?: string;
+}): Promise<{ success: boolean; error: string | null }> {
+  try {
+    const { error } = await supabase.rpc("admin_assign_order_nfc", {
+      _order_id: params.orderId,
+      _nfc_token: params.nfcToken.trim(),
+      _release_identifier: params.releaseId || DEFAULT_RELEASE_IDENTIFIER,
+    });
+
+    if (error) return { success: false, error: error.message };
+    return { success: true, error: null };
+  } catch (err: unknown) {
+    return { success: false, error: (err as Error).message || "Failed to assign NFC tag to order" };
+  }
+}
+
+export async function adminUpdateOrderFulfillment(params: {
+  orderId: string;
+  fulfillmentStatus: string;
+  carrier?: string;
+  trackingNumber?: string;
+  adminNotes?: string;
+  releaseId?: string;
+}): Promise<{ success: boolean; error: string | null }> {
+  try {
+    const { error } = await supabase.rpc("admin_update_order_fulfillment", {
+      _order_id: params.orderId,
+      _fulfillment_status: params.fulfillmentStatus,
+      _carrier: params.carrier || null,
+      _tracking_number: params.trackingNumber || null,
+      _admin_notes: params.adminNotes || null,
+      _release_identifier: params.releaseId || DEFAULT_RELEASE_IDENTIFIER,
+    });
+
+    if (error) return { success: false, error: error.message };
+    return { success: true, error: null };
+  } catch (err: unknown) {
+    return { success: false, error: (err as Error).message || "Failed to update fulfillment" };
+  }
+}
+
+export async function adminCompleteOrder(params: {
+  orderId: string;
+  releaseId?: string;
+}): Promise<{ success: boolean; error: string | null }> {
+  try {
+    const { error } = await supabase.rpc("admin_complete_order", {
+      _order_id: params.orderId,
+      _release_identifier: params.releaseId || DEFAULT_RELEASE_IDENTIFIER,
+    });
+
+    if (error) return { success: false, error: error.message };
+    return { success: true, error: null };
+  } catch (err: unknown) {
+    return { success: false, error: (err as Error).message || "Failed to complete order" };
+  }
+}

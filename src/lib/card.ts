@@ -60,6 +60,8 @@ export type Card = {
   title_ar: string | null;
   bio_ar: string | null;
   social_links: SocialLinks | null;
+  card_name?: string | null;
+  is_primary?: boolean;
   plan_tier?: PlanTier;
   trial_ends_at?: string | null;
   pro_features?: ProFeatures | null;
@@ -187,6 +189,8 @@ export const emptyCard: Card = {
   title_ar: "",
   bio_ar: "",
   social_links: { linkedin: "", instagram: "", twitter: "", website: "" },
+  card_name: "Personal Card",
+  is_primary: false,
   plan_tier: "free",
   pro_features: defaultProFeatures,
 };
