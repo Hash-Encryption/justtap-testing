@@ -12,6 +12,11 @@ import {
   type UserProfileData,
 } from "@/lib/account";
 import { getUserOrders, getOrderEvents, type CardOrder, type CardOrderEvent } from "@/lib/orders";
+import { getUserBillingOverview, getUserPaymentMethods } from "@/lib/payments/subscriptions";
+import { getUserBillingHistory } from "@/lib/payments/payments";
+import { BundleCheckoutDialog } from "@/components/dashboard/BundleCheckoutDialog";
+import type { UserBillingOverview, SafePaymentMethod, PaymentRecord } from "@/lib/payments/types";
+import type { Card } from "@/lib/card";
 import { supabase } from "@/lib/supabase";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -36,6 +41,11 @@ import {
   Loader2,
   Trash2,
   Sparkles,
+  CreditCard,
+  Receipt,
+  FileText,
+  Check,
+  Tag,
 } from "lucide-react";
 
 export const Route = createFileRoute("/account")({
@@ -72,11 +82,19 @@ function AccountPage() {
   const [expandedOrderId, setExpandedOrderId] = useState<string | null>(null);
   const [orderEvents, setOrderEvents] = useState<Record<string, CardOrderEvent[]>>({});
 
+  // Billing state (Phase 4)
+  const [billingOverview, setBillingOverview] = useState<UserBillingOverview | null>(null);
+  const [loadingBilling, setLoadingBilling] = useState(false);
+  const [paymentMethods, setPaymentMethods] = useState<SafePaymentMethod[]>([]);
+  const [billingHistory, setBillingHistory] = useState<PaymentRecord[]>([]);
+  const [userCards, setUserCards] = useState<Card[]>([]);
+  const [bundleModalOpen, setBundleModalOpen] = useState(false);
+
   // Danger zone state
   const [deleteConfirmation, setDeleteConfirmation] = useState("");
   const [isDeletingAccount, setIsDeletingAccount] = useState(false);
 
-  // Load user profile
+  // Load user profile & initial billing data
   useEffect(() => {
     if (!user) {
       if (!authLoading) {
@@ -100,6 +118,29 @@ function AccountPage() {
 
     loadData();
   }, [user, authLoading, navigate]);
+
+  // Load billing data when plan/billing tab is activated
+  useEffect(() => {
+    if (activeTab === "plan" && user) {
+      loadBillingData();
+    }
+  }, [activeTab, user]);
+
+  const loadBillingData = async () => {
+    setLoadingBilling(true);
+    const [overviewRes, methodsRes, historyRes, cardsRes] = await Promise.all([
+      getUserBillingOverview(),
+      getUserPaymentMethods(),
+      getUserBillingHistory(),
+      supabase.from("cards").select("*").order("created_at", { ascending: true }),
+    ]);
+
+    if (overviewRes.data) setBillingOverview(overviewRes.data);
+    if (methodsRes.data) setPaymentMethods(methodsRes.data);
+    if (historyRes.data) setBillingHistory(historyRes.data);
+    if (cardsRes.data) setUserCards(cardsRes.data as Card[]);
+    setLoadingBilling(false);
+  };
 
   // Load orders when orders tab is activated
   useEffect(() => {
@@ -396,7 +437,7 @@ function AccountPage() {
               }`}
             >
               <Crown className="w-4 h-4 shrink-0" />
-              <span>{t("tabPlan")}</span>
+              <span>{t("tabBilling")}</span>
             </button>
 
             <button
@@ -509,36 +550,81 @@ function AccountPage() {
               </div>
             )}
 
-            {/* 2. Plan & Upgrade Tab */}
+            {/* 2. Billing & Subscriptions Tab */}
             {activeTab === "plan" && (
-              <div className="p-6 rounded-2xl bg-[#111116] border border-white/[0.08] space-y-6">
-                <div>
-                  <h3 className="text-base font-bold text-white">{t("tabPlan")}</h3>
-                  <p className="text-xs text-zinc-400">
-                    {lang === "ar"
-                      ? "إدارة باقة الاشتراك، حدود البطاقات الرقمية وخيارات الترقية"
-                      : "Manage your subscription tier, digital card limits, and upgrade options"}
-                  </p>
+              <div className="p-6 rounded-2xl bg-[#111116] border border-white/[0.08] space-y-8">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h3 className="text-base font-bold text-white">{t("tabBilling")}</h3>
+                    <p className="text-xs text-zinc-400">
+                      {lang === "ar"
+                        ? "إدارة باقة الاشتراك، سجل الفواتير، وسائل الدفع وخيارات الترقية"
+                        : "Manage your subscription plan, billing history, payment methods, and upgrades"}
+                    </p>
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={loadBillingData}
+                    disabled={loadingBilling}
+                    className="text-xs border-white/10 text-zinc-300 hover:text-white"
+                  >
+                    {loadingBilling ? (
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    ) : lang === "ar" ? (
+                      "تحديث"
+                    ) : (
+                      "Refresh"
+                    )}
+                  </Button>
                 </div>
 
-                {/* Current Plan Status Box */}
-                <div className="p-5 rounded-xl bg-purple-950/20 border border-purple-500/20 space-y-3">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs text-purple-300 font-semibold uppercase tracking-wider">
-                      {lang === "ar" ? "الباقة الحالية" : "Current Plan"}
-                    </span>
-                    <span className="text-xs font-bold font-mono text-white">
-                      {isTrialActive ? "PRO TRIAL" : (profile?.plan_tier || "free").toUpperCase()}
-                    </span>
+                {/* Current Plan & Subscription Status Box */}
+                <div className="p-5 rounded-xl bg-purple-950/20 border border-purple-500/20 space-y-4">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-purple-500/20 pb-3">
+                    <div>
+                      <span className="text-xs text-purple-300 font-semibold uppercase tracking-wider block">
+                        {t("currentPlan")}
+                      </span>
+                      <span className="text-lg font-bold text-white font-mono">
+                        {isTrialActive
+                          ? "PRO TRIAL"
+                          : (
+                              billingOverview?.plan_tier ||
+                              profile?.plan_tier ||
+                              "free"
+                            ).toUpperCase()}
+                      </span>
+                    </div>
+
+                    <div className="text-xs text-zinc-400 font-mono">
+                      {billingOverview?.subscription?.next_charge_at ? (
+                        <span className="text-emerald-400 font-medium">
+                          {t("planNextCharge")
+                            .replace(
+                              "{amount}",
+                              String((billingOverview.subscription.amount_minor || 9900) / 100),
+                            )
+                            .replace("{currency}", billingOverview.subscription.currency || "SAR")
+                            .replace(
+                              "{date}",
+                              new Date(
+                                billingOverview.subscription.next_charge_at,
+                              ).toLocaleDateString(),
+                            )}
+                        </span>
+                      ) : isTrialActive ? (
+                        <span className="text-purple-300">
+                          {t("trialActiveBanner").replace("{days}", String(trialDaysRemaining))}
+                        </span>
+                      ) : (
+                        <span className="text-zinc-500">{t("annualRenewalOnly")}</span>
+                      )}
+                    </div>
                   </div>
 
-                  {isTrialActive && (
-                    <div className="text-xs text-purple-200">
-                      {t("trialActiveBanner").replace("{days}", String(trialDaysRemaining))}
-                    </div>
-                  )}
-
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-2">
+                  {/* Tier Limits Grid */}
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-1">
                     <div className="p-3 rounded-lg bg-black/40 border border-white/5 text-center">
                       <div className="text-[10px] text-zinc-400">
                         {lang === "ar" ? "حد البطاقات المجانية" : "Free Tier"}
@@ -566,28 +652,205 @@ function AccountPage() {
                   </div>
                 </div>
 
-                {/* Non-Destructive Downgrade Explanation */}
-                <div className="p-4 rounded-xl bg-white/[0.02] border border-white/[0.06] text-xs text-zinc-400 space-y-2">
-                  <div className="font-semibold text-zinc-200">
-                    {lang === "ar"
-                      ? "حفظ البطاقات عند انتهاء التجربة"
-                      : "Non-Destructive Trial Preservation"}
+                {/* Upgrade & Bundle Options Cards */}
+                <div className="space-y-4">
+                  <h4 className="text-xs font-semibold uppercase tracking-wider text-zinc-300 flex items-center gap-2">
+                    <Sparkles className="w-3.5 h-3.5 text-purple-400" />
+                    <span>
+                      {lang === "ar" ? "خيارات الترقية والعروض" : "Available Plans & Offers"}
+                    </span>
+                  </h4>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {/* Standalone Pro Option */}
+                    <div className="p-5 rounded-xl bg-white/[0.02] border border-white/[0.08] flex flex-col justify-between space-y-4 hover:border-purple-500/30 transition-all">
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between">
+                          <span className="font-bold text-white text-base">JustTap Pro</span>
+                          <span className="font-mono text-purple-400 font-bold text-sm">
+                            99 SAR / yr
+                          </span>
+                        </div>
+                        <p className="text-xs text-zinc-400 leading-relaxed">
+                          {lang === "ar"
+                            ? "تفعيل 3 بطاقات رقمية، ألوان مخصصة، إزالة الشعار وبطاقة Apple Wallet."
+                            : "Unlock 3 digital cards, custom colors, remove branding, and Apple Wallet passes."}
+                        </p>
+                      </div>
+                      <Link to="/dashboard" className="w-full block">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="w-full border-purple-500/30 text-purple-300 hover:bg-purple-600 hover:text-white text-xs font-semibold"
+                        >
+                          <Crown className="w-3.5 h-3.5 mr-1.5" />
+                          <span>{t("upgradeToProAnnual")}</span>
+                        </Button>
+                      </Link>
+                    </div>
+
+                    {/* Bundle Option */}
+                    <div className="p-5 rounded-xl bg-gradient-to-b from-[#181126] to-[#0E0B16] border border-purple-500/50 flex flex-col justify-between space-y-4 shadow-lg shadow-purple-950/20 relative">
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <span className="font-bold text-white text-base">Pro + NFC Card</span>
+                            <span className="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 text-[10px] font-bold">
+                              Save 49 SAR
+                            </span>
+                          </div>
+                          <span className="font-mono text-purple-400 font-bold text-sm">
+                            199 SAR
+                          </span>
+                        </div>
+                        <p className="text-xs text-purple-200/80 leading-relaxed">
+                          {t("pricingBundleRenewalCopy")}
+                        </p>
+                      </div>
+
+                      <Button
+                        size="sm"
+                        onClick={() => setBundleModalOpen(true)}
+                        className="w-full bg-purple-600 hover:bg-purple-500 text-white text-xs font-bold shadow-md shadow-purple-950/40"
+                      >
+                        <Sparkles className="w-3.5 h-3.5 mr-1.5" />
+                        <span>{t("upgradeToBundle")}</span>
+                      </Button>
+                    </div>
                   </div>
-                  <p className="leading-relaxed text-zinc-400">
-                    {lang === "ar"
-                      ? "عند انتهاء فترة التجربة، تظل بطاقتك الرئيسية نشطة ومتاحة مجاناً. البطاقات الإضافية تظل محفوظة بأمان في حسابك دون أي حذف، وسيتم إعادة تفعيلها فوراً بمجرد الترقية إلى باقة Pro."
-                      : "When your trial ends, your designated Primary Card remains active on the Free tier. Any additional cards remain securely stored without data loss, and will automatically reactivate upon upgrading to Pro."}
-                  </p>
                 </div>
 
-                <div className="pt-2">
-                  <Link to="/dashboard">
-                    <Button className="bg-purple-600 hover:bg-purple-500 text-white text-xs font-semibold">
-                      <Sparkles className="w-3.5 h-3.5 mr-1.5" />
-                      <span>{lang === "ar" ? "استعراض ميزات Pro" : "Explore Pro Features"}</span>
-                    </Button>
-                  </Link>
+                {/* Payment Methods Section (Safe Container) */}
+                <div className="space-y-4 pt-2">
+                  <h4 className="text-xs font-semibold uppercase tracking-wider text-zinc-300 flex items-center gap-2">
+                    <CreditCard className="w-3.5 h-3.5 text-purple-400" />
+                    <span>{t("paymentMethods")}</span>
+                  </h4>
+
+                  {paymentMethods.length === 0 ? (
+                    <div className="p-6 rounded-xl bg-white/[0.02] border border-white/[0.06] text-center space-y-2">
+                      <CreditCard className="w-6 h-6 text-zinc-600 mx-auto" />
+                      <p className="text-xs text-zinc-400">{t("noPaymentMethods")}</p>
+                      <p className="text-[11px] text-zinc-500 max-w-md mx-auto">
+                        {t("providerNotConnectedNotice")}
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      {paymentMethods.map((pm) => (
+                        <div
+                          key={pm.id}
+                          className="p-4 rounded-xl bg-white/[0.03] border border-white/[0.08] flex items-center justify-between text-xs"
+                        >
+                          <div className="flex items-center gap-3">
+                            <CreditCard className="w-4 h-4 text-purple-400" />
+                            <div>
+                              <div className="font-semibold text-white uppercase font-mono">
+                                {pm.brand || pm.type} •••• {pm.last_four || "••••"}
+                              </div>
+                              <div className="text-[10px] text-zinc-500 font-mono">
+                                Exp: {pm.expiry_month}/{pm.expiry_year}
+                              </div>
+                            </div>
+                          </div>
+                          {pm.is_default && (
+                            <span className="px-2 py-0.5 rounded text-[10px] bg-purple-500/20 text-purple-300 font-semibold">
+                              Default
+                            </span>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
+
+                {/* Real Billing History Section */}
+                <div className="space-y-4 pt-2">
+                  <h4 className="text-xs font-semibold uppercase tracking-wider text-zinc-300 flex items-center gap-2">
+                    <Receipt className="w-3.5 h-3.5 text-purple-400" />
+                    <span>{t("billingHistory")}</span>
+                  </h4>
+
+                  {billingHistory.length === 0 ? (
+                    <div className="p-8 rounded-xl bg-white/[0.02] border border-white/[0.06] text-center space-y-2">
+                      <FileText className="w-6 h-6 text-zinc-600 mx-auto" />
+                      <p className="text-xs text-zinc-400">{t("noBillingHistory")}</p>
+                    </div>
+                  ) : (
+                    <div className="rounded-xl border border-white/[0.08] bg-card/60 overflow-hidden">
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-xs text-left rtl:text-right">
+                          <thead className="border-b border-white/[0.08] bg-white/[0.02] text-[10px] font-semibold text-zinc-400 uppercase">
+                            <tr>
+                              <th className="px-4 py-3">{t("adminPaymentDate")}</th>
+                              <th className="px-4 py-3">{t("adminPaymentPurpose")}</th>
+                              <th className="px-4 py-3">{t("adminPaymentAmount")}</th>
+                              <th className="px-4 py-3">{t("adminPaymentStatus")}</th>
+                              <th className="px-4 py-3">{t("adminOrderNumber")}</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-white/[0.04]">
+                            {billingHistory.map((bh) => (
+                              <tr key={bh.id} className="hover:bg-white/[0.02] transition-colors">
+                                <td className="px-4 py-3 font-mono text-zinc-300">
+                                  {new Date(bh.created_at).toLocaleDateString()}
+                                </td>
+                                <td className="px-4 py-3 font-medium text-white">
+                                  {bh.purpose === "pro_nfc_bundle"
+                                    ? "Pro + NFC Card Bundle"
+                                    : bh.purpose === "subscription_initial"
+                                      ? "Pro Subscription (Annual)"
+                                      : bh.purpose === "physical_card_order"
+                                        ? "JustTap NFC Card"
+                                        : bh.purpose}
+                                </td>
+                                <td className="px-4 py-3 font-mono font-bold text-purple-400">
+                                  {(bh.amount_minor / 100).toFixed(2)} {bh.currency}
+                                </td>
+                                <td className="px-4 py-3">
+                                  <span
+                                    className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase ${
+                                      bh.status === "paid"
+                                        ? "bg-emerald-500/20 text-emerald-400"
+                                        : bh.status === "refunded" ||
+                                            bh.status === "partially_refunded"
+                                          ? "bg-purple-500/20 text-purple-300"
+                                          : bh.status === "failed"
+                                            ? "bg-red-500/20 text-red-400"
+                                            : "bg-amber-500/20 text-amber-400"
+                                    }`}
+                                  >
+                                    {bh.status}
+                                  </span>
+                                </td>
+                                <td className="px-4 py-3 font-mono text-zinc-400">
+                                  {bh.order_number || "—"}
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Bundle Checkout Dialog Modal */}
+                {bundleModalOpen && (
+                  <BundleCheckoutDialog
+                    cards={userCards}
+                    isOpen={bundleModalOpen}
+                    onClose={() => setBundleModalOpen(false)}
+                    onCheckoutCreated={(res) => {
+                      toast.success(
+                        lang === "ar"
+                          ? `تم تسجيل طلب الباقة بنجاح (${res.order_number})`
+                          : `Bundle order created (${res.order_number})`,
+                      );
+                      loadBillingData();
+                    }}
+                  />
+                )}
               </div>
             )}
 

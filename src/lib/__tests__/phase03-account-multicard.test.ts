@@ -148,7 +148,7 @@ describe("Phase 3: Physical Card Product Catalog & Snapshots", () => {
     const product = getProductBySku("pvc_matte_black");
     expect(product).toBeDefined();
     expect(product?.name).toBe("JustTap Matte Card");
-    expect(product?.price).toBe(119.0);
+    expect(product?.price).toBe(149.0);
     expect(product?.currency).toBe("SAR");
     expect(product?.isAvailable).toBe(true);
   });
@@ -241,9 +241,9 @@ describe("Phase 3.1: Commerce Pricing, VAT Exemption & National Address Validati
     const shipping = 0.0;
     const total = price + tax + shipping;
 
-    expect(price).toBe(119.0);
+    expect(price).toBe(149.0);
     expect(tax).toBe(0.0);
-    expect(total).toBe(119.0);
+    expect(total).toBe(149.0);
   });
 
   it("validates mandatory National Address and non-empty City in checkout parameters", () => {

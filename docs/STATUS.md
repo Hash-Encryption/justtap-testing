@@ -1,12 +1,26 @@
 # JustTap V2 Status
 
-Last updated: 2026-08-30
+Last updated: 2026-09-04
 
 ## Current phase
 
-Phase 2: Administrative Operations Portal, Product Analytics, and Privileged Telemetry (Testing-First). Status: `PHASE_2_CHECKPOINT_COMMITTED` (Authenticated Account Matrix: `MANUAL_DEPLOYED_VERIFICATION_PENDING`).
+Phase 4: Billing, Subscriptions, Physical-Card Commerce & Pricing System. Status: `IMPLEMENTED_VALIDATED_AWAITING_REVIEW`.
 
 ## Completed
+
+- Completed Phase 4: Billing, Subscriptions, Physical-Card Commerce & Pricing System:
+  - Database migration `20260904000000_phase04_billing_commerce_system.sql` introducing authoritative financial schema: `billing_plans`, `billing_prices`, `billing_offers`, `payment_methods`, `subscriptions`, `payments`, `payment_refunds`, `subscription_events`, `payment_events`, `payment_webhook_events`.
+  - Authoritative database pricing catalog and updated physical card pricing to 149.00 SAR (`pvc_matte_black`).
+  - Bundle commercial model: Initial purchase 199.00 SAR (1 yr Pro + 1 physical NFC card, saving 49 SAR), renewal strictly 99.00 SAR/year (Pro renewal only with 0 physical cards).
+  - Account deletion data retention: Foreign keys `subscriptions.user_id`, `payments.user_id`, `card_orders.user_id`, and `payment_refunds.requested_by` use `ON DELETE SET NULL` to preserve historical financial ledgers.
+  - Sensitive token boundary: Direct client SELECT on `payment_methods` revoked; narrow projection RPC `get_user_payment_methods()` excludes `provider_token_reference`.
+  - Durable idempotency on bundle checkout creation (`create_bundle_order_and_subscription()`) and refund requests (`admin_request_refund()`).
+  - Provider layer: Generic `PaymentProvider` interface and `DisabledPaymentProvider` returning controlled `PAYMENT_PROVIDER_NOT_CONFIGURED` domain errors without fake success.
+  - Landing page pricing section in `src/components/landing/PricingSection.tsx` displaying Pro (99 SAR/yr), NFC Card (149 SAR), Featured Bundle (199 SAR initial, saves 49 SAR, renews 99 SAR/yr), and discoverable Free option.
+  - Account Center Billing tab in `src/routes/account.tsx` with subscription overview, commercial upgrade cards, `BundleCheckoutDialog.tsx`, payment methods safe empty state, and billing history ledger.
+  - Admin Operations Billing & Commerce portal in `src/components/admin/AdminBillingSection.tsx` with Billing Overview KPIs, Payments Ledger, Subscriptions Queue, Payment Detail modal, Refund Request modal (with balance validation and `requested` status), and Reconciliation diagnostics.
+  - Comprehensive English & Arabic localization across all billing and pricing surfaces.
+  - Full validation: 480 unit tests passing (19 skipped), `tsc -p tsconfig.v2.json` clean, `eslint` clean, `scan-secrets.mjs` clean (266 files), `vite build` clean.
 
 - Established TanStack Start as the sole V2 target and froze the Next.js tree.
 - Added architecture, plan, decisions, security, status, and repository inventory documents.

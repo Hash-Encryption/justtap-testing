@@ -21,6 +21,7 @@ import {
   Plus,
   Power,
   Radio,
+  Receipt,
   RefreshCw,
   Search,
   ShieldAlert,
@@ -38,6 +39,7 @@ import { toast } from "sonner";
 import { useAuth, useIsAdmin } from "@/hooks/useAuth";
 import { useTranslation } from "@/lib/i18n";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
+import { AdminBillingSection } from "@/components/admin/AdminBillingSection";
 import { slugify, type PlanTier } from "@/lib/card";
 import { slugValidationMessage, validateSlug } from "@/lib/slug";
 import {
@@ -80,7 +82,8 @@ export const Route = createFileRoute("/admin")({
   component: AdminPage,
 });
 
-type TabType = "overview" | "users" | "cards" | "connections" | "analytics" | "audit" | "nfc";
+type TabType =
+  "overview" | "users" | "cards" | "connections" | "analytics" | "audit" | "nfc" | "billing";
 
 function AdminPage() {
   const navigate = useNavigate();
@@ -763,6 +766,7 @@ function AdminPage() {
                 { id: "analytics", label: t("adminTabAnalytics"), icon: BarChart3 },
                 { id: "audit", label: t("adminTabAudit"), icon: History },
                 { id: "nfc", label: t("adminTabNfc"), icon: Tag },
+                { id: "billing", label: t("adminTabBilling"), icon: Receipt },
               ] as const
             ).map((tab) => {
               const Icon = tab.icon;
@@ -2365,6 +2369,9 @@ function AdminPage() {
             )}
           </div>
         )}
+
+        {/* TAB 8: BILLING & COMMERCE PORTAL */}
+        {activeTab === "billing" && <AdminBillingSection />}
       </main>
 
       {/* MODAL: ASSIGN NFC TAG TO ORDER */}

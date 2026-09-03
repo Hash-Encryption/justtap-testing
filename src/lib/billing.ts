@@ -11,11 +11,9 @@ export type TrialResult = { ok: true; trialEndsAt: Date } | { ok: false; error: 
  *
  * The client never sets plan_tier, trial_started_at, or trial_ends_at directly.
  *
- * BILLING EXTENSION POINT: when Stripe payment methods are collected, extend
- * this function to collect and attach a payment method before calling
- * /api/trial-start. The server route body is where Stripe verification connects.
- * The trial-start RPC and this function stay identical; only the server route
- * gains a Stripe step before calling the RPC.
+ * BILLING EXTENSION POINT: When live payment provider integration is connected,
+ * this function can attach payment verification before activating subscriptions.
+ * The trial-start RPC and this function enforce trusted server validation.
  */
 export async function startProTrial(session: Session): Promise<TrialResult> {
   let response: Response;

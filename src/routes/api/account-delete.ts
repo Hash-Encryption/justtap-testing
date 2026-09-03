@@ -90,14 +90,15 @@ export const Route = createFileRoute("/api/account-delete")({
               .in("card_id", cardIds);
           }
 
-          // 3. Delete user's public entities (cards, leads, analytics, roles, profile)
-          // Historic card_orders survive with user_id and card_id set to NULL
+          // 3. Delete user's public entities and revoke saved payment methods
+          // Historic card_orders, payments, refunds, and subscriptions survive with user_id set to NULL
           if (cardIds.length > 0) {
             await serviceClient.from("card_leads").delete().in("card_id", cardIds);
             await serviceClient.from("card_analytics").delete().in("card_id", cardIds);
             await serviceClient.from("cards").delete().eq("user_id", userId);
           }
 
+          await serviceClient.from("payment_methods").delete().eq("user_id", userId);
           await serviceClient.from("user_roles").delete().eq("user_id", userId);
           await serviceClient.from("profiles").delete().eq("user_id", userId);
 

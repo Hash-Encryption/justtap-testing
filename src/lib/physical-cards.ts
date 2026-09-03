@@ -20,7 +20,7 @@ export const PHYSICAL_CARD_PRODUCTS: PhysicalCardProduct[] = [
     variant: "Matte Black PVC",
     variant_ar: "أسود مطفي",
     sku: "JT-NFC-PVC-BLK",
-    price: 119.0, // Default testing price (configurable)
+    price: 149.0, // Authoritative catalog price (149 SAR)
     currency: "SAR",
     description: "Premium matte finish with embedded high-frequency NFC chip & QR code.",
     description_ar: "مظهر مطفي فاخر مع شريحة NFC مدمجة ورمز QR عالي الدقة.",

@@ -3,6 +3,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { Smartphone, Zap, QrCode, Globe2, ArrowRight, Sparkles } from "lucide-react";
 import { useTranslation } from "@/lib/i18n";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
+import { PricingSection } from "@/components/landing/PricingSection";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -145,6 +146,9 @@ function Landing() {
           </div>
         </div>
       </section>
+
+      {/* COMMERCIAL PRICING SECTION */}
+      <PricingSection />
 
       {/* FOOTER */}
       <footer className="border-t border-border py-8 px-4 text-center text-xs text-muted-foreground">
