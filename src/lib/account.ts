@@ -95,9 +95,28 @@ export async function updateUserProfile(
   }
 }
 
-export async function updateUserPassword(newPassword: string): Promise<{ error: string | null }> {
+export interface UpdatePasswordParams {
+  currentPassword?: string;
+  newPassword: string;
+  email?: string;
+}
+
+export async function updateUserPassword(
+  params: UpdatePasswordParams,
+): Promise<{ error: string | null; isInvalidCurrentPassword?: boolean }> {
   try {
-    const { error } = await supabase.auth.updateUser({ password: newPassword });
+    if (params.email && params.currentPassword) {
+      const { error: verifyError } = await supabase.auth.signInWithPassword({
+        email: params.email,
+        password: params.currentPassword,
+      });
+
+      if (verifyError) {
+        return { error: "INVALID_CURRENT_PASSWORD", isInvalidCurrentPassword: true };
+      }
+    }
+
+    const { error } = await supabase.auth.updateUser({ password: params.newPassword });
     if (error) {
       return { error: error.message };
     }

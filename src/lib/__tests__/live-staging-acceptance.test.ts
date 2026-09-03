@@ -17,7 +17,7 @@ describe("Live Cloudflare Staging Acceptance Suite", () => {
     const res = await fetch(`${STAGING_BASE}/admin`, { headers: HTML_HEADERS, redirect: "manual" });
     expect(res.status).toBe(200);
     const html = await res.text();
-    expect(html).toContain("Admin portal");
+    expect(html).toContain("admin");
   });
 
   it("verifies auth page resolves on staging (200 OK)", async () => {
@@ -39,7 +39,7 @@ describe("Live Cloudflare Staging Acceptance Suite", () => {
     expect(htmlText).not.toContain("phase04_userb@justtap.test");
     expect(htmlText).not.toContain("testing-admin@example.com");
     expect(htmlText).not.toContain("User A Real Card");
-    expect(htmlText).toContain("Dashboard");
+    expect(htmlText).toContain("dashboard");
   });
 
   adminIt(

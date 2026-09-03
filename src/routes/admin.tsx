@@ -2139,7 +2139,7 @@ function AdminPage() {
                                   {o.recipient_phone}
                                 </div>
                                 <div className="text-muted-foreground text-[10px] truncate max-w-[180px]">
-                                  {o.shipping_address}, {o.city}
+                                  {o.national_address || o.shipping_address}, {o.city}
                                 </div>
                               </td>
 

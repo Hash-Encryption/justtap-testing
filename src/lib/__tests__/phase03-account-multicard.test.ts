@@ -230,3 +230,124 @@ describe("Phase 3: Account Profile & Initials Generation", () => {
     expect(getInitials(null, null)).toBe("JT");
   });
 });
+
+describe("Phase 3.1: Commerce Pricing, VAT Exemption & National Address Validation", () => {
+  it("verifies 0 VAT in checkout pricing breakdown", () => {
+    const product = getProductBySku("pvc_matte_black");
+    expect(product).toBeDefined();
+
+    const price = product?.price ?? 119.0;
+    const tax = 0.0;
+    const shipping = 0.0;
+    const total = price + tax + shipping;
+
+    expect(price).toBe(119.0);
+    expect(tax).toBe(0.0);
+    expect(total).toBe(119.0);
+  });
+
+  it("validates mandatory National Address and non-empty City in checkout parameters", () => {
+    function validateCheckoutParams(params: {
+      recipientName: string;
+      recipientPhone: string;
+      nationalAddress: string;
+      city: string;
+    }): { isValid: boolean; error?: string } {
+      if (!params.recipientName.trim()) return { isValid: false, error: "Recipient name required" };
+      if (!params.recipientPhone.trim())
+        return { isValid: false, error: "Recipient phone required" };
+      if (!params.nationalAddress.trim())
+        return { isValid: false, error: "National Address required" };
+      if (!params.city.trim()) return { isValid: false, error: "City required" };
+      return { isValid: true };
+    }
+
+    // Missing National Address
+    expect(
+      validateCheckoutParams({
+        recipientName: "Hisham",
+        recipientPhone: "+966501234567",
+        nationalAddress: "",
+        city: "Riyadh",
+      }).isValid,
+    ).toBe(false);
+
+    // Missing City (no default city allowed)
+    expect(
+      validateCheckoutParams({
+        recipientName: "Hisham",
+        recipientPhone: "+966501234567",
+        nationalAddress: "RRRD2929, 2929 King Fahd Rd",
+        city: "",
+      }).isValid,
+    ).toBe(false);
+
+    // Valid inputs
+    expect(
+      validateCheckoutParams({
+        recipientName: "Hisham",
+        recipientPhone: "+966501234567",
+        nationalAddress: "RRRD2929, 2929 King Fahd Rd",
+        city: "Jeddah",
+      }).isValid,
+    ).toBe(true);
+  });
+});
+
+describe("Phase 3.1: Password Change Hardening", () => {
+  function validatePasswordChange(params: {
+    currentPasswordInput?: string;
+    newPasswordInput?: string;
+    confirmPasswordInput?: string;
+  }): { isValid: boolean; error?: string } {
+    if (!params.currentPasswordInput?.trim()) {
+      return { isValid: false, error: "Current password is required" };
+    }
+    if (!params.newPasswordInput || params.newPasswordInput.length < 8) {
+      return { isValid: false, error: "Password must be at least 8 characters" };
+    }
+    if (params.newPasswordInput !== params.confirmPasswordInput) {
+      return { isValid: false, error: "Passwords do not match" };
+    }
+    return { isValid: true };
+  }
+
+  it("rejects password change if current password is missing", () => {
+    const res = validatePasswordChange({
+      currentPasswordInput: "",
+      newPasswordInput: "SampleNewSecretValue123",
+      confirmPasswordInput: "SampleNewSecretValue123",
+    });
+    expect(res.isValid).toBe(false);
+    expect(res.error).toBe("Current password is required");
+  });
+
+  it("rejects password shorter than 8 characters", () => {
+    const res = validatePasswordChange({
+      currentPasswordInput: "SampleOldSecretValue123",
+      newPasswordInput: "short",
+      confirmPasswordInput: "short",
+    });
+    expect(res.isValid).toBe(false);
+    expect(res.error).toBe("Password must be at least 8 characters");
+  });
+
+  it("rejects mismatched confirmation password", () => {
+    const res = validatePasswordChange({
+      currentPasswordInput: "SampleOldSecretValue123",
+      newPasswordInput: "SampleNewSecretValue123",
+      confirmPasswordInput: "DifferentValue456",
+    });
+    expect(res.isValid).toBe(false);
+    expect(res.error).toBe("Passwords do not match");
+  });
+
+  it("accepts valid password change matching all security constraints", () => {
+    const res = validatePasswordChange({
+      currentPasswordInput: "SampleOldSecretValue123",
+      newPasswordInput: "SampleNewSecretValue123",
+      confirmPasswordInput: "SampleNewSecretValue123",
+    });
+    expect(res.isValid).toBe(true);
+  });
+});

@@ -43,8 +43,8 @@ export function PhysicalCardCheckoutDialog({
 
   const [recipientName, setRecipientName] = useState(card.full_name || "");
   const [recipientPhone, setRecipientPhone] = useState(card.phone || "");
-  const [shippingAddress, setShippingAddress] = useState("");
-  const [city, setCity] = useState("Riyadh");
+  const [nationalAddress, setNationalAddress] = useState("");
+  const [city, setCity] = useState("");
   const [postalCode, setPostalCode] = useState("");
   const [deliveryInstructions, setDeliveryInstructions] = useState("");
 
@@ -65,8 +65,8 @@ export function PhysicalCardCheckoutDialog({
       );
       return;
     }
-    if (!shippingAddress.trim()) {
-      setErrorMessage(lang === "ar" ? "يرجى إدخال عنوان الشارع" : "Street address is required");
+    if (!nationalAddress.trim()) {
+      setErrorMessage(lang === "ar" ? "يرجى إدخال العنوان الوطني" : "National Address is required");
       return;
     }
     if (!city.trim()) {
@@ -81,7 +81,7 @@ export function PhysicalCardCheckoutDialog({
         productId: product.id,
         recipientName,
         recipientPhone,
-        shippingAddress,
+        nationalAddress,
         city,
         postalCode,
         deliveryInstructions,
@@ -187,14 +187,18 @@ export function PhysicalCardCheckoutDialog({
             </div>
 
             <div className="space-y-1.5">
-              <Label htmlFor="shippingAddress" className="text-xs text-zinc-300">
-                {t("shippingAddress")} *
+              <Label htmlFor="nationalAddress" className="text-xs text-zinc-300">
+                {t("nationalAddress")} *
               </Label>
               <Input
-                id="shippingAddress"
-                value={shippingAddress}
-                onChange={(e) => setShippingAddress(e.target.value)}
-                placeholder="King Fahd Road, Al Olaya"
+                id="nationalAddress"
+                value={nationalAddress}
+                onChange={(e) => setNationalAddress(e.target.value)}
+                placeholder={
+                  lang === "ar"
+                    ? "RRRD2929، 2929 طريق الملك فهد..."
+                    : "RRRD2929, 2929 King Fahd Rd..."
+                }
                 required
                 className="bg-zinc-900/80 border-white/10 text-white placeholder:text-zinc-600 focus:border-purple-500"
               />
@@ -209,7 +213,9 @@ export function PhysicalCardCheckoutDialog({
                   id="city"
                   value={city}
                   onChange={(e) => setCity(e.target.value)}
-                  placeholder="Riyadh, Jeddah, Dammam..."
+                  placeholder={
+                    lang === "ar" ? "الرياض، جدة، الدمام..." : "Riyadh, Jeddah, Dammam..."
+                  }
                   required
                   className="bg-zinc-900/80 border-white/10 text-white placeholder:text-zinc-600 focus:border-purple-500"
                 />
@@ -267,13 +273,6 @@ export function PhysicalCardCheckoutDialog({
             <div className="flex justify-between text-xs text-zinc-400">
               <span>{t("shippingFee")}</span>
               <span className="font-medium text-emerald-400">{t("freeShipping")}</span>
-            </div>
-
-            <div className="flex justify-between text-xs text-zinc-400">
-              <span>{t("taxIncluded")}</span>
-              <span className="font-mono text-zinc-300">
-                {(product.price * 0.15).toFixed(2)} {product.currency}
-              </span>
             </div>
 
             <div className="border-t border-purple-500/20 pt-2 flex justify-between items-center text-sm font-bold text-white">

@@ -18,6 +18,7 @@ export interface CardOrder {
   quantity: number;
   recipient_name: string;
   recipient_phone: string;
+  national_address?: string | null;
   shipping_address: string;
   city: string;
   postal_code: string | null;
@@ -62,7 +63,8 @@ export interface CreateOrderParams {
   productId: string;
   recipientName: string;
   recipientPhone: string;
-  shippingAddress: string;
+  nationalAddress: string;
+  shippingAddress?: string;
   city: string;
   postalCode?: string;
   deliveryInstructions?: string;
@@ -112,15 +114,17 @@ export async function createPhysicalCardOrder(
   params: CreateOrderParams,
 ): Promise<{ data: { order_id: string; order_number: string } | null; error: string | null }> {
   try {
+    const address = (params.nationalAddress || params.shippingAddress || "").trim();
     const { data, error } = await supabase.rpc("create_physical_card_order", {
       _card_id: params.cardId,
       _product_id: params.productId,
-      _recipient_name: params.recipientName,
-      _recipient_phone: params.recipientPhone,
-      _shipping_address: params.shippingAddress,
-      _city: params.city,
-      _postal_code: params.postalCode || null,
-      _delivery_instructions: params.deliveryInstructions || null,
+      _recipient_name: params.recipientName.trim(),
+      _recipient_phone: params.recipientPhone.trim(),
+      _national_address: address,
+      _shipping_address: address,
+      _city: params.city.trim(),
+      _postal_code: params.postalCode?.trim() || null,
+      _delivery_instructions: params.deliveryInstructions?.trim() || null,
     });
 
     if (error) {

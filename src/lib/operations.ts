@@ -400,6 +400,7 @@ export interface AdminOrderRow {
   quantity: number;
   recipient_name: string;
   recipient_phone: string;
+  national_address?: string;
   shipping_address: string;
   city: string;
   postal_code: string | null;

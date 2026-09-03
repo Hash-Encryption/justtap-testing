@@ -61,6 +61,7 @@ function AccountPage() {
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
 
   // Security form state
+  const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [savingPassword, setSavingPassword] = useState(false);
@@ -165,23 +166,36 @@ function AccountPage() {
 
   const handleSavePassword = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!currentPassword.trim()) {
+      toast.error(t("currentPasswordRequired"));
+      return;
+    }
     if (newPassword !== confirmPassword) {
       toast.error(t("passwordsDoNotMatch"));
       return;
     }
-    if (newPassword.length < 6) {
+    if (newPassword.length < 8) {
       toast.error(t("passwordTooShort"));
       return;
     }
 
     setSavingPassword(true);
-    const { error } = await updateUserPassword(newPassword);
+    const { error, isInvalidCurrentPassword } = await updateUserPassword({
+      currentPassword,
+      newPassword,
+      email: user?.email,
+    });
     setSavingPassword(false);
 
     if (error) {
-      toast.error(error);
+      if (isInvalidCurrentPassword) {
+        toast.error(t("currentPasswordInvalidError"));
+      } else {
+        toast.error(error);
+      }
     } else {
       toast.success(t("passwordChanged"));
+      setCurrentPassword("");
       setNewPassword("");
       setConfirmPassword("");
     }
@@ -703,8 +717,17 @@ function AccountPage() {
                                   <div className="text-white font-medium">
                                     {o.recipient_name} ({o.recipient_phone})
                                   </div>
+                                  <div className="text-zinc-300">
+                                    <span className="text-zinc-500 font-normal">
+                                      {t("nationalAddress")}:{" "}
+                                    </span>
+                                    {o.national_address || o.shipping_address}
+                                  </div>
                                   <div className="text-zinc-400">
-                                    {o.shipping_address}, {o.city}
+                                    <span className="text-zinc-500 font-normal">
+                                      {t("shippingCity")}:{" "}
+                                    </span>
+                                    {o.city}
                                   </div>
                                   {o.delivery_instructions && (
                                     <div className="text-zinc-500 italic">
@@ -791,6 +814,18 @@ function AccountPage() {
 
                 <form onSubmit={handleSavePassword} className="space-y-4 max-w-lg">
                   <div className="space-y-1.5">
+                    <Label className="text-xs text-zinc-300">{t("currentPasswordLabel")}</Label>
+                    <Input
+                      type="password"
+                      value={currentPassword}
+                      onChange={(e) => setCurrentPassword(e.target.value)}
+                      placeholder="••••••••"
+                      required
+                      className="bg-zinc-900/80 border-white/10 text-white placeholder:text-zinc-600"
+                    />
+                  </div>
+
+                  <div className="space-y-1.5">
                     <Label className="text-xs text-zinc-300">{t("newPasswordLabel")}</Label>
                     <Input
                       type="password"
@@ -798,6 +833,7 @@ function AccountPage() {
                       onChange={(e) => setNewPassword(e.target.value)}
                       placeholder="••••••••"
                       required
+                      minLength={8}
                       className="bg-zinc-900/80 border-white/10 text-white placeholder:text-zinc-600"
                     />
                   </div>
@@ -810,6 +846,7 @@ function AccountPage() {
                       onChange={(e) => setConfirmPassword(e.target.value)}
                       placeholder="••••••••"
                       required
+                      minLength={8}
                       className="bg-zinc-900/80 border-white/10 text-white placeholder:text-zinc-600"
                     />
                   </div>
